@@ -2,7 +2,7 @@
 title: Index (Reinforcement Learning)
 ---
 
-- [ ] [[Introduction to Reinforcement Learning|Introduction]]
+- [ ] [[Introduction to Reinforcement Learning|Introduction]]  
 
 Model free methods
 

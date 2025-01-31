@@ -2,7 +2,8 @@
 title: Index (Machine Learning)
 ---
 
+- [ ] [[Non-Parametric Models|Non-Parametric Models]]
 - [ ] [[Bayesian Decision Theory|Bayesian Decision Theory]] (todo)
-- [ ] [[Linear Models|Linear and Logistic Regression]]
 - [ ] [[Discriminant Analysis|Discriminant Analysis]]
+- [ ] [[Linear Models|Linear and Logistic Regression]]
 - [ ] [[Vector Machines|Support Vector Machines]]
