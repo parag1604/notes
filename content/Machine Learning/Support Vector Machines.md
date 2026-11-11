@@ -302,16 +302,94 @@ def fit_svm_dual(K, y, C):
 
 ## Support vector regression
 
-The same machinery handles regression. Instead of a margin around a boundary, SVR fits a **tube** of half-width $\varepsilon$ around the regression function and ignores errors that fall inside it (the $\varepsilon$-insensitive loss):[^smolasvr2004]
+The margin idea carries over to regression. Instead of a street *between* two classes, SVR fits a **tube** of half-width $\varepsilon$ *around* the regression function $f(\mathbf{x})=\mathbf{w}^\top\mathbf{x}+b$ and ignores every error that falls inside it. This is the **$\varepsilon$-insensitive loss**, $\max\big(0,\lvert y-f(\mathbf{x})\rvert-\varepsilon\big)$.[^smolasvr2004] As in classification, we want $f$ as "flat" as possible (small $\lVert\mathbf{w}\rVert$) while keeping the points inside the tube, with slack for the ones that cannot be.
+
+### Primal
+
+Points may stick out *above* the tube (slack $\xi_i$) or *below* it (slack $\xi_i^*$):
 
 $$
 \begin{aligned}
-\min_{\mathbf{w},b,\boldsymbol{\xi},\boldsymbol{\xi}^*}\ &\frac12\lVert\mathbf{w}\rVert^2+C\sum_{i}(\xi_i+\xi_i^*)\\
-\text{s.t.}\ &y_i-f(\mathbf{x}_i)\le\varepsilon+\xi_i,\quad f(\mathbf{x}_i)-y_i\le\varepsilon+\xi_i^*,\quad\xi_i,\xi_i^*\ge0.
+\min_{\mathbf{w},b,\boldsymbol{\xi},\boldsymbol{\xi}^*}\ &\frac12\lVert\mathbf{w}\rVert^2+C\sum_{i=1}^{N}(\xi_i+\xi_i^*)\\
+\text{s.t.}\ &y_i-\mathbf{w}^\top\mathbf{x}_i-b\le\varepsilon+\xi_i,\qquad\mathbf{w}^\top\mathbf{x}_i+b-y_i\le\varepsilon+\xi_i^*,\qquad\xi_i,\xi_i^*\ge0.
 \end{aligned}
 $$
 
-Points strictly inside the tube get zero multipliers. The dual again involves only dot products, so kernels apply unchanged.
+### Dual
+
+Introduce multipliers $\alpha_i,\alpha_i^*\ge0$ for the two tube constraints and $\eta_i,\eta_i^*\ge0$ for the slack signs:
+
+$$
+\begin{aligned}
+\mathcal{L}=\ &\frac12\lVert\mathbf{w}\rVert^2+C\sum_i(\xi_i+\xi_i^*)-\sum_i(\eta_i\xi_i+\eta_i^*\xi_i^*)\\
+&+\sum_i\alpha_i\big(y_i-\mathbf{w}^\top\mathbf{x}_i-b-\varepsilon-\xi_i\big)+\sum_i\alpha_i^*\big(\mathbf{w}^\top\mathbf{x}_i+b-y_i-\varepsilon-\xi_i^*\big).
+\end{aligned}
+$$
+
+Stationarity in each primal variable gives
+
+$$
+\begin{aligned}
+\nabla_\mathbf{w}\mathcal{L}=\mathbf{0}&\ \Longrightarrow\ \mathbf{w}=\sum_i(\alpha_i-\alpha_i^*)\,\mathbf{x}_i,\qquad\frac{\partial\mathcal{L}}{\partial b}=0\ \Longrightarrow\ \sum_i(\alpha_i-\alpha_i^*)=0,\\
+\frac{\partial\mathcal{L}}{\partial\xi_i}=0&\ \Longrightarrow\ \eta_i=C-\alpha_i\ \Longrightarrow\ 0\le\alpha_i\le C\quad(\text{and likewise }0\le\alpha_i^*\le C).
+\end{aligned}
+$$
+
+Write $\beta_i=\alpha_i-\alpha_i^*$ and substitute. The $\xi$ and $b$ terms cancel, and $\frac12\lVert\mathbf{w}\rVert^2-\mathbf{w}^\top\sum_i\beta_i\mathbf{x}_i=-\frac12\lVert\mathbf{w}\rVert^2$. This leaves the **SVR dual**:
+
+$$
+\begin{aligned}
+\max_{\boldsymbol{\alpha},\boldsymbol{\alpha}^*}\ &-\frac12\sum_{i,j}\beta_i\beta_j\,\mathbf{x}_i^\top\mathbf{x}_j-\varepsilon\sum_i(\alpha_i+\alpha_i^*)+\sum_iy_i\beta_i\\
+\text{s.t.}\ &\sum_i\beta_i=0,\qquad0\le\alpha_i,\alpha_i^*\le C.
+\end{aligned}
+$$
+
+As before, the data appear only through dot products. Replace $\mathbf{x}_i^\top\mathbf{x}_j$ by $K(\mathbf{x}_i,\mathbf{x}_j)$, and the prediction becomes $f(\mathbf{x})=\sum_i\beta_i\,K(\mathbf{x}_i,\mathbf{x})+b$.
+
+### Which points are support vectors?
+
+Complementary slackness, $\alpha_i\big(y_i-f(\mathbf{x}_i)-\varepsilon-\xi_i\big)=0$ and $(C-\alpha_i)\xi_i=0$ (and likewise for $\alpha_i^*$), sorts the training points:
+
+- **Strictly inside the tube**, $\lvert y_i-f(\mathbf{x}_i)\rvert<\varepsilon$: neither constraint is active, so $\alpha_i=\alpha_i^*=0$. These points do not affect the solution at all.
+- **On the upper edge**, $y_i-f(\mathbf{x}_i)=\varepsilon$: $0<\alpha_i<C$ and $\xi_i=0$. **On the lower edge**: $0<\alpha_i^*<C$.
+- **Outside the tube**: $\alpha_i=C$ (above) or $\alpha_i^*=C$ (below), with positive slack.
+- A point cannot be above and below the tube at once, so $\alpha_i\alpha_i^*=0$.
+
+The bias comes from the edge points. If $0<\alpha_i<C$, then $b=y_i-\varepsilon-\sum_j\beta_jK(\mathbf{x}_j,\mathbf{x}_i)$. If $0<\alpha_i^*<C$, then $b=y_i+\varepsilon-\sum_j\beta_jK(\mathbf{x}_j,\mathbf{x}_i)$. Average over all such points. The width $\varepsilon$ therefore controls **sparsity**: a wider tube holds more points and leaves fewer support vectors. $C$ controls how hard outliers pull on the fit.
+
+![[Machine Learning/images/support-vector-machines-svr.svg]]
+*Figure 5: an RBF-kernel SVR on noisy samples of $\sin x$. Grey points lie inside the $\varepsilon$-tube and have zero multipliers. Only the red points, on or outside the tube, are support vectors (27 of 80 here). The orange segments show the slacks of points outside the tube.*
+
+### Solving the SVR dual with cvxopt
+
+Stack the variables as $\mathbf{z}=[\boldsymbol{\alpha};\boldsymbol{\alpha}^*]\in\mathbb{R}^{2N}$. Then $\boldsymbol{\beta}^\top\mathbf{K}\boldsymbol{\beta}=\mathbf{z}^\top\begin{pmatrix}\mathbf{K}&-\mathbf{K}\\-\mathbf{K}&\mathbf{K}\end{pmatrix}\mathbf{z}$, and minimizing the negated dual is a standard QP:
+
+```python
+import numpy as np
+from cvxopt import matrix, solvers
+
+def fit_svr_dual(K, y, C, eps):
+    """K: (N, N) Gram matrix, y: (N,) targets. Returns beta = alpha - alpha*, b, alpha, alpha_star."""
+    N = len(y)
+    P = np.block([[K, -K], [-K, K]]) + 1e-8 * np.eye(2 * N)   # z = [alpha; alpha*]; tiny ridge for stability
+    q = np.hstack([eps - y, eps + y])                         # -(dual) = 1/2 z'Pz + eps*1'z - y'(alpha - alpha*)
+    G = np.vstack([-np.eye(2 * N), np.eye(2 * N)])            # 0 <= z <= C
+    h = np.hstack([np.zeros(2 * N), C * np.ones(2 * N)])
+    A = np.hstack([np.ones(N), -np.ones(N)]).reshape(1, -1)   # sum(alpha - alpha*) = 0
+    solvers.options["show_progress"] = False
+    z = np.ravel(solvers.qp(matrix(P), matrix(q), matrix(G), matrix(h), matrix(A), matrix(0.0))["x"])
+    a, a_s = z[:N], z[N:]
+    beta = a - a_s
+    f0 = K @ beta                                             # f(x_i) - b
+    up = (a > 1e-6) & (a < C - 1e-6)                          # upper edge: y_i - f(x_i) = eps
+    lo = (a_s > 1e-6) & (a_s < C - 1e-6)                      # lower edge: f(x_i) - y_i = eps
+    b = np.mean(np.r_[y[up] - eps - f0[up], y[lo] + eps - f0[lo]])
+    return beta, b, a, a_s
+
+# Prediction: f(u_j) = beta @ K_test[:, j] + b, with K_test[i, j] = K(x_i, u_j)
+```
+
+On the problem of Figure 5, this agrees with scikit-learn's `SVR` to within $0.004$ everywhere, and $\alpha_i\alpha_i^*\approx0$ as predicted.
 
 ## Key takeaways
 
@@ -320,12 +398,13 @@ Points strictly inside the tube get zero multipliers. The dual again involves on
 - The data appear only through dot products, so the **kernel trick** applies. Valid kernels are symmetric and PSD. Linear, polynomial and RBF are the standard choices.
 - **Soft margin:** slack variables add a box constraint $0\le\alpha_i\le C$. This is equivalent to the **hinge loss** plus $L_2$ regularization; logistic regression is the same template with the log loss.
 - Solve with QP solvers (small $N$), SMO (kernels) or SGD on the primal (large linear problems).
+- **SVR** fits an $\varepsilon$-tube. Points inside the tube have zero multipliers, and $\mathbf{w}=\sum_i(\alpha_i-\alpha_i^*)\mathbf{x}_i$ is kernelized exactly as in classification.
 
 ## Where this shows up next
 
 - [[Linear Models]]: the logistic-regression counterpart, and $L_2$ regularization.
 - [[Discriminant Analysis]]: generative linear classifiers. LDA, logistic regression and the linear SVM are three routes to a hyperplane.
-- [[Non-parametric Models]]: Parzen windows and kernels as similarity functions.
+- [[Non-parametric Models]]: Parzen windows and kernels as smoothing windows.
 - **Kernel k-means, kernel PCA and spectral methods** (coming soon) reuse this lecture's kernels.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->

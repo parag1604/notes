@@ -34,7 +34,7 @@ All figures use one $5\times5$ gridworld.
 - **Walls:** a move into a wall leaves the agent where it is.
 - **Other rewards and discount:** all other rewards are $0$, and $\gamma=0.9$.
 
-The code that produces every number and figure is in the vault (`_meta/figures/dynamic-programming/gridworld.py`).
+
 
 ---
 
