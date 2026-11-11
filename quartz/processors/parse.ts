@@ -29,7 +29,7 @@ export function createProcessor(ctx: BuildCtx): QuartzProcessor {
           .flatMap((plugin) => plugin.markdownPlugins!(ctx)),
       )
       // MD AST -> HTML AST
-      .use(remarkRehype, { allowDangerousHtml: true })
+      .use(remarkRehype, { allowDangerousHtml: true, footnoteLabel: "References" })
       // HTML AST -> HTML AST transforms
       .use(transformers.filter((p) => p.htmlPlugins).flatMap((plugin) => plugin.htmlPlugins!(ctx)))
   )

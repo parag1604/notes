@@ -1,106 +1,184 @@
 ---
 title: Imitation Learning
+tags:
+  - reinforcement-learning
+  - imitation-learning
+  - behavior-cloning
+  - dagger
 ---
 
-Let's say we have a policy $\pi^\beta$ (known as the behavior policy). We run $\pi^\beta$ on the environment and generate $\mathcal{D}$ (a dataset of experience tuples). Now, since each tuple is of the form $\{o_t,a_t,r_t,o_{t+1},d_t\}$ corresponding to the observation, action, reward, next observation, and done respectively at time-step $t$, we can easily extract a new dataset $\mathcal{D}'=\{o_t,a_t\}_{t=0}^{|\mathcal{D}|}$. Note that in the analogy of supervised learning, $\{o_t\}_t$ are the data features and $\{a_t\}_t$ are the targets. Since we consider the continuous state/action space, it might be helpful to think of the supervised learning task as a regression task.
-**Note** that although in this part of the notes all the expressions use observations ($o_t$), however everything can be interchanged to states ($s_{t}$) without much modification.
+> **Prerequisites:** [[Introduction to Reinforcement Learning]] (MDPs, POMDPs, cost vs. reward), maximum likelihood estimation ([[Linear Models]]).
+>
+> **TL;DR:** Behavior cloning turns control into supervised learning: regress the expert's actions on the observations. It is simple, but a small per-step error $\epsilon$ compounds into an expected trajectory cost of $O(\epsilon T^2)$, because the learner drifts into states the expert never showed it. DAgger fixes this by collecting data under the learner's *own* state distribution and asking the expert to label it, which brings the cost back to $O(\epsilon T)$.
 
-### Behavior Cloning (BC)
+## Motivation
 
-For behavior cloning to work, we need to assume that the behavior policy $\pi^\beta$ is also the optimal (expert) policy $\pi^*$, since it doesn't make sense to imitate sub-optimal policies. So, given $\mathcal{D}'$ we need to learn a mapping $\pi_\theta:\mathcal{O}\to\mathcal{A}$, i.e. a policy (which can be modeled as a parametric distribution over actions conditioned on the observation) $\pi_\theta(a_t|o_t)$. This can be easily learned by using ERM (expected risk minimization), which is equivalent to maximizing the log likelihood of the data as follows:
-$$
-\max_\theta\mathbb{E}_{(o_t,a_t)\sim\mathcal{D}'}\log\pi_\theta(a_t|o_t)
-$$
-where the symbols have their usual meanings. In the regression setting, the ERM objective becomes:
-$$
-\theta^*=\arg\max_\theta\mathbb{E}_{(o_t,a_t)\sim\mathcal{D}'}[(\pi_\theta(o_t)-a_t)^2]
-$$
+Suppose an expert can already do the task: a human driving a car, a teleoperator moving a robot arm. The most direct way to get a policy is to *copy* the expert, with no reward function and no trial and error. This is **imitation learning**. It is the simplest bridge between supervised learning and sequential decision making, and seeing exactly where it breaks tells us a lot about why RL is hard. The presentation here loosely follows CS285.[^cs285]
 
----
+## Setup
 
-### Aside (Cost Function and RL Objective)
+Say we have a policy $\pi^\beta$, known as the **behavior policy**. We run $\pi^\beta$ in the environment and record a dataset $\mathcal{D}$ of experience tuples $(o_t,a_t,r_t,o_{t+1},d_t)$: observation, action, reward, next observation and done flag at time-step $t$. From it we keep only the observation–action pairs:
 
-We can now analyze the "goodness" of the policy $\pi_{\theta^*}$ obtained after ERM by inspecting the difference from $\pi^*$. Recall that the any MDP can be characterized by either a reward or a cost function. Assume the following cost function:
 $$
-c(o_{t},a_{t})=\begin{cases} 0 & a_{t} = \pi^*(o_{t}) \\ 1 & otherwise \end{cases}
-$$
-In that case the goal of any RL agent should be to minimize the cost (rather than the ERM):
-$$
-\theta^*=\arg\min_{\theta}\mathbb{E}_{o_{t}\sim p_{\pi_{\theta}}(o_t)}[c(o_{t},\pi_{\theta}(o_{t}))]
+\mathcal{D}'=\{(o_i,a_i)\}_{i=1}^{N}.
 $$
 
-**Note**: Although in ERM we are training without rewards, since the task is sequential decision making, we shall be using the above cost function to evaluate the performance of any trained policy.
+By analogy with supervised learning, the $o_i$ are the input features and the $a_i$ are the targets. For continuous action spaces it helps to think of this as a **regression** task, and for discrete actions as **classification**.
 
----
+> [!note]
+> We write everything with observations $o_t$, because in general the agent sees a partial observation of the state ([[Introduction to Reinforcement Learning|POMDP]]). Everything below goes through with $o_t$ replaced by $s_t$.
 
-### Analysis
+## Behavior Cloning (BC)
 
-Let's assume that for any $o_t$ (under the trained BC policy trained using ERM), the probability of incurring the cost (i.e. making error), i.e.:
-$$
-\pi_{\theta^{*}}(\hat{a}_{t}\neq a_{t}|o_t)\leq\epsilon;\forall{(o_{t},a_{t})\in\mathcal{D}'}
-$$
-where $\hat{a}_{t}\sim\pi_{\theta^{*}}(s_{t})$ and $\epsilon\geq0$ is a small constant bound. So, the upper bound on the total error for a trajectory run by taking actions according to a BC trained policy $\pi_{\theta^*}$ is:
-$$
-\mathbb{E}\left[\sum\limits_{t=0}^{T}c(o_{t},\hat{a}_{t})\right]\leq\epsilon T; \text{ only when all possible } o_{t}\in\mathcal{D}'...[1]
-$$
-However, that is not the case during execution of the policy. Assume that the agent transitions from $o_t\in\mathcal{D}'$ to $o_{t+1}\notin \mathcal{D}'$ after an erroneous decision. Since there is a distribution shift, all actions corresponding to time-steps $t+1$ onward until $T$ will be wrong and will incur a cost.
+For behavior cloning to make sense, we assume the behavior policy is the **expert**: $\pi^\beta=\pi^*$. There is little point in imitating a sub-optimal policy. Given $\mathcal{D}'$, we learn a policy $\pi_\theta(a_t\mid o_t)$, a parametric distribution over actions conditioned on the observation, by **empirical risk minimization** (ERM). With the negative log-likelihood as the loss, ERM is maximum likelihood:
 
-Let $p_{\theta^*}(o_t)$ be the distribution over observations at the $t^\text{th}$ time-step that is obtained when the trajectory is collected with the policy $\pi_{\theta^*}$:
 $$
-p_{\theta^*}(o_t)=(1-\epsilon)^{t}p_{train}(o_{t})+(1-(1-\epsilon)^{t})p_{mistake}(o_{t})
+\theta^*=\arg\max_\theta\;\mathbb{E}_{(o_t,a_t)\sim\mathcal{D}'}\big[\log\pi_\theta(a_t\mid o_t)\big].
 $$
-where $p_{train}(o_t)$ can be thought of as the distribution over observations when the trajectory is collected using $\pi^\beta$ ($\pi^*$ in our case), i.e. the same distribution from which $\mathcal{D}'$ was generated, and similarly $p_{mistake}$ is the distribution over observations after the first mistake is made. We are interested in finding out how far off is the distribution of observations under the current policy (trained using the dataset $\mathcal{D}'$) vs. the behavior policy (that collected the training dataset). Manipulating the above expression we get:
-$$
-\begin{align}
-p_{\theta^*}(o_t)&=(1-\epsilon)^{t}p_{train}(o_{t})+(1-(1-\epsilon)^{t})p_{mistake}(o_{t})\\
-&=(1-\epsilon)^{t}p_{train}(o_{t})-(1-\epsilon)^{t}p_{mistake}(o_{t})+p_{mistake}(o_{t})\\
-&=p_{mistake}(o_{t})+(1-\epsilon)^{t}(p_{train}(o_{t})-p_{mistake}(o_{t}))\\
-\implies-p_{\theta^*}(o_t)&=-p_{mistake}(o_{t})-(1-\epsilon)^{t}(p_{train}(o_{t})-p_{mistake}(o_{t}))\\
-\implies p_{train}(o_t)-p_{\theta^*}(o_t)&=(p_{train}(o_t)-p_{mistake}(o_{t}))-(1-\epsilon)^{t}(p_{train}(o_{t})-p_{mistake}(o_{t}))\\
-&=(1-(1-\epsilon)^{t})(p_{train}(o_{t})-p_{mistake}(o_{t}))\\
-\end{align}
-$$
-However, since we are only interested in the magnitude of the difference, and not the sign, we can upper-bound the variational divergence as follows:
-$$
-\begin{align}
-\implies|p_{train}(o_t)-p_{\theta^*}(o_t)|&=(1-(1-\epsilon)^{t})\cdot|p_{train}(o_{t})-p_{mistake}(o_{t})|\\
-&\leq(1-(1-\epsilon)^{t})\cdot2 \text{ (using the identity $|a-b|<|a|+|b|$ \& $\max\mathbb{P}[\cdot]=1$)}\\
-&\leq2\epsilon t \text{ (using the identity $(1-\epsilon)^{t}\geq1-\epsilon t$)}
-\end{align}
-$$
-Thus the difference between the distribution of observations at time-step $t$ obtained by learning the optimal policy and the learned policy is upper-bounded by $2\epsilon t$. Hence, the expected cost over the trajectory can be calculated as follows:
-$$
-\begin{align}\mathbb{E}_{o_{t}\sim p_{\theta^{*}}(\cdot),\hat{a}_{t}\sim\pi_{\theta^{*}}(\cdot|o_t)}\left[\sum\limits_{t=0}^{T}c(o_{t},\hat{a}_{t})\right]&=\sum\limits_{t=0}^{T}\mathbb{E}_{o_{t},\hat{a}_{t}}\left[c(o_{t},\hat{a}_{t})\right] \text{ (linearity of expectations)}\\
-&=\sum\limits_{t=0}^{T}\sum\limits_{o_{t}} p_{\theta^{*}}(o_{t})\cdot c(o_{t},\hat{a}_{t})\\
-&=\sum\limits_{t=0}^{T}\sum\limits_{o_{t}} (p_{train}(o_{t})+p_{\theta^{*}}(o_{t})-p_{train}(o_{t}))\cdot c(o_{t},\hat{a}_{t})\\
-&=\sum\limits_{t=0}^{T}\sum\limits_{o_{t}} p_{train}(o_{t})\cdot c(o_{t},\hat{a}_{t})+(p_{\theta^{*}}(o_{t})-p_{train}(o_{t}))\cdot c(o_{t},\hat{a}_{t})\\
-&=\sum\limits_{t=0}^{T}\left(\mathbb{E}_{o_{t},\hat{a}_{t}}\left[c(o_{t},\hat{a}_{t})\right]+\sum\limits_{o_{t}}(p_{\theta^{*}}(o_{t})-p_{train}(o_{t}))\cdot c(o_{t},\hat{a}_{t})\right)\\
-&\leq\sum\limits_{t=0}^{T}\left(\mathbb{E}_{o_{t},\hat{a}_{t}}\left[c(o_{t},\hat{a}_{t})\right]+\sum\limits_{o_{t}}|p_{\theta^{*}}(o_{t})-p_{train}(o_{t})|\cdot c_\text{max}\right)\\
-&\leq\sum\limits_{t=0}^{T} \epsilon + 2\epsilon t \text{ ($c_\text{max}$=1 as defined above)}\\
-&=\epsilon\sum\limits_{t=0}^{T}1+2\epsilon\sum\limits_{t=0}^{T}t=\epsilon T+2\epsilon\frac{T(T+1)}{2}\\
-&=\epsilon T+\epsilon T(T+1)=2\epsilon T + \epsilon T^{2}\\
-\therefore \mathbb{E}_{o_{t}\sim p_{\theta^{*}}(\cdot),\hat{a}_{t}\sim\pi_{\theta^{*}}(\cdot|o_t)}\left[\sum\limits_{t=0}^{T}c(o_{t},\hat{a}_{t})\right] &\in \mathcal{O}(T^{2})
-\end{align}
-$$
-here $\mathcal{O}$ is the Big-Oh Notation, not the observation space.
 
-This problem can be addressed in a the following ways:
+In the regression setting, take a Gaussian policy $\pi_\theta(a\mid o)=\mathcal{N}\big(\mu_\theta(o),\sigma^2 I\big)$. Then $\log\pi_\theta(a\mid o)=-\frac{1}{2\sigma^2}\lVert a-\mu_\theta(o)\rVert^2+\text{const}$, and maximum likelihood becomes ordinary least squares on the actions:
 
-- Be smart about data collection (and augmentation)
-- Use very powerful models that make very few mistakes
-- Use multi-task learning
-- Change the algorithm (DAgger)
+$$
+\theta^*=\arg\min_\theta\;\mathbb{E}_{(o_t,a_t)\sim\mathcal{D}'}\Big[\lVert\mu_\theta(o_t)-a_t\rVert^2\Big].
+$$
+
+This is the same MLE–MSE equivalence as in [[Linear Models]], with "features → targets" replaced by "observations → actions".
+
+> [!warning] Two quieter failure modes
+> - **Multimodal experts.** If the expert sometimes swerves left and sometimes right around an obstacle, the MSE-optimal prediction is the *average*: straight into the obstacle. Expressive policy classes (mixtures of Gaussians, discretized actions, diffusion or flow policies) avoid this.
+> - **Non-Markovian experts.** A human's action depends on their history, not just the current observation. A policy $\pi_\theta(a_t\mid o_t)$ may be unable to represent it. Conditioning on a short history of observations helps.
 
 ---
 
-### DAgger (Dataset Aggregation)
+## Aside: a cost function for imitation
 
-GOAL: Collect data from $p_{\pi_{\theta}}(o_t)$ instead of $p_{\pi^*}(o_t)$
-While $\pi_{\theta}\neq\pi^*$ for the support $o_t$ of $\pi^*$:
+To judge how *good* the cloned policy $\pi_{\theta^*}$ is, we compare it with $\pi^*$ inside the sequential task. Recall from [[Introduction to Reinforcement Learning]] that an MDP can be specified with a reward or, equivalently, a cost $c=-r$. Take the 0–1 cost "did we deviate from the expert?":
 
-    1. Train $\pi_{\theta}(\hat{a}_{t}|o_{t})$ from dataset $\mathcal{D}'=\{o_{1},a_{1},...,o_{N},a_{N}\}$
-    2. Run $\pi_{\theta}(\hat{a}_{t}|o_{t})$ to get dataset $\mathcal{D}_{\pi}=\{o_{1},...,o_{M}\}$
-    3. Use $\pi^*$ to get $a_{t}$ $\forall o_{t}\in\mathcal{D}_{\pi}$
-    4. Aggregate $\mathcal{D}'\gets \mathcal{D}'\cup \mathcal{D}_{\pi}$
+$$
+c(o_t,a_t)=\begin{cases}0 & a_t=\pi^*(o_t)\\ 1 & \text{otherwise.}\end{cases}
+$$
 
-Since the dataset will eventually get populated with the entire support of $\pi^*$, the error will be upper-bounded by $\epsilon T$ as mentioned in $[1]$, i.e. all possible $o_{t}$ will be in the augmented dataset.
+What we actually care about is the cost accumulated over a horizon of $T$ steps when the *learned* policy is in control. That means observations come from the learned policy's own distribution $p_{\pi_\theta}(o_t)$:
+
+$$
+\min_\theta\;\sum_{t=0}^{T-1}\mathbb{E}_{o_t\sim p_{\pi_\theta}(o_t)}\Big[\mathbb{E}_{a_t\sim\pi_\theta(\cdot\mid o_t)}\big[c(o_t,a_t)\big]\Big].
+$$
+
+Compare this with what BC optimizes: a loss on observations drawn from the *expert's* distribution $p_{\text{train}}(o_t)$. The whole story of this lecture is the gap between these two distributions.
+
+> [!note]
+> BC is trained without any reward. The cost $c$ is only a tool for *evaluating* the trained policy in the sequential setting.
+
+---
+
+## Analysis: why errors compound
+
+**Assumption (BC succeeds as supervised learning).** On the training distribution, the learned policy errs with probability at most $\epsilon$:
+
+$$
+\pi_{\theta^*}\big(a\neq\pi^*(o)\,\big|\,o\big)\le\epsilon\qquad\text{for all } o\sim p_{\text{train}}(o).
+$$
+
+If the learner always stayed on the expert's distribution, the expected cost over $T$ steps would be at most $\epsilon T$. That is the best we can hope for. But the learner does *not* stay there.
+
+![[Reinforcement Learning/images/imitation-learning-drift.svg]]
+*Figure 1: the expert's trajectories (blue) define the training distribution (shaded tube). One mistake moves the learner (orange) slightly outside the tube. There it has no data, its errors become more likely, and it drifts further. This is covariate shift that the policy causes itself.*
+
+**Worst-case model of a mistake.** As long as the learner has made no mistake, it follows the expert, so $o_t\sim p_{\text{train}}$. After the first mistake, it lands in unfamiliar observations with some distribution $p_{\text{mistake}}$, and we pessimistically assume it never recovers. The probability of no mistake in the first $t$ steps is at least $(1-\epsilon)^t$, so the learner's observation distribution at step $t$ is the mixture
+
+$$
+p_{\theta^*}(o_t)=(1-\epsilon)^t\,p_{\text{train}}(o_t)+\big(1-(1-\epsilon)^t\big)\,p_{\text{mistake}}(o_t).
+$$
+
+**How far is $p_{\theta^*}$ from $p_{\text{train}}$?** Rearranging,
+
+$$
+\begin{aligned}
+p_{\theta^*}(o_t)&=p_{\text{mistake}}(o_t)+(1-\epsilon)^t\big(p_{\text{train}}(o_t)-p_{\text{mistake}}(o_t)\big)\\
+\implies p_{\text{train}}(o_t)-p_{\theta^*}(o_t)&=\big(1-(1-\epsilon)^t\big)\big(p_{\text{train}}(o_t)-p_{\text{mistake}}(o_t)\big).
+\end{aligned}
+$$
+
+Only the size of the gap matters, not its sign, so we measure it with the **total variation** distance, summed over all observations:
+
+$$
+\begin{aligned}
+\sum_{o_t}\big|p_{\text{train}}(o_t)-p_{\theta^*}(o_t)\big|
+&=\big(1-(1-\epsilon)^t\big)\sum_{o_t}\big|p_{\text{train}}(o_t)-p_{\text{mistake}}(o_t)\big|\\
+&\le 2\big(1-(1-\epsilon)^t\big)&&\text{since }\textstyle\sum_o|p(o)-q(o)|\le\sum_o p(o)+\sum_o q(o)=2\\
+&\le 2\epsilon t&&\text{since }(1-\epsilon)^t\ge 1-\epsilon t\ \text{(Bernoulli's inequality)}.
+\end{aligned}
+$$
+
+So the learner's distribution drifts away from the training distribution *linearly in time*.
+
+**Bounding the expected cost.** Write $\bar c_t(o)=\mathbb{E}_{a\sim\pi_{\theta^*}(\cdot\mid o)}[c(o,a)]\in[0,1]$ for the probability of erring at observation $o$. By linearity of expectation,
+
+$$
+\begin{aligned}
+\mathbb{E}\left[\sum_{t=0}^{T-1}c(o_t,a_t)\right]
+&=\sum_{t=0}^{T-1}\sum_{o_t}p_{\theta^*}(o_t)\,\bar c_t(o_t)\\
+&=\sum_{t=0}^{T-1}\left[\sum_{o_t}p_{\text{train}}(o_t)\,\bar c_t(o_t)+\sum_{o_t}\big(p_{\theta^*}(o_t)-p_{\text{train}}(o_t)\big)\,\bar c_t(o_t)\right]\\
+&\le\sum_{t=0}^{T-1}\left[\underbrace{\mathbb{E}_{o_t\sim p_{\text{train}}}\big[\bar c_t(o_t)\big]}_{\le\,\epsilon\ \text{(assumption)}}+\underbrace{\sum_{o_t}\big|p_{\theta^*}(o_t)-p_{\text{train}}(o_t)\big|}_{\le\,2\epsilon t}\cdot\underbrace{\max_o\bar c_t(o)}_{\le 1}\right]\\
+&\le\sum_{t=0}^{T-1}\big(\epsilon+2\epsilon t\big)=\epsilon T+2\epsilon\frac{T(T-1)}{2}=\epsilon T^2.
+\end{aligned}
+$$
+
+$$
+\boxed{\;\mathbb{E}\left[\sum_{t=0}^{T-1}c(o_t,a_t)\right]\le\epsilon T^2=O(\epsilon T^2)\;}
+$$
+
+(The $O$ here is big-O notation, not the observation space $\mathcal{O}$.) A per-step error that would cost $\epsilon T$ if the data distribution held still costs up to $\epsilon T^2$, because the learner's own mistakes move the distribution. This is the classic result of Ross & Bagnell.[^ross2010]
+
+![[Reinforcement Learning/images/imitation-learning-cost-growth.svg]]
+*Figure 2: expected trajectory cost against horizon $T$, with $\epsilon=0.01$. The orange curve is the exact expected cost under the "never recover" model above, $\sum_{t}\big(1-(1-\epsilon)^{t+1}\big)$. It tracks the quadratic bound $\epsilon T^2$ while $\epsilon T\ll1$ and eventually saturates at one error per step. DAgger's $O(\epsilon T)$ line is shown for comparison.*
+
+### What can we do about it?
+
+- **Be smart about data collection and augmentation.** Show the learner how to *recover*. The classic example is NVIDIA's self-driving car, which added side-facing cameras labelled with corrective steering, so the training data contained "slightly off the road → steer back" examples.[^bojarski2016] ALVINN used a similar trick decades earlier.[^pomerleau1988]
+- **Use very powerful models that make very few mistakes.** Driving $\epsilon$ down shrinks $\epsilon T^2$, provided the model can also handle multimodal and non-Markovian behavior (see the warning above).
+- **Use multi-task learning.** Training on many related tasks or goals widens the training distribution, so the learner is less often off-distribution.
+- **Change the algorithm.** Collect data from the learner's distribution directly: DAgger.
+
+---
+
+## DAgger (Dataset Aggregation)
+
+**Goal:** make the training data come from $p_{\pi_\theta}(o_t)$, the distribution the *learner* visits, instead of $p_{\pi^*}(o_t)$. We cannot change the distribution the policy induces, but we *can* change where the labels come from: run the learner, then ask the expert what it *should* have done.[^ross2011]
+
+> [!example] Algorithm: DAgger
+> **Input:** an initial expert dataset $\mathcal{D}'=\{(o_i,a_i)\}_{i=1}^N$, and an expert $\pi^*$ that can be queried.
+> **For** $k=1,\dots,K$:
+> 1. Train $\pi_\theta(a_t\mid o_t)$ on $\mathcal{D}'$ (behavior cloning).
+> 2. Run $\pi_\theta$ in the environment to collect observations $\mathcal{D}_\pi=\{o_1,\dots,o_M\}$.
+> 3. Ask the expert to label them: $a_j=\pi^*(o_j)$ for all $o_j\in\mathcal{D}_\pi$.
+> 4. Aggregate: $\mathcal{D}'\leftarrow\mathcal{D}'\cup\{(o_j,a_j)\}_{j=1}^M$.
+>
+> **Return** the best policy found.
+
+![[Reinforcement Learning/images/imitation-learning-dagger-loop.svg]]
+*Figure 3: the DAgger loop. The learner chooses which observations get visited; the expert only supplies the labels.*
+
+**Why it works.** After enough iterations, the aggregated dataset contains observations from the distribution the learner actually visits. The training error $\epsilon$ is then measured *under the learner's own distribution*, so the mismatch term in the analysis disappears. Formally, Ross, Gordon & Bagnell cast DAgger as **no-regret online learning**: each iteration is a round, and its loss is the imitation loss on the learner's current state distribution. They show that the expected cost grows only **linearly**, $O(\epsilon T)$, where $\epsilon$ is now the best achievable error on the aggregated data.[^ross2011] The original algorithm also runs a mixture $\beta_k\pi^*+(1-\beta_k)\pi_\theta$ in step 2, with $\beta_k\to0$. Using the pure learner ($\beta_k=0$ for $k\ge2$) is the common simplification shown above.
+
+> [!warning] The catch
+> Step 3 needs an expert that can be queried on *arbitrary* observations. That is easy for a planner or a scripted controller, but awkward for humans: labelling video frames offline is unnatural, because people act well in a closed loop, not frame by frame.
+
+## Key takeaways
+
+- **Behavior cloning** is supervised learning of $\pi_\theta(a\mid o)$ from expert data. With a Gaussian policy, maximum likelihood is the same as MSE regression on actions.
+- **Covariate shift:** the learner's own mistakes take it to observations the expert never visited. A per-step error $\epsilon$ then compounds into an expected trajectory cost of $O(\epsilon T^2)$.
+- **Fixes:** data that shows recovery, better models (lower $\epsilon$, multimodal and history-aware), multi-task data, or **DAgger**, which labels the learner's own visited observations and recovers $O(\epsilon T)$.
+- The *source of the data distribution* is central to RL. It comes back in [[Introduction to Reinforcement Learning#On-policy vs Off-policy Algorithm|on- vs off-policy learning]] and in importance sampling for [[Policy Gradients#Off-policy Policy Gradients|off-policy policy gradients]].
+
+## Where this shows up next
+
+- [[Policy Gradients]]: the policy-gradient estimator is the behavior-cloning (MLE) gradient with each trajectory's log-likelihood **weighted by its return**. Imitation copies every action; RL copies the good ones more.
+
+<!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
+
+[^pomerleau1988]: Pomerleau, D. A. (1988). *ALVINN: An Autonomous Land Vehicle in a Neural Network*. NeurIPS. [link](https://papers.nips.cc/paper_files/paper/1988/hash/812b4ba287f5ee0bc9d43bbf5bbe87fb-Abstract.html)
+[^ross2010]: Ross, S., & Bagnell, J. A. (2010). *Efficient Reductions for Imitation Learning*. AISTATS. [link](https://proceedings.mlr.press/v9/ross10a.html)
+[^ross2011]: Ross, S., Gordon, G. J., & Bagnell, J. A. (2011). *A Reduction of Imitation Learning and Structured Prediction to No-Regret Online Learning* (DAgger). AISTATS. [arXiv:1011.0686](https://arxiv.org/abs/1011.0686)
+[^bojarski2016]: Bojarski, M., et al. (2016). *End to End Learning for Self-Driving Cars*. [arXiv:1604.07316](https://arxiv.org/abs/1604.07316)
+[^cs285]: Levine, S. *CS 285: Deep Reinforcement Learning*, UC Berkeley, Lecture 2 (Imitation Learning). [course page](https://rail.eecs.berkeley.edu/deeprlcourse/)

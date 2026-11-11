@@ -22,6 +22,7 @@ DRY="--dry-run"
 rsync -a -m --no-perms --delete $DRY --itemize-changes \
   --exclude '.git/' \
   --exclude '.obsidian/' \
+  --exclude '.claude/' \
   --exclude '.DS_Store' \
   --exclude '.gitignore' \
   --exclude '_meta/' \
