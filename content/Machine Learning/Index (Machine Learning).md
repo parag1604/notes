@@ -14,7 +14,4 @@ Classical machine learning, built up from first principles. Each lecture lists i
 ## Unsupervised learning
 
 5. [[Clustering and Expectation Maximization]]: K-Means (with k-means++ and choosing $K$), fuzzy and kernel K-Means, EM and the ELBO, Gaussian mixtures, spectral clustering, modularity and Louvain, hierarchical clustering, DBSCAN and evaluation metrics.
-
-## Coming soon
-
-- Matrix factorization and dimensionality reduction (SVD, PCA, kernel PCA).
+6. [[Matrix Factorization and Dimensionality Reduction]]: eigen-decomposition, SVD and Eckart–Young (with proof), power iteration and QR, pseudo-inverse, recommender systems, NMF and CUR; PCA (max variance, min error, via SVD), autoencoders, kernel PCA, and manifold methods.
