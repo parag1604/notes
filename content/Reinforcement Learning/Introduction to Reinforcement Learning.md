@@ -7,7 +7,7 @@ tags:
   - value-functions
 ---
 
-> **Prerequisites:** basic probability (conditional expectation, the tower rule) and Markov chains. Some familiarity with supervised learning ([[Linear Models]]) helps for the motivation.
+> **Prerequisites:** basic probability (conditional expectation, the tower rule) and Markov chains. Some familiarity with supervised learning ([[Linear Models]]) helps for the motivation. [[Multi-Armed Bandits]] introduces exploration in the simplest, single-state setting.
 >
 > **TL;DR:** Reinforcement learning is learning to make *sequences* of decisions when each decision changes what you see next. We model the world as a **Markov decision process** (MDP). A **policy** acts in it, and we judge the policy by its expected (discounted) sum of rewards. The **value functions** $V^\pi$ and $Q^\pi$ satisfy recursive **Bellman equations**. For finite MDPs, these give policy evaluation in closed form and characterize the optimal policy.
 
@@ -32,7 +32,7 @@ Decision-making problems usually break all three:
 
 - current actions influence future observations, and so future actions;
 - the goal is to maximize some utility (reward) accumulated over time, so credit for a good outcome must be assigned to the decisions that caused it;
-- optimal actions are not provided, and must be discovered by trial and error.
+- optimal actions are not provided, and must be discovered by trial and error. This is the exploration problem, studied in isolation in [[Multi-Armed Bandits]].
 
 Real-world deployments of ML often have the same feedback issues. For example, a traffic-prediction system's suggestions change the routes people take, which in turn changes the traffic it is trying to predict.
 

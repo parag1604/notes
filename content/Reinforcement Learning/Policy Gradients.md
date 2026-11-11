@@ -93,7 +93,7 @@ $$
 \nabla_\theta J_{\text{MLE}}(\theta)\approx\frac{1}{N}\sum_{i=1}^{N}\sum_{t=0}^{T-1}\nabla_\theta\log\pi_\theta(a_{i,t}\mid s_{i,t}).
 $$
 
-The policy gradient has one extra factor, the return $R(\tau_i)$, which **weights** each trajectory's log-likelihood. Policy gradient is therefore formalized *trial and error*. Actions from more rewarding trajectories get more weight in the update, which *reinforces* the behavior that led to reward (hence the name). Unlike BC, the data comes from the current policy itself, not from an expert.
+The policy gradient has one extra factor, the return $R(\tau_i)$, which **weights** each trajectory's log-likelihood. Policy gradient is therefore formalized *trial and error*. Actions from more rewarding trajectories get more weight in the update, which *reinforces* the behavior that led to reward (hence the name). Unlike BC, the data comes from the current policy itself, not from an expert. With a horizon of one step, REINFORCE with a softmax policy is exactly the [[Multi-Armed Bandits#Gradient bandit algorithms|gradient bandit]] algorithm.
 
 ---
 

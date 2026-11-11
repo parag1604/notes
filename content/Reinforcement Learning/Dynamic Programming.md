@@ -152,7 +152,7 @@ $$
 
 > [!warning] Two details that matter
 > - **Tie-breaking.** If two actions are equally good and the improvement step picks between them arbitrarily, the policy can switch back and forth forever between equally good policies, so step 3 never fires. Keeping the current action when it is still among the maximizers prevents this.
-> - **The initial policy is arbitrary.** Policy iteration converges from *any* $\pi_0$. With a known model nothing needs to be explored. Exploration only becomes a concern once we must *estimate* values from samples, as in [[Policy Gradients]] and Q-learning.
+> - **The initial policy is arbitrary.** Policy iteration converges from *any* $\pi_0$. With a known model nothing needs to be explored. Exploration only becomes a concern once we must *estimate* values from samples, as in [[Multi-Armed Bandits]], [[Policy Gradients]] and Q-learning.
 
 ![[Reinforcement Learning/images/dynamic-programming-policy-iteration.svg]]
 *Figure 2: policy iteration on the gridworld, starting from the bad policy "always go left". Each panel shows a policy (arrows) and its exact value ($\pi_0$, $\pi_1$, $\pi_2$ and the final $\pi_4$). One improvement step already points the top-right region towards G. After four improvements the policy stops changing; its value equals $V^*$, and it steers around the pit.*
