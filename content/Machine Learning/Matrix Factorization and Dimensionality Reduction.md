@@ -424,7 +424,7 @@ The cost is that of the $N\times N$ eigenproblem, $O(N^3)$, and mapping componen
 - [[Linear Models]]: least squares, the pseudo-inverse, and ridge regression (which shrinks along principal directions by $\sigma_i^2/(\sigma_i^2+\lambda)$).
 - [[Discriminant Analysis]]: Fisher's discriminant, the supervised counterpart of PCA.
 - [[Clustering and Expectation Maximization]]: spectral clustering (Laplacian eigenvectors) and kernel K-Means. Probabilistic PCA is a linear-Gaussian latent-variable model fitted with EM.
-- **Variational autoencoders** (coming soon): probabilistic autoencoders built on the ELBO.
+- [[Variational Autoencoders]]: probabilistic autoencoders built on the ELBO.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

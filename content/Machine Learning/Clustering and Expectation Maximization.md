@@ -503,7 +503,7 @@ It is $1$ for identical partitions, about $0$ for random ones, and invariant to 
 - [[Discriminant Analysis]]: the supervised version of the GMM, with QDA/LDA and the same estimates under hard labels.
 - [[Non-parametric Models]]: RBF similarities and density estimation. A GMM sits between one Gaussian and a full KDE.
 - [[Matrix Factorization and Dimensionality Reduction]]: PCA and kernel PCA. K-Means is a matrix factorization with one-hot codes, and spectral clustering is a Laplacian eigenmap followed by K-Means.
-- **Variational autoencoders** (coming soon): the ELBO with a learned, amortized E-step.
+- [[Variational Autoencoders]]: the ELBO with a learned, amortized E-step.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

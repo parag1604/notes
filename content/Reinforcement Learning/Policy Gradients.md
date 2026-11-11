@@ -357,6 +357,7 @@ actor_loss.backward()                                   # gradients flow through
 - Actor-critic methods learn $V^\pi$ as a baseline (future lecture).
 - Trust-region and proximal policy optimization (TRPO/PPO) formalize the "stay close to $\pi_\theta$" approximation (future lecture).
 - [[Imitation Learning]] is the unweighted special case: maximum likelihood on expert data.
+- [[Variational Autoencoders#Gradients of an expectation|Variational autoencoders]] face the same problem, the gradient of an expectation under a parameterized distribution, and compare the score-function estimator used here with the lower-variance reparameterization (pathwise) estimator.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 
