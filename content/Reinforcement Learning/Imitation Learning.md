@@ -105,10 +105,12 @@ $$
 \begin{aligned}
 \sum_{o_t}\big|p_{\text{train}}(o_t)-p_{\theta^*}(o_t)\big|
 &=\big(1-(1-\epsilon)^t\big)\sum_{o_t}\big|p_{\text{train}}(o_t)-p_{\text{mistake}}(o_t)\big|\\
-&\le 2\big(1-(1-\epsilon)^t\big)&&\text{since }\textstyle\sum_o|p(o)-q(o)|\le\sum_o p(o)+\sum_o q(o)=2\\
-&\le 2\epsilon t&&\text{since }(1-\epsilon)^t\ge 1-\epsilon t\ \text{(Bernoulli's inequality)}.
+&\le 2\big(1-(1-\epsilon)^t\big)\\
+&\le 2\epsilon t.
 \end{aligned}
 $$
+
+The first inequality holds because $\sum_o|p(o)-q(o)|\le\sum_o p(o)+\sum_o q(o)=2$ for any two distributions. The second uses Bernoulli's inequality, $(1-\epsilon)^t\ge1-\epsilon t$.
 
 So the learner's distribution drifts away from the training distribution *linearly in time*.
 

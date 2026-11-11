@@ -65,7 +65,7 @@ $$
 \end{aligned}
 $$
 
-In terms of the [[Introduction to Reinforcement Learning#Anatomy of a RL algorithm|anatomy of an RL algorithm]], the sum over samples is the *generate samples* step and the return is the *fit a model / estimate returns* step. The *improve the policy* step is plain gradient ascent with learning rate $\alpha$:
+In terms of the [[Introduction to Reinforcement Learning#Anatomy of an RL algorithm|anatomy of an RL algorithm]], the sum over samples is the *generate samples* step and the return is the *fit a model / estimate returns* step. The *improve the policy* step is plain gradient ascent with learning rate $\alpha$:
 
 $$
 \theta\leftarrow\theta+\alpha\,\nabla_\theta J(\theta).
@@ -119,7 +119,10 @@ Trajectories better than $b$ get pushed up, and worse ones get pushed down. A si
 **Baselines are unbiased.** For any constant $b$,
 
 $$
-\mathbb{E}_{\tau\sim p_\theta}\big[\nabla_\theta\log p_\theta(\tau)\,b\big]=\int p_\theta(\tau)\,\nabla_\theta\log p_\theta(\tau)\,b\,d\tau=b\int\nabla_\theta p_\theta(\tau)\,d\tau=b\,\nabla_\theta\underbrace{\int p_\theta(\tau)\,d\tau}_{=1}=0.
+\begin{aligned}
+\mathbb{E}_{\tau\sim p_\theta}\big[\nabla_\theta\log p_\theta(\tau)\,b\big]&=\int p_\theta(\tau)\,\nabla_\theta\log p_\theta(\tau)\,b\,d\tau\\
+&=b\int\nabla_\theta p_\theta(\tau)\,d\tau=b\,\nabla_\theta\underbrace{\int p_\theta(\tau)\,d\tau}_{=1}=0.
+\end{aligned}
 $$
 
 So subtracting a baseline leaves the *expected* gradient unchanged and only changes its variance. (Strictly, a $b$ computed from the same batch adds a small $O(1/N)$ bias. In practice it is negligible, or it can be avoided by a leave-one-out average.) The baseline can also be a learned function, trained by regression alongside the policy.
@@ -206,19 +209,28 @@ $$
 (At $\theta'=\theta$ the ratio is $1$ and we recover the on-policy gradient.) Substituting (2) and expanding:
 
 $$
-\nabla_{\theta'}J(\theta')=\mathbb{E}_{\tau\sim p_\theta(\tau)}\left[\left(\prod_{t=0}^{T-1}\frac{\pi_{\theta'}(a_t\mid s_t)}{\pi_\theta(a_t\mid s_t)}\right)\left(\sum_{t=0}^{T-1}\nabla_{\theta'}\log\pi_{\theta'}(a_t\mid s_t)\right)\left(\sum_{t=0}^{T-1}r(s_t,a_t)\right)\right].
+\begin{aligned}
+\nabla_{\theta'}J(\theta')=\mathbb{E}_{\tau\sim p_\theta(\tau)}\Bigg[&\left(\prod_{t=0}^{T-1}\frac{\pi_{\theta'}(a_t\mid s_t)}{\pi_\theta(a_t\mid s_t)}\right)\\
+&\times\left(\sum_{t=0}^{T-1}\nabla_{\theta'}\log\pi_{\theta'}(a_t\mid s_t)\right)\left(\sum_{t=0}^{T-1}r(s_t,a_t)\right)\Bigg].
+\end{aligned}
 $$
 
 **Causality again.** Future actions cannot affect the current gradient term, and the importance weight for reward $r_{t'}$ only needs actions up to $t'$:
 
 $$
-\nabla_{\theta'}J(\theta')=\mathbb{E}_{\tau\sim p_\theta(\tau)}\left[\sum_{t=0}^{T-1}\nabla_{\theta'}\log\pi_{\theta'}(a_t\mid s_t)\left(\prod_{t'=0}^{t}\frac{\pi_{\theta'}(a_{t'}\mid s_{t'})}{\pi_\theta(a_{t'}\mid s_{t'})}\right)\left(\sum_{t'=t}^{T-1}r(s_{t'},a_{t'})\prod_{t''=t}^{t'}\frac{\pi_{\theta'}(a_{t''}\mid s_{t''})}{\pi_\theta(a_{t''}\mid s_{t''})}\right)\right].
+\begin{aligned}
+\nabla_{\theta'}J(\theta')=\mathbb{E}_{\tau\sim p_\theta(\tau)}\Bigg[\sum_{t=0}^{T-1}&\nabla_{\theta'}\log\pi_{\theta'}(a_t\mid s_t)\left(\prod_{t'=0}^{t}\frac{\pi_{\theta'}(a_{t'}\mid s_{t'})}{\pi_\theta(a_{t'}\mid s_{t'})}\right)\\
+&\times\left(\sum_{t'=t}^{T-1}r(s_{t'},a_{t'})\prod_{t''=t}^{t'}\frac{\pi_{\theta'}(a_{t''}\mid s_{t''})}{\pi_\theta(a_{t''}\mid s_{t''})}\right)\Bigg].
+\end{aligned}
 $$
 
 If we drop the last product, the importance weights on *future rewards*, we no longer have the exact policy gradient. What remains still improves the policy, and it leads to a *policy iteration*-style algorithm (CS285, Lecture 5).[^cs285] Even in the reduced form
 
 $$
-\nabla_{\theta'}J(\theta')\approx\mathbb{E}_{\tau\sim p_\theta(\tau)}\left[\sum_{t=0}^{T-1}\nabla_{\theta'}\log\pi_{\theta'}(a_t\mid s_t)\left(\prod_{t'=0}^{t}\frac{\pi_{\theta'}(a_{t'}\mid s_{t'})}{\pi_\theta(a_{t'}\mid s_{t'})}\right)\left(\sum_{t'=t}^{T-1}r(s_{t'},a_{t'})\right)\right],
+\begin{aligned}
+\nabla_{\theta'}J(\theta')\approx\mathbb{E}_{\tau\sim p_\theta(\tau)}\Bigg[\sum_{t=0}^{T-1}&\nabla_{\theta'}\log\pi_{\theta'}(a_t\mid s_t)\\
+&\times\left(\prod_{t'=0}^{t}\frac{\pi_{\theta'}(a_{t'}\mid s_{t'})}{\pi_\theta(a_{t'}\mid s_{t'})}\right)\left(\sum_{t'=t}^{T-1}r(s_{t'},a_{t'})\right)\Bigg],
+\end{aligned}
 $$
 
 the middle product is a product of up to $T$ ratios. It is cheap to *compute*, but its **variance grows exponentially in $T$**. If each ratio is a little below 1 the product vanishes, and if it is a little above 1 the product explodes. So this estimator works poorly for long horizons.
@@ -251,12 +263,16 @@ Often, though, part of the pipeline after the action *is* differentiable. A lear
 
 For a single decision with objective $f(s,a)$, for example $f=Q_\phi(s,a)$:
 
+**Score function (REINFORCE):**
+
 $$
-\nabla_\theta\,\mathbb{E}_{a\sim\pi_\theta(\cdot\mid s)}\big[f(s,a)\big]=
-\begin{cases}
-\mathbb{E}_{a\sim\pi_\theta}\big[f(s,a)\,\nabla_\theta\log\pi_\theta(a\mid s)\big] & \text{score function (REINFORCE)}\\[4pt]
-\mathbb{E}_{\xi}\big[\nabla_a f(s,a)\big|_{a=h_\theta(s,\xi)}\,\nabla_\theta h_\theta(s,\xi)\big] & \text{pathwise, if }a=h_\theta(s,\xi)\text{ is differentiable.}
-\end{cases}
+\nabla_\theta\,\mathbb{E}_{a\sim\pi_\theta}\big[f(s,a)\big]=\mathbb{E}_{a\sim\pi_\theta}\big[f(s,a)\,\nabla_\theta\log\pi_\theta(a\mid s)\big].
+$$
+
+**Pathwise**, if the action can be written as a differentiable function $a=h_\theta(s,\xi)$ of parameter-free noise $\xi$:
+
+$$
+\nabla_\theta\,\mathbb{E}_{a\sim\pi_\theta}\big[f(s,a)\big]=\mathbb{E}_{\xi}\Big[\nabla_a f(s,a)\big|_{a=h_\theta(s,\xi)}\,\nabla_\theta h_\theta(s,\xi)\Big].
 $$
 
 The score-function estimator only needs the *values* $f(s,a)$, and its variance is high. The pathwise estimator uses the *gradient* $\nabla_a f$, which carries far more information per sample, and its variance is typically much lower. STGS gives us an approximate $h_\theta$ for categorical actions.
