@@ -268,7 +268,7 @@ where $\boldsymbol{\sigma}=\sigma(\mathbf{X}\mathbf{w})$ elementwise and $\mathb
 > A Newton step is $\mathbf{w}\leftarrow\mathbf{w}-(\mathbf{X}^\top\mathbf{S}\mathbf{X})^{-1}\mathbf{X}^\top(\boldsymbol{\sigma}-\mathbf{y})$. It can be rewritten as $\mathbf{w}\leftarrow(\mathbf{X}^\top\mathbf{S}\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{S}\,\mathbf{z}$ with "working targets" $\mathbf{z}=\mathbf{X}\mathbf{w}-\mathbf{S}^{-1}(\boldsymbol{\sigma}-\mathbf{y})$. That is a [[#Weighted linear regression|weighted least-squares]] problem with weights $\sigma_i(1-\sigma_i)$, re-solved at every step. Hence the name **IRLS**.
 
 > [!warning] Separable data breaks maximum likelihood
-> If some hyperplane separates the two classes perfectly, scaling its $\mathbf{w}$ up pushes every probability towards $0$ or $1$ and the loss towards $0$. The likelihood keeps increasing, so the MLE does not exist: $\lVert\mathbf{w}\rVert\to\infty$. Regularization fixes this. **Support vector machines** (next lecture) take a different route and pick the separating hyperplane with the largest margin.
+> If some hyperplane separates the two classes perfectly, scaling its $\mathbf{w}$ up pushes every probability towards $0$ or $1$ and the loss towards $0$. The likelihood keeps increasing, so the MLE does not exist: $\lVert\mathbf{w}\rVert\to\infty$. Regularization fixes this. [[Support Vector Machines]] take a different route and pick the separating hyperplane with the largest margin.
 
 **Regularization** works exactly as for regression. For example, $\mathcal{L}(\mathbf{w})+\frac{\lambda}{2}\lVert\mathbf{w}\rVert_2^2$ corresponds to a Gaussian prior, and $\mathcal{L}(\mathbf{w})+\lambda\lVert\mathbf{w}\rVert_1$ to a sparse (Laplace) prior.
 
@@ -354,7 +354,7 @@ Where weighted least squares shows up:
 ## Where this shows up next
 
 - [[Discriminant Analysis]]: a *generative* route to linear classifiers. Its posterior turns out to be a logistic or softmax function of $\mathbf{x}$.
-- **Support Vector Machines** (coming soon): maximum-margin linear classifiers and the kernel trick.
+- [[Support Vector Machines]]: maximum-margin linear classifiers and the kernel trick.
 - [[Imitation Learning]] and [[Policy Gradients]]: maximum likelihood and weighted maximum likelihood, applied to policies.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
