@@ -16,8 +16,8 @@ const config: QuartzConfig = {
       provider: "plausible",
     },
     locale: "en-US",
-    baseUrl: "quartz.jzhao.xyz",
-    ignorePatterns: ["private", "templates", ".obsidian"],
+    baseUrl: "parag1604.github.io/notes",
+    ignorePatterns: ["private", "templates", ".obsidian", "_meta", "CLAUDE.md"],
     defaultDateType: "created",
     generateSocialImages: false,
     theme: {

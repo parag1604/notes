@@ -1,7 +1,10 @@
 ---
 title: Linear Models
+tags:
+  - linear-regression
+  - logistic-regression
+  - regularization
 ---
-
 
 ## Linear Regression
 

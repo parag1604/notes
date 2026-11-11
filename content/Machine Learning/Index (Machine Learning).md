@@ -6,4 +6,4 @@ title: Index (Machine Learning)
 - [ ] [[Bayesian Decision Theory|Bayesian Decision Theory]] (todo)
 - [ ] [[Discriminant Analysis|Discriminant Analysis]]
 - [ ] [[Linear Models|Linear and Logistic Regression]]
-- [ ] [[Vector Machines|Support Vector Machines]]
+- [ ] [[Support Vector Machines|Support Vector Machines]] (todo)
