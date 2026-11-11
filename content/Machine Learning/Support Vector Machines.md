@@ -405,7 +405,7 @@ On the problem of Figure 5, this agrees with scikit-learn's `SVR` to within $0.0
 - [[Linear Models]]: the logistic-regression counterpart, and $L_2$ regularization.
 - [[Discriminant Analysis]]: generative linear classifiers. LDA, logistic regression and the linear SVM are three routes to a hyperplane.
 - [[Non-parametric Models]]: Parzen windows and kernels as smoothing windows.
-- **Kernel k-means, kernel PCA and spectral methods** (coming soon) reuse this lecture's kernels.
+- [[Clustering and Expectation Maximization#Kernel K-Means|Kernel K-Means]] and [[Clustering and Expectation Maximization#Spectral clustering|spectral clustering]] reuse this lecture's kernels and Lagrangian tools; kernel PCA comes with matrix factorization.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

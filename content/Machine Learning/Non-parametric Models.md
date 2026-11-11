@@ -252,7 +252,7 @@ Libraries such as FAISS combine these ideas (inverted files + PQ + GPUs) to sear
 
 - [[Discriminant Analysis]]: parametric (Gaussian) class densities instead of KDE.
 - [[Support Vector Machines]]: kernels as similarities, and a sparse alternative to storing every point (only the support vectors).
-- **Clustering and mixture models** (coming soon): $k$-means resembles nearest-mean classification with unknown labels; Gaussian mixtures sit between a single Gaussian and a KDE.
+- [[Clustering and Expectation Maximization]]: $k$-means is nearest-mean classification with unknown labels, and Gaussian mixtures sit between a single Gaussian and a KDE.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

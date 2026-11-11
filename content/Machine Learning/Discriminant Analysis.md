@@ -209,7 +209,7 @@ Ng and Jordan made this precise:[^ngjordan2001] generative models often reach th
 - [[Linear Models]]: logistic regression, the discriminative counterpart of LDA.
 - [[Support Vector Machines]]: a third route to a separating hyperplane, the one with maximum margin.
 - [[Non-parametric Models]]: classifiers that keep the data instead of summarizing it.
-- **Expectation maximization** (coming soon): Gaussian mixture models are QDA with *unknown* labels, fitted with soft, probabilistic class assignments.
+- [[Clustering and Expectation Maximization#Gaussian mixture models|Gaussian mixture models]]: QDA with *unknown* labels, fitted by EM with soft, probabilistic class assignments.
 - **Dimensionality reduction** (coming soon): PCA, the unsupervised cousin of Fisher's projection.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
