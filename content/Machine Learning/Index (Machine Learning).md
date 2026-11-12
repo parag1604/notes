@@ -2,7 +2,7 @@
 title: Index (Machine Learning)
 ---
 
-Classical machine learning, built up from first principles. Each lecture lists its prerequisites at the top; the probability they all use is collected in [[Probability Basics]].
+Machine learning built up from first principles: classical supervised and unsupervised methods, then representation learning and deep generative models. Each lecture lists its prerequisites at the top; the probability they use is in the [[Index (Probability and Linear Algebra)|Probability and Linear Algebra]] series.
 
 ## How machine learning works in practice
 
@@ -21,7 +21,7 @@ A machine-learning model is a function fitted to data, so that it can make predi
 
 The point of the splits is to estimate how the model will do on **new** data. Error on the data a model was fitted to is optimistic, because flexible models can memorize it (overfitting).
 - The **training set** is used to fit the parameters.
-- The **validation set** is used to choose among models and hyperparameters, such as the regularization strength in [[Linear Models#MAP estimation and regularization|ridge regression]] or $k$ in [[Non-parametric Models|$k$-nearest neighbours]]. Because we choose whatever scores best on it, its score is also slightly optimistic.
+- The **validation set** is used to choose among models and hyperparameters, such as the regularization strength in [[Linear Models#MAP estimation and regularization|ridge regression]] or the number of neighbours $k$ in [[Non-parametric Models|k-nearest neighbours]]. Because we choose whatever scores best on it, its score is also slightly optimistic.
 - The **test set** is touched only once, at the end, to report performance. Using it to make decisions turns it into a second validation set.
 
 Typical proportions are 60/20/20 or 80/10/10. When data are scarce, **$k$-fold cross-validation** replaces the single validation set: split the non-test data into $k$ folds, train on $k-1$ of them and validate on the remaining one, rotate through all $k$, and average the $k$ scores. Two common pitfalls:
@@ -39,3 +39,14 @@ Typical proportions are 60/20/20 or 80/10/10. When data are scarce, **$k$-fold c
 
 5. [[Clustering and Expectation Maximization]]: K-Means (with k-means++ and choosing $K$), fuzzy and kernel K-Means, EM and the ELBO, Gaussian mixtures, spectral clustering, modularity and Louvain, hierarchical clustering, DBSCAN and evaluation metrics.
 6. [[Matrix Factorization and Dimensionality Reduction]]: eigen-decomposition, SVD and Eckart–Young (with proof), power iteration and QR, pseudo-inverse, recommender systems, NMF and CUR; PCA (max variance, min error, via SVD), autoencoders, kernel PCA, and manifold methods.
+
+## Representation learning and generative models
+
+Learning representations of data, and generative models that learn to produce new data. The linear methods (PCA, kernel PCA, autoencoders) are in [[Matrix Factorization and Dimensionality Reduction]] above.
+
+7. [[Variational Autoencoders]]: the ELBO as amortized EM, score-function vs reparameterization gradients, the Gaussian VAE with its closed-form KL, sampling through the aggregate posterior, forward vs reverse KL, and practical issues (blurry samples, posterior collapse, β-VAE).
+8. [[Generative Adversarial Networks]]: f-divergences and Fenchel conjugates, the variational lower bound and the f-GAN, the original GAN as a special case ($D^*$, $2\,\mathrm{JSD}-\log4$), training in practice, mode collapse, and the Wasserstein GAN.
+9. [[Energy-Based Models]]: the Boltzmann distribution (staircase intuition and maximum entropy), Hopfield networks as associative memory, Boltzmann machines and RBMs with contrastive divergence, the EBM likelihood gradient and Langevin sampling, contrastive losses (InfoNCE, CLIP) derived from energy, and modern Hopfield networks as attention.
+10. [[Score-Based Models]]: the score and its properties, implicit, sliced and denoising score matching, Tweedie's formula (the score is the optimal denoiser), why naive score-based sampling fails, noise-conditional score networks with annealed Langevin dynamics, and a preview of the SDE view.
+
+Coming soon, in this order: Denoising Diffusion Models, Flow Matching. Also planned: Normalizing Flows.

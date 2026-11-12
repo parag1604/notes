@@ -42,7 +42,7 @@ Look at the two kinds of mistakes the model can make.
 
 So $D_{\mathrm{KL}}(p_X\,\|\,p_\theta)$ has no "mechanism" to discourage the model from sampling in regions of low data density. Figure 1 shows the consequence for a model that is too simple: the forward KL covers both modes and puts much of its mass in the empty valley between them.
 
-![[Representation Learning/images/generative-forward-reverse-kl.svg]]
+![[Machine Learning/images/generative-forward-reverse-kl.svg]]
 *Figure 1: fitting one Gaussian to a bimodal target. Left: forward KL (maximum likelihood) covers everything, including the empty valley. Right: reverse KL commits to a single mode and never generates in the valley.*
 
 For generating realistic samples, Case 2 is precisely the failure we care about: a sample from the valley is unrealistic. This motivates looking at a whole family of divergences, some of which penalize Case 2 more heavily. There is a second, practical motivation: as we will see, the f-divergences can be minimized using **only samples** from the model, so the generator needs no tractable density.
@@ -94,7 +94,7 @@ The trouble is that $D_f$ needs the density ratio $p/q$, and we have neither den
 >
 > For differentiable, strictly convex $f$, the supremum is attained where $t=f'(u)$. Hence the derivatives of $f$ and $f^*$ are **inverse functions**: $(f^*)'=(f')^{-1}$.
 
-![[Representation Learning/images/gan-fenchel-conjugate.svg]]
+![[Machine Learning/images/gan-fenchel-conjugate.svg]]
 *Figure 2: left, the conjugate of $f(u)=u\log u$ at slope $t=1$. The largest gap between $tu$ and $f$ occurs where $f'(u)=t$, i.e. at $u=e^{t-1}=1$, and equals $f^*(1)=1$. The dashed line, of slope $t$ and intercept $-f^*(t)$, touches $f$ from below. Right: two conjugates, $e^{t-1}$ for KL, and $-\log(1-e^{t})$ for the GAN generator, which is only finite for $t<0$.*
 
 ## A variational lower bound on $D_f$
@@ -154,7 +154,7 @@ $$
 
 The critic maximizes $F$ to make the bound as tight as possible, i.e. to *estimate* the divergence. The generator minimizes $F$ to *reduce* the estimated divergence. Since the two networks respectively minimize and maximize the same objective, the procedure is called **adversarial learning**, and the pair is a **generative adversarial network**. The critic is traditionally called the **discriminator**.
 
-![[Representation Learning/images/gan-architecture.svg]]
+![[Machine Learning/images/gan-architecture.svg]]
 *Figure 3: the f-GAN. The generator turns noise into fake samples. The critic $V_\omega$ scores real and fake samples with a real number, and $g_f$ maps that score into the domain of $f^*$. Both networks play the same objective $F(\theta,\omega)$ with opposite goals.*
 
 A few divergences and their activations:[^nowozin2016]
@@ -213,7 +213,7 @@ $$
 
 This is the Bayes-optimal classifier for "real or fake" with equal priors. Where the generator over-produces, $D^*<\tfrac12$; where it under-produces, $D^*>\tfrac12$.
 
-![[Representation Learning/images/gan-optimal-discriminator.svg]]
+![[Machine Learning/images/gan-optimal-discriminator.svg]]
 *Figure 4: the optimal discriminator for a fixed generator. $D^*$ is near 1 where only real data lives, near 0 where only fakes live, and exactly $\tfrac12$ where the two densities are equal. Its gradient tells the generator where to move its mass.*
 
 **Step 6: the value at the optimum.** Substituting $D^*$ into (4):
@@ -255,7 +255,7 @@ $$
 
 Both losses push $D(G(\mathbf{z}))$ up. But $-\log D$ is steep near $D=0$, so a bad generator gets strong gradients.[^goodfellow2014]
 
-![[Representation Learning/images/gan-generator-losses.svg]]
+![[Machine Learning/images/gan-generator-losses.svg]]
 *Figure 5: the two generator losses as a function of the discriminator's output on a fake sample. Both decrease towards $D=1$. The saturating loss is nearly flat in the shaded region where training starts, while the non-saturating loss is steepest there.*
 
 ### Mode collapse and instability
@@ -280,7 +280,7 @@ $$
 
 where $\Pi(P,Q)$ is the set of joint distributions (couplings) with marginals $P$ and $Q$. In the example, $W_1(P,Q_\theta)=|\theta|$, which is continuous and has a useful gradient everywhere.
 
-![[Representation Learning/images/gan-js-vs-wasserstein.svg]]
+![[Machine Learning/images/gan-js-vs-wasserstein.svg]]
 *Figure 6: two parallel line segments a distance $\theta$ apart. The JS divergence is $\log2$ for every $\theta\ne0$ and drops to 0 only at $\theta=0$, so it gives the generator no gradient. The Wasserstein distance $|\theta|$ shrinks smoothly as the generator improves.*
 
 **A critic for $W_1$.** The coupling form is intractable, but the **Kantorovich–Rubinstein duality** turns it into a supremum over critics, much like (2):

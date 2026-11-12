@@ -58,7 +58,7 @@ $$
 
 $Z$ is the **partition function** (from the German *Zustandssumme*, "sum over states").
 
-![[Representation Learning/images/energy-based-models-boltzmann.svg]]
+![[Machine Learning/images/energy-based-models-boltzmann.svg]]
 *Figure 1. (a) The staircase picture: each step up adds energy $\delta$ and has probability $p$, so a jump of $N$ levels has probability $p^N=e^{-\Delta E/\tau}$. (b) The resulting Boltzmann distribution over 8 equally spaced levels. At low temperature almost everything sits in the ground state; at high temperature the distribution flattens towards uniform.*
 
 The temperature controls how peaked the distribution is (Figure 1b):
@@ -114,7 +114,7 @@ We set $\tau=1$ from now on: a temperature can always be absorbed into $E_\theta
 
 Think of $E_\theta$ as a **landscape** over the data space (Figure 2). Plausible data sit in valleys; implausible inputs sit on hills. Learning means sculpting the landscape so that the valleys line up with the training data.
 
-![[Representation Learning/images/energy-based-models-landscape.svg]]
+![[Machine Learning/images/energy-based-models-landscape.svg]]
 *Figure 2. (a) A one-dimensional energy function with a global and a local minimum. (b) The densities it defines at three temperatures. The deep valley gets the most mass; lowering $\tau$ concentrates almost all the mass there.*
 
 Two properties make EBMs attractive:
@@ -178,7 +178,7 @@ $$
 
 Each stored pattern contributes minus its **squared overlap** with the current state. Learning a pattern literally digs a valley centred on it. Recall then works as in Figure 3: start from a corrupted pattern, update units one by one, and watch the energy fall until the stored pattern reappears.
 
-![[Representation Learning/images/energy-based-models-hopfield-recall.svg]]
+![[Machine Learning/images/energy-based-models-hopfield-recall.svg]]
 *Figure 3. A 144-unit Hopfield network storing four $12\times12$ glyphs (X, O, T, L) with Hebb's rule. Starting from the "O" with 30% of its pixels flipped, asynchronous updates restore it exactly. The energy (bottom) decreases monotonically and stops at the energy of the stored pattern.*
 
 ### Capacity and spurious memories
@@ -192,7 +192,7 @@ $$
 
 For random patterns the crosstalk is a sum of about $MD$ random $\pm1$ terms divided by $D$, so it is roughly Gaussian with mean 0 and variance $\approx M/D$. Bit $i$ is stable unless the crosstalk overwhelms the signal. The **load** $\alpha=M/D$ (patterns per neuron) is what matters. A careful statistical-mechanics analysis shows that recall collapses abruptly at $\alpha_c\approx0.138$:[^amit1985] a network of $D$ neurons stores only about $0.14D$ random patterns (Figure 4).
 
-![[Representation Learning/images/energy-based-models-hopfield-capacity.svg]]
+![[Machine Learning/images/energy-based-models-hopfield-capacity.svg]]
 *Figure 4. Simulated capacity with $D=400$ (6 trials per point). Almost all bits of a stored pattern remain stable well past $\alpha_c$ (blue), but recall from a 10%-corrupted cue collapses near $\alpha_c$ (orange): wrong bits trigger further wrong bits, and the state drifts into a spurious minimum. In a finite network the drop is smeared slightly beyond $0.138$.*
 
 The landscape also has valleys we never asked for:
@@ -269,7 +269,7 @@ p(\mathbf{v})=\frac{e^{-F(\mathbf{v})}}{Z},
 F(\mathbf{v})=-\mathbf{a}^\top\mathbf{v}-\sum_{j=1}^{H}\log\Big(1+e^{\,b_j+\mathbf{v}^\top\mathbf{w}_{:j}}\Big).
 $$
 
-![[Representation Learning/images/energy-based-models-rbm.svg]]
+![[Machine Learning/images/energy-based-models-rbm.svg]]
 *Figure 5. (a) An RBM: a layer of visible units and a layer of hidden units, with connections only between layers. (b) Block Gibbs sampling alternates between the two layers. Contrastive divergence (CD-1) starts the chain at a data point and stops after one reconstruction.*
 
 ### Contrastive divergence
@@ -339,7 +339,7 @@ Without the noise, (10) would slide into the nearest valley, as a Hopfield netwo
 
 Notice what (10) uses: $\nabla_{\mathbf{x}}E_\theta(\mathbf{x})=-\nabla_{\mathbf{x}}\log p_\theta(\mathbf{x})$. The partition function is a constant in $\mathbf{x}$, so it **disappears** from the gradient. The quantity $\nabla_{\mathbf{x}}\log p(\mathbf{x})$ is called the **score**, and it is all a sampler needs.
 
-![[Representation Learning/images/energy-based-models-langevin.svg]]
+![[Machine Learning/images/energy-based-models-langevin.svg]]
 *Figure 6. Langevin dynamics (10) on a two-dimensional energy with three wells ($\eta=0.01$). (a) Three chains from different corners each settle into a well and then wander inside it; crossing between wells is rare. (b) 1500 chains started uniformly at random end up split roughly equally among the three wells (31%, 31%, 38%), matching the three equal-mass modes.*
 
 Figure 6a shows the main practical difficulty: **mixing**. A chain rarely crosses a high-energy barrier, so with few steps the samples reflect where the chains started rather than the true weights of the modes. Practical deep EBMs therefore use short chains, initialize them from a **replay buffer** of earlier samples, and regularize the energy magnitudes to keep training stable.[^du2019] Song and Kingma's tutorial surveys these techniques.[^song2021]
@@ -419,7 +419,7 @@ It is guaranteed to lower the energy, and for well-separated patterns it converg
 
 Then (12) is exactly the attention of a transformer,[^vaswani2017] $\operatorname{softmax}(\mathbf{q}^\top\mathbf{K}^\top/\sqrt{d_k})\mathbf{V}$. **One attention step is one retrieval step of an associative memory.** The temperature controls what is retrieved (Figure 7). At small $\beta$, the softmax is nearly uniform and the update returns an average of all memories, a "metastable" state. At large $\beta$, it snaps to the single closest memory. The same weighted-average-by-similarity view appeared earlier as [[Non-parametric Models#Similarity-based (dot-product) neighbours|kernel regression]].
 
-![[Representation Learning/images/energy-based-models-modern-hopfield.svg]]
+![[Machine Learning/images/energy-based-models-modern-hopfield.svg]]
 *Figure 7. One retrieval step (12) of a modern Hopfield network storing the four glyphs from Figure 3 as continuous vectors. The query is the "T" with its lower half masked (set to 0). Top: the retrieved state; bottom: the softmax weights over the stored patterns. At $\beta=0.002$ the weights are nearly uniform and the output is a blur of all four glyphs; at $\beta=0.03$ the "T" dominates; at $\beta=0.5$ the full "T" is retrieved in one step.*
 
 ## EBMs among the generative models

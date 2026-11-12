@@ -47,7 +47,7 @@ It is a vector field that points in the direction in which the log-density incre
 - **Gaussians have linear scores.** For $\mathcal{N}(\boldsymbol\mu,\sigma^2\mathbf{I})$, $\mathbf{s}(\mathbf{x})=-(\mathbf{x}-\boldsymbol\mu)/\sigma^2$: a spring pulling back to the mean, stronger for narrow Gaussians.
 - **Mixtures average their components' scores.** For $p=\sum_k\pi_kp_k$, $\mathbf{s}(\mathbf{x})=\sum_k r_k(\mathbf{x})\nabla\log p_k(\mathbf{x})$, where $r_k(\mathbf{x})=\pi_kp_k(\mathbf{x})/p(\mathbf{x})$ are the [[Clustering and Expectation Maximization#E-step: responsibilities|responsibilities]] from EM. Every score in this lecture's figures is computed this way, exactly.
 
-![[Representation Learning/images/score-based-models-score-field.svg]]
+![[Machine Learning/images/score-based-models-score-field.svg]]
 *Figure 1. (a) A mixture of three Gaussians. (b) Its score field, shown as unit-length arrows coloured by magnitude. The arrows point towards the nearest mode, and they are longest far from the data, where $\log p$ drops quadratically.*
 
 A score model is a network $\mathbf{s}_\theta:\mathbb{R}^D\to\mathbb{R}^D$ with as many outputs as inputs, typically a U-Net for images. Nothing forces $\mathbf{s}_\theta$ to be the gradient of a scalar function. That freedom is deliberate: a free-form vector field is easier to fit, and in practice the learned field is close enough to a gradient for sampling to work.
@@ -163,7 +163,7 @@ $$
 
 Denoising score matching is the method that won. It needs no Jacobian at all: one forward pass and an ordinary mean-squared error. The price is that it learns the score of $q_\sigma$, not of $p$. For small $\sigma$ the two are close; for large $\sigma$ they differ, which turns out to be a feature (next section). Figure 2 shows it working.
 
-![[Representation Learning/images/score-based-models-dsm-fit.svg]]
+![[Machine Learning/images/score-based-models-dsm-fit.svg]]
 *Figure 2. Denoising score matching on a 1-D mixture (density shaded green). A model that is linear in 40 Gaussian bump features is fitted to the DSM target $-\epsilon/\sigma$ by least squares on 20 000 noisy samples. It recovers the noisy score $\nabla\log q_\sigma$ (blue), not the clean one (dotted): the relative error is 10% at $\sigma=0.3$ and 4% at $\sigma=1$, measured where $q_\sigma$ exceeds 1% of its peak. At $\sigma=0.3$ the fit is wild beyond $|x|\approx4$, where there is no data to fit.*
 
 Rewriting (4) in terms of a **noise predictor** $\boldsymbol\epsilon_\theta(\tilde{\mathbf{x}})=-\sigma\,\mathbf{s}_\theta(\tilde{\mathbf{x}})$ turns it into
@@ -201,7 +201,7 @@ Read (5) three ways:
 - **DSM is consistent.** The minimizer of (4) is the conditional mean of its target, $\mathbb{E}[-\boldsymbol\epsilon/\sigma\mid\tilde{\mathbf{x}}]=\nabla\log q_\sigma(\tilde{\mathbf{x}})$, by (5). This is a second proof of Vincent's theorem.
 - **Denoising autoencoders learn scores.** An autoencoder $r$ trained to map $\tilde{\mathbf{x}}$ back to $\mathbf{x}$ with squared error learns $r(\tilde{\mathbf{x}})=\mathbb{E}[\mathbf{x}\mid\tilde{\mathbf{x}}]$, so $(r(\tilde{\mathbf{x}})-\tilde{\mathbf{x}})/\sigma^2$ is a score estimate.[^alain2014]
 
-![[Representation Learning/images/score-based-models-tweedie.svg]]
+![[Machine Learning/images/score-based-models-tweedie.svg]]
 *Figure 3. The optimal denoiser $\mathbb{E}[x\mid\tilde x]$ for a 1-D mixture with modes at $-2$ and $1.5$, from Tweedie's formula. With little noise it stays near the identity and only shrinks towards the nearer mode; with $\sigma=2$ it pulls everything towards the modes. A Monte Carlo check of $\mathbb{E}[x\mid\tilde x=0.5]$ agrees with (5) to within sampling error (e.g. 0.994 vs 0.986 at $\sigma=0.5$).*
 
 ## Why naive score-based sampling fails
@@ -229,7 +229,7 @@ All three problems have the same remedy: **perturb the data with noise**.
 
 The trade-off is that large noise destroys the data: we want samples from $p$, not from a blurred $q_\sigma$. Figure 4 shows the whole range: small $\sigma$ is accurate but has empty regions, and large $\sigma$ covers everything but has lost the structure.
 
-![[Representation Learning/images/score-based-models-noise-levels.svg]]
+![[Machine Learning/images/score-based-models-noise-levels.svg]]
 *Figure 4. The noisy density $q_\sigma$ and its score directions for the three-mode mixture of Figure 1, at increasing noise. With clean data the modes are isolated and the space between them is empty; by $\sigma=1$ they are connected; by $\sigma=2$ there is one broad mode, with more mass towards the heavier component.*
 
 The resolution is not to choose one $\sigma$ but to use **many**: start sampling with a large noise level to find the right region and the right proportions, and move to smaller noise levels to recover the detail.
@@ -273,10 +273,10 @@ The step size shrinks with $\sigma_i^2$ for a reason. The score has magnitude ab
 
 Figures 5 and 6 show annealed Langevin on two toy problems with exact (analytic) noisy scores. With the clean score, Langevin gets the mode weights badly wrong. Annealing gets them nearly right, and it covers all eight modes of a ring evenly.
 
-![[Representation Learning/images/score-based-models-mode-weights.svg]]
+![[Machine Learning/images/score-based-models-mode-weights.svg]]
 *Figure 5. A mixture with weights 0.8 (lower left) and 0.2 (upper right), 1500 chains started uniformly in $[-8,8]^2$. (a) True samples: 82% lower left. (b) Langevin with the exact clean score, 1000 steps: 53%, because each chain stays in the mode nearest its start. (c) Annealed Langevin over 10 noise levels from $\sigma=10$ to $0.1$, 100 steps each: 77%, close to the true 80%.*
 
-![[Representation Learning/images/score-based-models-annealed.svg]]
+![[Machine Learning/images/score-based-models-annealed.svg]]
 *Figure 6. Annealed Langevin dynamics on a ring of eight Gaussians, through 12 noise levels from $\sigma=8$ to $0.05$ (60 steps per level). The samples go from structureless, to a blob with the ring's overall size, to eight clusters. At the end every mode holds between 11% and 13% of the 2000 samples.*
 
 ### Practical recipe

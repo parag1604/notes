@@ -60,7 +60,7 @@ The model has the autoencoder's shape:
 - the **encoder** gives $\mathbf{z}_i\sim q_\phi(\cdot\mid\mathbf{x}_i)$;
 - the **decoder** gives $\hat{\mathbf{x}}_i\sim p_\theta(\cdot\mid\mathbf{z}_i)$.
 
-![[Representation Learning/images/vae-architecture.svg]]
+![[Machine Learning/images/vae-architecture.svg]]
 *Figure 1: a VAE. The encoder outputs the mean and standard deviation of $q_\phi(\mathbf{z}\mid\mathbf{x})$. The latent code is formed from those and an independent noise input. The two ELBO terms attach to the latent code (KL) and to the output (reconstruction). To generate new data, only the decoder is used.*
 
 ### The ELBO for one data point
@@ -152,12 +152,12 @@ $$
 
 The gradient now flows through $f$ along the sampling *path*, using the slope of $f$. That is where the name **pathwise** estimator comes from.
 
-![[Representation Learning/images/vae-reparameterization-graph.svg]]
+![[Machine Learning/images/vae-reparameterization-graph.svg]]
 *Figure 2: left, sampling sits inside the computation graph, and there is no derivative of a random draw with respect to $\phi$. Right, after reparameterizing, the noise is an input. $\mathbf{z}$ is a deterministic function of $\phi$ and $\boldsymbol\epsilon$, so the chain rule carries $\nabla_\phi$ back from the loss.*
 
 How much does the choice matter? Take $f(z)=z^2$ and $z\sim\mathcal{N}(\mu,1)$, so the true gradient is $\frac{\partial}{\partial\mu}\mathbb{E}[z^2]=\frac{\partial}{\partial\mu}(\mu^2+1)=2\mu$. Both estimators are unbiased, but one sample of the score-function estimator is $z^2(z-\mu)$, while one sample of the pathwise estimator is $2(\mu+\epsilon)$.
 
-![[Representation Learning/images/vae-gradient-estimators.svg]]
+![[Machine Learning/images/vae-gradient-estimators.svg]]
 *Figure 3: 20,000 single-sample estimates of the same gradient (true value 3). Both are centred on the truth, but the score-function estimator's standard deviation is about 7.0 against 2.0 for the pathwise one, so it needs about 12 times as many samples for the same accuracy.*
 
 > [!tip] Which estimator when?
@@ -242,7 +242,7 @@ D_{\mathrm{KL}}\big(q_\phi(\mathbf{z}\mid\mathbf{x})\,\|\,\mathcal{N}(\mathbf{0}
 \tag{3}
 $$
 
-![[Representation Learning/images/vae-kl-landscape.svg]]
+![[Machine Learning/images/vae-kl-landscape.svg]]
 *Figure 4: the KL term (3) for one latent dimension. It is zero only at the prior ($\mu=0$, $\sigma=1$) and grows quadratically in $\mu$. It also blows up as $\sigma\to0$, so the encoder is penalized both for moving codes away from the origin and for making them too precise.*
 
 ### The reconstruction term
@@ -289,7 +289,7 @@ roughly fills the prior. The encodings of the training points tile the region wh
 
 The VAE fits $q_\phi$ to the true posterior by maximizing the ELBO, which by (1) means minimizing $D_{\mathrm{KL}}(q_\phi\,\|\,p_\theta(\mathbf{z}\mid\mathbf{x}))$: the **reverse** KL, with the approximation first. Maximum-likelihood training of $p_\theta$, by contrast, minimizes the **forward** KL $D_{\mathrm{KL}}(p_X\,\|\,p_\theta)$. The two behave very differently when the approximating family is too simple.
 
-![[Representation Learning/images/generative-forward-reverse-kl.svg]]
+![[Machine Learning/images/generative-forward-reverse-kl.svg]]
 *Figure 5: fitting a single Gaussian $q$ to a bimodal $p$. The forward KL $D_{\mathrm{KL}}(p\,\|\,q)$ is minimized by matching moments: $q$ covers both modes and puts much of its mass in the empty valley. The reverse KL $D_{\mathrm{KL}}(q\,\|\,p)$ is minimized by locking onto one mode: $q$ almost never puts mass where $p$ has none, at the price of ignoring the other mode.*
 
 Reading the integrands explains the pictures.
