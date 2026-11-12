@@ -14,6 +14,8 @@ next: "[[Monte Carlo and Temporal-Difference Learning]]"
 > **Prerequisites:** [[Policy Gradients]] (REINFORCE, baselines, reward-to-go), [[Introduction to Reinforcement Learning]] (returns, $V^\pi$, $Q^\pi$, $A^\pi$, the Bellman expectation equation). How to learn the critic *well* is the subject of the next lecture, [[Monte Carlo and Temporal-Difference Learning]], and its theory with features is in [[Linear Function Approximation]].
 >
 > **TL;DR:** REINFORCE weights each action by a noisy single-sample return. An **actor-critic** method also learns a **critic**, an estimate of $V^\pi$ or $Q^\pi$, and weights each action by an estimated **advantage** instead. Bootstrapped estimates such as the TD error $r_t+\gamma V(s_{t+1})-V(s_t)$ cut the variance of the gradient sharply but are biased when the critic is wrong. **GAE($\lambda$)** interpolates between the two extremes. A **Q-function critic** lets us reuse old data from a replay buffer, which gives the off-policy family DDPG, TD3 and SAC. Convergence proofs run the critic on a **faster timescale** than the actor.
+>
+> **Code:** [Actor-Critic](https://github.com/parag1604/Actor-Critic): batch, online and A2C/GAE actor-critic, a Gaussian actor for continuous control, and Soft Actor-Critic.
 
 **Notation used here.** The actor is $\pi_\theta$ and the critic has its own parameters $\phi$ ($\hat V_\phi$ or $\hat Q_\phi$). The TD error is $\delta_t$ and an advantage estimate is $\hat A_t$. In the convergence section the actor's step size is $\alpha_t$ and the critic's is $\beta_t$. A deterministic policy is $\mu_\theta(s)$, as in the series notation. Two local symbols: the entropy temperature is $\tau$, and the Polyak (soft target-update) rate is $\kappa$.
 
@@ -479,7 +481,7 @@ The failure in the third schedule is exactly the one the theory guards against. 
 
 ## Code
 
-A tutorial implementation of the algorithms in this lecture (batch and online actor-critic, GAE, and a continuous-action version) is being written and will be linked here. Until then, the [Policy-Gradients repository](https://github.com/parag1604/Policy-Gradients) builds up to a learned value baseline ($V_\phi$), which is the first step of this lecture.
+The [Actor-Critic repository](https://github.com/parag1604/Actor-Critic) builds the algorithms of this lecture one idea at a time, in PyTorch with gymnasium, with learning curves over 5 seeds: REINFORCE with a learned baseline as the starting point, batch actor-critic with bootstrapped TD targets (and what goes wrong when the critic is under-fitted or a time limit is treated as termination), online one-step actor-critic, A2C with parallel environments, n-step returns and GAE (with a sweep over $\lambda$), a Gaussian actor for continuous actions, and Soft Actor-Critic, which reaches the same returns on InvertedPendulum and Pendulum with roughly 10 to 100 times fewer environment steps by reusing data from a replay buffer. The [Policy-Gradients repository](https://github.com/parag1604/Policy-Gradients) covers the step before (learned value baselines) and PPO.
 
 ## Key takeaways
 

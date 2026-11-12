@@ -22,7 +22,7 @@ next: "[[Score-Based Models]]"
 >
 > **Notation in this lecture:** temperature is $\tau$ and inverse temperature is $\beta=1/\tau$ ($T$ is reserved for the RL horizon). $\mathbf{s}$ is the state of a network of $D$ units, not an RL state.
 >
-> **Code:** [Contrastive-Representation-Learning](https://github.com/parag1604/Contrastive-Representation-Learning): contrastive losses (InfoNCE, SimCLR, MoCo) on MNIST, for the contrastive-loss section.
+> **Code:** [Energy-Based-Models](https://github.com/parag1604/Energy-Based-Models): Langevin sampling on a 2-D toy, persistent chains in a replay buffer, an image EBM on Bitmoji faces (sampling, inpainting, denoising), and conditional super-resolution. [Contrastive-Representation-Learning](https://github.com/parag1604/Contrastive-Representation-Learning): contrastive losses (InfoNCE, SimCLR, MoCo) on MNIST, for the contrastive-loss section.
 
 ## Motivation
 
