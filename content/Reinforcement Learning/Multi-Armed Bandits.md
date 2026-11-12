@@ -8,7 +8,7 @@ tags:
   - stochastic-approximation
 ---
 
-> **Prerequisites:** basic probability (expectations, the law of large numbers). Familiarity with [[Introduction to Reinforcement Learning|MDPs]] helps for the closing section but is not needed.
+> **Prerequisites:** basic probability ([[Probability Basics|expectations, the law of large numbers]]). Familiarity with [[Introduction to Reinforcement Learning|MDPs]] helps for the closing section but is not needed.
 >
 > **TL;DR:**
 > - A $K$-armed bandit is RL stripped to its core: one state, $K$ actions, unknown reward distributions.

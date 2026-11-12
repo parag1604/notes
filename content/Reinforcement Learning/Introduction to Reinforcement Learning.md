@@ -7,7 +7,7 @@ tags:
   - value-functions
 ---
 
-> **Prerequisites:** basic probability (conditional expectation, the tower rule) and Markov chains. Some familiarity with supervised learning ([[Linear Models]]) helps for the motivation. [[Multi-Armed Bandits]] introduces exploration in the simplest, single-state setting.
+> **Prerequisites:** basic probability ([[Probability Basics#Conditional expectation|conditional expectation, the tower rule]]) and Markov chains. Some familiarity with supervised learning ([[Linear Models]]) helps for the motivation. [[Multi-Armed Bandits]] introduces exploration in the simplest, single-state setting.
 >
 > **TL;DR:** Reinforcement learning is learning to make *sequences* of decisions when each decision changes what you see next. We model the world as a **Markov decision process** (MDP). A **policy** acts in it, and we judge the policy by its expected (discounted) sum of rewards. The **value functions** $V^\pi$ and $Q^\pi$ satisfy recursive **Bellman equations**. For finite MDPs, these give policy evaluation in closed form and characterize the optimal policy.
 

@@ -7,7 +7,7 @@ tags:
   - generative-models
 ---
 
-> **Prerequisites:** [[Linear Models]] (logistic regression, maximum likelihood), Bayes' rule, and the multivariate Gaussian.
+> **Prerequisites:** [[Linear Models]] (logistic regression, maximum likelihood), [[Probability Basics#Conditioning on evidence|Bayes' rule]], and [[Probability Basics#The multivariate Gaussian|the multivariate Gaussian]].
 >
 > **TL;DR:**
 > - **Fisher's discriminant** looks for the projection direction that separates two classes best: large spread *between* the projected class means, small spread *within* each class. The answer is $\mathbf{w}^*\propto\mathbf{S}_W^{-1}(\boldsymbol{\mu}_1-\boldsymbol{\mu}_0)$.

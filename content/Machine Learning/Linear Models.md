@@ -7,7 +7,7 @@ tags:
   - maximum-likelihood
 ---
 
-> **Prerequisites:** linear algebra (rank, column space, inverses, the SVD) and basic probability (Gaussian and Bernoulli distributions, likelihood).
+> **Prerequisites:** linear algebra (rank, column space, inverses, the SVD) and basic probability ([[Probability Basics|Gaussian and Bernoulli distributions]], likelihood).
 >
 > **TL;DR:**
 > - **Linear regression** finds $\mathbf{w}$ so that $\mathbf{X}\mathbf{w}\approx\mathbf{y}$. Geometrically it projects $\mathbf{y}$ onto the column space of $\mathbf{X}$; probabilistically it is maximum likelihood under Gaussian noise. Both views give the same least-squares objective and the normal equations.
