@@ -19,6 +19,8 @@ next: "[[Energy-Based Models]]"
 > - Any **f-divergence** has a variational lower bound, obtained from the **Fenchel conjugate** $f^*$. The bound is an expectation over real samples minus an expectation over fake samples, and a **critic** network $T_\omega$ maximizes it.
 > - Minimizing the bound over $\theta$ and maximizing over $\omega$ gives a saddle-point problem: adversarial training. One particular $f$ gives the original GAN, with optimal discriminator $D^*=p/(p+q)$ and value $2\,\mathrm{JSD}-\log4$.
 > - In practice: the non-saturating generator loss, mode collapse, and the Wasserstein GAN for when the supports don't overlap.
+>
+> **Code:** [Generative-Adversarial-Networks](https://github.com/parag1604/Generative-Adversarial-Networks): GANs on MNIST, from fully connected to DCGAN-style.
 
 ## Motivation
 

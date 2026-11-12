@@ -15,6 +15,8 @@ next: "[[Discriminant Analysis]]"
 > - **Linear regression** finds $\mathbf{w}$ so that $\mathbf{X}\mathbf{w}\approx\mathbf{y}$. Geometrically it projects $\mathbf{y}$ onto the column space of $\mathbf{X}$; probabilistically it is maximum likelihood under Gaussian noise. Both views give the same least-squares objective and the normal equations.
 > - A Gaussian prior on $\mathbf{w}$ (MAP) gives **ridge** ($L_2$) regularization, and a Laplace prior gives the **lasso** ($L_1$), which produces sparse weights.
 > - **Logistic regression** pushes the same linear score through a sigmoid (two classes) or softmax (many classes) and fits it by maximum likelihood, i.e. by minimizing the **cross-entropy**.
+>
+> **Code:** [Linear-Models](https://github.com/parag1604/Linear-Models): linear and logistic regression from scratch; [Least-Squares-Classification](https://github.com/parag1604/Least-Squares-Classification): separating handwritten 0s from 1s with least squares.
 
 ## Linear Regression
 

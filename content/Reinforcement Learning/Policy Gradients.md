@@ -12,6 +12,8 @@ next: "[[Actor-Critic Algorithms]]"
 > **Prerequisites:** [[Introduction to Reinforcement Learning]] (MDPs, trajectories, $Q^\pi$ and $V^\pi$), [[Imitation Learning]] (behavior cloning as maximum likelihood).
 >
 > **TL;DR:** Write the RL objective as an expectation over trajectories and differentiate it with the log-derivative trick. The result is REINFORCE: maximum likelihood on your own samples, with each action's log-probability weighted by the reward that followed it. The estimator is unbiased but very noisy. *Baselines* and *reward-to-go* reduce the variance without adding bias, and *importance sampling* lets us reuse old data.
+>
+> **Code:** [Policy-Gradients](https://github.com/parag1604/Policy-Gradients): REINFORCE built up one idea at a time: reward-to-go, baselines, continuous actions; [Importance-Sampling](https://github.com/parag1604/Importance-Sampling): importance sampling, the tool behind off-policy policy gradients.
 
 ## Motivation
 

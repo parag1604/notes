@@ -21,6 +21,8 @@ next: "[[Score-Based Models]]"
 > - Modern Hopfield networks with an exponential energy retrieve with one softmax step, and that step is transformer attention.
 >
 > **Notation in this lecture:** temperature is $\tau$ and inverse temperature is $\beta=1/\tau$ ($T$ is reserved for the RL horizon). $\mathbf{s}$ is the state of a network of $D$ units, not an RL state.
+>
+> **Code:** [Contrastive-Representation-Learning](https://github.com/parag1604/Contrastive-Representation-Learning): contrastive losses (InfoNCE, SimCLR, MoCo) on MNIST, for the contrastive-loss section.
 
 ## Motivation
 

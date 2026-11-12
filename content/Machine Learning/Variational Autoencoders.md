@@ -18,6 +18,8 @@ next: "[[Generative Adversarial Networks]]"
 > - The ELBO splits into a **reconstruction** term and a **KL-to-prior** term. With Gaussian encoder and prior, the KL term has a closed form.
 > - The **reparameterization trick** $\mathbf{z}=\boldsymbol\mu_\phi(\mathbf{x})+\boldsymbol\sigma_\phi(\mathbf{x})\odot\boldsymbol\epsilon$ moves the randomness into an input, so ordinary backpropagation gives low-variance gradients for $\phi$.
 > - To generate, sample $\mathbf{z}\sim\mathcal{N}(\mathbf{0},\mathbf{I})$ and decode.
+>
+> **Code:** [Variational-Autoencoders](https://github.com/parag1604/Variational-Autoencoders): VAEs on MNIST, up to a conditional VAE.
 
 ## Motivation
 

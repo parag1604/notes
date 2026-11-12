@@ -16,6 +16,8 @@ next: "[[Matrix Factorization and Dimensionality Reduction]]"
 > - **$k$-nearest neighbours** predicts from the $k$ closest training points. **Parzen windows** use every point within a fixed radius, or weight all points with a smooth **kernel**.
 > - Both are local density estimators in disguise: $k$-NN fixes the count and lets the volume adapt, while Parzen fixes the volume and lets the count vary.
 > - **Kernel density estimation** turns the same idea into a density model. Similarity-weighted averaging leads straight to attention.
+>
+> **Code:** [Non-Parameteric](https://github.com/parag1604/Non-Parameteric): k-nearest neighbours and Parzen windows.
 
 ## Parametric vs. non-parametric
 

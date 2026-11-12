@@ -15,6 +15,8 @@ next: "[[Support Vector Machines]]"
 > - **Fisher's discriminant** looks for the projection direction that separates two classes best: large spread *between* the projected class means, small spread *within* each class. The answer is $\mathbf{w}^*\propto\mathbf{S}_W^{-1}(\boldsymbol{\mu}_1-\boldsymbol{\mu}_0)$.
 > - **Generative classifiers** instead model each class's distribution $p(\mathbf{x}\mid y=k)$ and classify with Bayes' rule. With Gaussian classes this gives **QDA** (one covariance per class, quadratic boundaries) or **LDA** (shared covariance, linear boundaries).
 > - LDA recovers Fisher's direction, and its posterior is exactly a logistic regression.
+>
+> **Code:** [Naive-Bayes](https://github.com/parag1604/Naive-Bayes): Gaussian naive Bayes from scratch.
 
 ## Motivation: discriminative vs. generative
 

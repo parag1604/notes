@@ -18,6 +18,8 @@ next: "[[Linear Function Approximation]]"
 > **TL;DR:** To *control* an MDP without a model, learn action values. **Q-learning** applies TD to the Bellman *optimality* equation: $Q(s_t,a_t)\leftarrow Q(s_t,a_t)+\alpha\big[r_t+\gamma\max_{a'}Q(s_{t+1},a')-Q(s_t,a_t)\big]$. It is **off-policy**: it learns $Q^*$ while behaving with any policy that keeps exploring. It converges to $Q^*$ with probability 1 **if every state-action pair is visited infinitely often and the per-pair step sizes satisfy $\sum\alpha=\infty$, $\sum\alpha^2<\infty$**. The proof writes it as an asynchronous stochastic approximation of a max-norm contraction, whose ODE is $\dot Q=D(\mathcal{T}^*Q-Q)$. **SARSA** uses the action actually taken next, so it is **on-policy**: it learns the value of the exploring policy itself, which makes it more cautious. Q-learning's $\max$ is **biased upwards**; Double Q-learning fixes this.
 >
 > **Local notation.** $Q_t$ is the estimate after $t$ updates and $\alpha_t(s,a)$ the step size used for pair $(s,a)$ at time $t$. The **behaviour policy**, which generates the data, is written $b(a\mid s)$; the **target policy**, whose values we learn, is $\pi$. $\mathcal{T}^*$ acts on Q-functions here, $Q\in\mathbb{R}^{|\mathcal{S}||\mathcal{A}|}$.
+>
+> **Code:** [RL-Basics](https://github.com/parag1604/RL-Basics): tabular Q-learning (file 03); [Deep-Q-Networks](https://github.com/parag1604/Deep-Q-Networks): a DQN with experience replay and a target network.
 
 ## Motivation
 

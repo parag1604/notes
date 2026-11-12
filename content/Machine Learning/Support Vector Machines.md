@@ -16,6 +16,8 @@ next: "[[Non-parametric Models]]"
 > - This is a convex quadratic program. Its **dual** depends on the data only through dot products $\mathbf{x}_i^\top\mathbf{x}_j$, and its solution depends only on the few **support vectors** on the margin.
 > - Replacing those dot products by a **kernel** $K(\mathbf{x},\mathbf{x}')$ gives non-linear boundaries without ever computing the feature map.
 > - The **soft-margin** SVM tolerates violations through slack variables, and is the same thing as $L_2$-regularized **hinge-loss** minimization.
+>
+> **Code:** [Support-Vector-Machines](https://github.com/parag1604/Support-Vector-Machines): hard-margin, soft-margin and kernel SVMs solved as quadratic programs with cvxopt.
 
 ## Setup
 

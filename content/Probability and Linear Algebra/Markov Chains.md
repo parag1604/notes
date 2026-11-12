@@ -20,6 +20,8 @@ next: "[[Index (Probability and Linear Algebra)]]"
 > - An irreducible, positive recurrent chain has a unique **stationary distribution** $\boldsymbol\pi=\boldsymbol\pi\mathbf{P}$, the long-run fraction of time spent in each state. If the chain is also aperiodic, it converges to $\boldsymbol\pi$ from any start, at a rate set by the **spectral gap**.
 > - PageRank is the stationary distribution of a random web surfer. MCMC (Metropolis–Hastings, Gibbs) designs a chain whose stationary distribution is the one we want to sample from.
 > - In **continuous time**, the chain holds each state for an exponential time and is described by a rate matrix $\mathbf{Q}$, with $\mathbf{P}(t)=e^{t\mathbf{Q}}$. Brownian motion, the forward process of diffusion models, and state space models all build on this.
+>
+> **Code:** [Gibbs-Sampling](https://github.com/parag1604/Gibbs-Sampling): Gibbs sampling on a discrete table and a correlated Gaussian, compared with Metropolis–Hastings; [Mamba-in-JAX](https://github.com/parag1604/Mamba-in-JAX): linear state space models, S4 and Mamba, for the continuous-time section.
 
 > **Notation in this lecture:** states are $i,j,k$ in a countable state space $\mathcal{S}$; $p_{ij}$ is a one-step transition probability, $p^{(n)}_{ij}$ an $n$-step one; distributions over states are **row** vectors, as is standard for Markov chains. $\mathbb{P}_i$ and $\mathbb{E}_i$ condition on $X_0=i$.
 

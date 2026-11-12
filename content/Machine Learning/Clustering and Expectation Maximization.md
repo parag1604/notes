@@ -19,6 +19,8 @@ next: "[[Variational Autoencoders]]"
 > - **EM** handles latent-variable models by repeatedly maximizing a tight lower bound (the ELBO) on the log-likelihood. **Gaussian mixtures** are "QDA with unknown labels".
 > - **Spectral clustering** relaxes a balanced graph cut into an eigenvector problem, and **modularity / Louvain** find communities in networks.
 > - Hierarchical clustering, DBSCAN and evaluation metrics complete the toolbox.
+>
+> **Code:** [K-Means-Clustering](https://github.com/parag1604/K-Means-Clustering): K-means for colour quantization of an image; [Gaussian-Mixture-Models](https://github.com/parag1604/Gaussian-Mixture-Models): Gaussian mixtures fitted with EM.
 
 ## The clustering problem
 

@@ -15,6 +15,8 @@ next: "[[Stochastic Shortest Path Problems]]"
 > **Part II (model-based).** Here we assume the transition model $p(s'\mid s,a)$ and the rewards are **known**: this is planning. In practice they usually are not, which is why Part I of the series is model-free; its methods approximate the computations below from samples. The model can also be learned from data, see [[Model-Based Reinforcement Learning]].
 >
 > **TL;DR:** When the MDP's model $p(s',r\mid s,a)$ is known, the Bellman equations can be solved directly by repeatedly applying them. Both Bellman operators are **$\gamma$-contractions**. This one fact implies that **policy evaluation** converges to $V^\pi$ and **value iteration** converges to $V^*$, both geometrically. The **policy improvement theorem** implies that **policy iteration** reaches an optimal policy in finitely many steps. Most model-free RL algorithms are sampled, approximate versions of these procedures.
+>
+> **Code:** [RL-Basics](https://github.com/parag1604/RL-Basics): policy iteration and value iteration (files 01 and 02).
 
 ## Motivation
 

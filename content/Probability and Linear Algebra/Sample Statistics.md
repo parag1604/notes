@@ -19,6 +19,8 @@ next: "[[Markov Chains]]"
 > - Jensen's inequality, Chernoff bounds and Hoeffding's inequality: tails of averages decay **exponentially**, and a union bound extends this to many averages at once.
 > - Random sequences can converge in four senses: in distribution, in probability, in mean square, and almost surely. They are not equivalent.
 > - The **law of large numbers** says the sample mean converges to the mean (weakly: in probability; strongly: almost surely). This justifies the frequency model and Monte Carlo integration. The **central limit theorem** says the fluctuations are Gaussian.
+>
+> **Code:** [Importance-Sampling](https://github.com/parag1604/Importance-Sampling): Monte Carlo estimates of expectations, and importance sampling with a proposal distribution.
 
 ## Motivation
 

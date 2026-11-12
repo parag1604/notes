@@ -17,6 +17,8 @@ next: "[[Clustering and Expectation Maximization]]"
 > - **Matrix factorization** writes a matrix as a product of simpler pieces. The **spectral decomposition** $\mathbf{S}=\mathbf{Q}\boldsymbol{\Lambda}\mathbf{Q}^\top$ handles symmetric matrices, and the **SVD** $\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ handles *every* matrix.
 > - Truncating the SVD gives the **best low-rank approximation** (Eckart–Young). This powers compression, denoising and recommender systems. **NMF** and **CUR** trade a little accuracy for interpretability.
 > - **Dimensionality reduction** keeps the directions that matter. **PCA** keeps the directions of maximum variance, which are the top right singular vectors of the centred data. **Autoencoders** and **kernel PCA** make it non-linear, and manifold methods (Laplacian eigenmaps, t-SNE) preserve neighbourhoods instead of variance.
+>
+> **Code:** [Principal-Component-Analysis](https://github.com/parag1604/Principal-Component-Analysis): PCA by eigendecomposition and by the SVD; [Matrix-Factorization-Recommender](https://github.com/parag1604/Matrix-Factorization-Recommender): a movie recommender with truncated SVD and alternating least squares.
 
 # Part I: Matrix factorization
 
