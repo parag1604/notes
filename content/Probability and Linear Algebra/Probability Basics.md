@@ -53,7 +53,7 @@ In any experiment we fix a **universe of discourse**, the collection of all elem
 
 An **event** $A$ is a subset of $\Omega$: the set of outcomes in which "$A$ happens". For three tosses, "exactly two heads" is the event $\{011,101,110\}$ (Figure 1).
 
-![[Probability/images/probability-basics-coin-events.svg]]
+![[Probability and Linear Algebra/images/probability-basics-coin-events.svg]]
 *Figure 1. The sample space of three coin tosses. The eight outcomes are grouped into four events by the number of heads. Each group is the event $\{X=k\}$ for the random variable $X$ = number of heads, defined later.*
 
 ### σ-algebras: which subsets are events
@@ -167,7 +167,7 @@ Any countable union is the limit of finite ones in this way: $E_k=\bigcup_{i=1}^
 >
 > Taking complements gives the decreasing version: $E_k\downarrow E$ implies $\mathbb{P}(E_k)\to\mathbb{P}(E)$.
 
-![[Probability/images/probability-basics-unions.svg]]
+![[Probability and Linear Algebra/images/probability-basics-unions.svg]]
 *Figure 2. (a) Continuity: the finite unions $E_k=A_1\cup\cdots\cup A_k$ grow towards the countable union, and their probabilities converge to its probability. (b) The disjointification behind the union bound: $E_1=A_1$, $E_2$ is the part of $A_2$ outside $A_1$, and $E_3$ is the part of $A_3$ outside both. Together they cover $A_1\cup A_2\cup A_3$ exactly once.*
 
 ## Conditional probability and independence
@@ -310,7 +310,7 @@ Where they appear:
 - **Poisson** models counts of rare events; **Uniform** expresses "no information" and is used for random initialization; **Exponential** models waiting times and is memoryless.
 - **Gaussian** is used for noise models, priors and latent variables throughout the series.
 
-![[Probability/images/probability-basics-distributions.svg]]
+![[Probability and Linear Algebra/images/probability-basics-distributions.svg]]
 *Figure 3. (a) Binomial PMFs for 10 trials. (b) Poisson PMFs. (c) Exponential densities, which decay at rate $\lambda$. (d) Gaussian densities. A narrow Gaussian has a peak above 1, a reminder that densities are not probabilities.*
 
 ### The multivariate Gaussian
@@ -334,7 +334,7 @@ $$
 
 The conditional mean is linear in $\mathbf{x}_2$, and the conditional covariance does not depend on $\mathbf{x}_2$ at all.
 
-![[Probability/images/probability-basics-gaussian-2d.svg]]
+![[Probability and Linear Algebra/images/probability-basics-gaussian-2d.svg]]
 *Figure 4. Density contours and 300 samples of three bivariate Gaussians with mean zero: isotropic (circles), diagonal covariance (axis-aligned ellipses), and correlation $\rho=0.8$ (tilted ellipses). Only the third has dependent coordinates.*
 
 ## Limit theorems: why frequencies work
@@ -370,7 +370,7 @@ $$
 
 Now take $X_i=\mathbb{1}\{A\text{ occurs in run }i\}$. Then $\mu=\mathbb{P}(A)$ and $\bar X_n=n_A/n$, so (3) says that **the relative frequency converges to the probability**. The frequency model we started from is a theorem of the axioms (Figure 5). The **strong** law says more: $\bar X_n\to\mu$ with probability 1.
 
-![[Probability/images/probability-basics-lln.svg]]
+![[Probability and Linear Algebra/images/probability-basics-lln.svg]]
 *Figure 5. Five independent sequences of runs with $\mathbb{P}(A)=0.3$. Each running relative frequency $n_A/n$ wanders early on, then settles at 0.3. The shaded band is the 95% Hoeffding interval $0.3\pm\sqrt{\ln(2/0.05)/(2n)}$, which shrinks like $1/\sqrt n$.*
 
 ### Hoeffding: exponential concentration
@@ -408,7 +408,7 @@ $$
 
 meaning the CDF of the left side converges to the standard Gaussian CDF. This holds **whatever** the distribution of the $X_i$ (Figure 6). This is why Gaussians are everywhere: any quantity built from many small independent contributions is approximately Gaussian. It also gives the familiar error bar: $\bar X_n\pm1.96\,\sigma/\sqrt n$ is an approximate 95% confidence interval.
 
-![[Probability/images/probability-basics-clt.svg]]
+![[Probability and Linear Algebra/images/probability-basics-clt.svg]]
 *Figure 6. The central limit theorem for the heavily skewed Exponential(1) distribution. Histograms of the standardized mean of $n$ samples (100 000 repetitions each) against the standard Gaussian density. At $n=1$ the histogram is the exponential itself; by $n=30$ it is close to Gaussian, with a slight remaining skew.*
 
 ## Key takeaways

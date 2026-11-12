@@ -4,7 +4,7 @@ title: Table of Contents
 
 ## Lecture notes by Parag Dutta
 
-1. [[Index (Probability)|Probability and Linear Algebra]]
+1. [[Index (Probability and Linear Algebra)|Probability and Linear Algebra]]
 2. [[Index (Machine Learning)|Machine Learning]]
 3. [[Index (Representation Learning)|Representation Learning]]
 4. [[Index (Reinforcement Learning)|Reinforcement Learning]]

@@ -1,5 +1,5 @@
 ---
-title: Probability and Linear Algebra
+title: Index (Probability and Linear Algebra)
 ---
 
 The probability and linear algebra needed for the rest of the series.
