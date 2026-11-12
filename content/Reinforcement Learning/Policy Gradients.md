@@ -224,7 +224,7 @@ $$
 $$
 \begin{aligned}
 \nabla_{\theta'}J(\theta')=\mathbb{E}_{\tau\sim p_\theta(\tau)}\Bigg[\sum_{t=0}^{T-1}&\nabla_{\theta'}\log\pi_{\theta'}(a_t\mid s_t)\left(\prod_{t'=0}^{t}\frac{\pi_{\theta'}(a_{t'}\mid s_{t'})}{\pi_\theta(a_{t'}\mid s_{t'})}\right)\\
-&\times\left(\sum_{t'=t}^{T-1}r(s_{t'},a_{t'})\prod_{t''=t}^{t'}\frac{\pi_{\theta'}(a_{t''}\mid s_{t''})}{\pi_\theta(a_{t''}\mid s_{t''})}\right)\Bigg].
+&\times\left(\sum_{t'=t}^{T-1}r(s_{t'},a_{t'})\prod_{t''=t+1}^{t'}\frac{\pi_{\theta'}(a_{t''}\mid s_{t''})}{\pi_\theta(a_{t''}\mid s_{t''})}\right)\Bigg].
 \end{aligned}
 $$
 

@@ -20,6 +20,8 @@ next: "[[Index (Machine Learning)]]"
 > - **Noise-conditional score networks** learn the score at many noise levels and sample by **annealed Langevin dynamics**, from very noisy to clean. Taking infinitely many noise levels gives a stochastic differential equation, the bridge to diffusion models.
 >
 > **Notation:** clean data $\mathbf{x}\sim p$, noisy data $\tilde{\mathbf{x}}=\mathbf{x}+\sigma\boldsymbol\epsilon$ with $\boldsymbol\epsilon\sim\mathcal{N}(\mathbf{0},\mathbf{I})$, and $q_\sigma$ the density of $\tilde{\mathbf{x}}$. Langevin step sizes are $\eta$, as in the EBM lecture.
+>
+> **Code:** [Image-Based-Generative-Models](https://github.com/parag1604/Image-Based-Generative-Models): a DDPM with DDIM sampling (the noise-prediction network is a score model at many noise levels), alongside a VAE and a DCGAN, on 64×64 Stanford Cars images.
 
 ## Motivation
 
