@@ -395,4 +395,4 @@ What the experiment shows:
 [^kaufmann2012]: Kaufmann, E., Korda, N., & Munos, R. (2012). *Thompson Sampling: An Asymptotically Optimal Finite Time Analysis*. ALT. [arXiv:1205.4217](https://arxiv.org/abs/1205.4217)
 [^russo2018]: Russo, D., Van Roy, B., Kazerouni, A., Osband, I., & Wen, Z. (2018). *A Tutorial on Thompson Sampling*. Foundations and Trends in Machine Learning. [arXiv:1707.02038](https://arxiv.org/abs/1707.02038)
 [^mei2020]: Mei, J., Xiao, C., Szepesvári, C., & Schuurmans, D. (2020). *On the Global Convergence Rates of Softmax Policy Gradient Methods*. ICML. [arXiv:2005.06392](https://arxiv.org/abs/2005.06392)
-[^li2010]: Li, L., Chu, W., Langford, J., & Schapire, R. E. (2010). *A Contextual-Bandit Approach to Personalized News Article Recommendation*. WWW. [arXiv:1003.0146](https://arxiv.org/abs/1003.0146)
+[^li2010]: Li, L., Chu, W., Langford, J., & Schapire, R. E. (2010). *A Contextual-Bandit Approach to Personalized News Article Recommendation*. International World Wide Web Conference (WWW '10). [arXiv:1003.0146](https://arxiv.org/abs/1003.0146)
