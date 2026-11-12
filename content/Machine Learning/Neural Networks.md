@@ -11,7 +11,7 @@ prev: "[[Support Vector Machines]]"
 next: "[[Applications of Neural Networks]]"
 ---
 
-> **Prerequisites:** [[Linear Models]] (logistic and softmax regression, gradient descent, $L_2$ regularization), [[Support Vector Machines]] (hyperplanes, the hinge loss, kernels), the multivariable chain rule, and [[Random Variables|variance]].
+> **Prerequisites:** [[Linear Models]] (logistic and softmax regression, gradient descent, $L_2$ regularization), [[Support Vector Machines]] (hyperplanes, the hinge loss, kernels), the [[Multivariable Calculus#The Jacobian and the chain rule|multivariable chain rule]] and [[First-Order Optimization]] (study both first if they are new), and [[Random Variables|variance]].
 >
 > **TL;DR:**
 > - The **perceptron** is stochastic gradient descent on logistic regression with the probability replaced by a hard prediction. It only updates on mistakes, and on linearly separable data it stops after at most $(R/\gamma)^2$ of them.
@@ -446,33 +446,11 @@ The remedies, most of which appear in this section: initialization that keeps th
 
 ### Optimizers
 
-**Mini-batch SGD.** As in [[Linear Models#Iterative methods|Linear Models]], each step uses the average gradient $\mathbf{g}_t$ of a random mini-batch: $\theta\leftarrow\theta-\alpha\,\mathbf{g}_t$. The noise is cheap regularization and helps escape saddles; batch sizes of 32 to a few thousand are typical.[^bottou2018]
+The optimizers themselves (mini-batch SGD, momentum, Nesterov, AdaGrad, RMSProp, Adam and AdamW, learning-rate schedules, warm-up and clipping) are covered in [[First-Order Optimization]], with their analysis on quadratics and convergence rates. Study [[First-Order Optimization#Momentum and adaptive methods|momentum and adaptive methods]] and the [[First-Order Optimization#Practical recipe|practical recipe]] first if they are new. Three points are specific to neural networks:
 
-**Momentum.** Ill-conditioned losses have long narrow valleys. Plain gradient descent zig-zags across them and creeps along them (Figure 8). Momentum keeps an exponentially weighted running sum of gradients,
-
-$$
-\mathbf{v}_{t+1}=\beta\,\mathbf{v}_t+\mathbf{g}_t,\qquad\theta_{t+1}=\theta_t-\alpha\,\mathbf{v}_{t+1},
-$$
-
-with $\beta\approx0.9$. Oscillating components cancel in the sum, while consistent ones add up to an effective step of up to $\alpha/(1-\beta)$. Sutskever et al. showed how much momentum and a good initialization matter for deep networks.[^sutskever2013]
-
-**Adam.** Adam rescales each coordinate by a running estimate of its gradient's magnitude:[^kingma2015]
-
-$$
-\begin{aligned}
-\mathbf{m}_t&=\beta_1\mathbf{m}_{t-1}+(1-\beta_1)\,\mathbf{g}_t,\\
-\mathbf{s}_t&=\beta_2\mathbf{s}_{t-1}+(1-\beta_2)\,\mathbf{g}_t\odot\mathbf{g}_t,\\
-\hat{\mathbf{m}}_t&=\frac{\mathbf{m}_t}{1-\beta_1^t},\qquad\hat{\mathbf{s}}_t=\frac{\mathbf{s}_t}{1-\beta_2^t},\\
-\theta_t&=\theta_{t-1}-\alpha\,\frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{s}}_t}+\epsilon},
-\end{aligned}
-$$
-
-with $t=1,2,\dots$, $\mathbf{m}_0=\mathbf{s}_0=\mathbf{0}$, all operations element-wise, and defaults $\alpha=10^{-3}$, $\beta_1=0.9$, $\beta_2=0.999$, $\epsilon=10^{-8}$. Here $\mathbf{m}_t$ is momentum, and dividing by $\sqrt{\hat{\mathbf{s}}_t}$ gives every coordinate a step of roughly size $\alpha$, whatever the scale of its gradient. The **bias corrections** are needed because the averages start at zero: if the gradients had a constant mean, $\mathbb{E}[\mathbf{m}_t]=(1-\beta_1^t)\,\mathbb{E}[\mathbf{g}]$, so early estimates are too small, and dividing by $1-\beta_1^t$ removes this. Adam is the usual first choice because it needs little tuning; well-tuned SGD with momentum sometimes generalizes slightly better.
-
-![[Machine Learning/images/neural-networks-optimizers.svg]]
-*Figure 8: three optimizers on the ill-conditioned quadratic $\frac12(w_1^2+50w_2^2)$, from $(-4,1)$. Left, the first 40 steps; right, the loss over 100 steps. Gradient descent ($\alpha=0.03$) quickly settles the steep $w_2$ direction but crawls along the shallow $w_1$ direction (loss $1.8\times10^{-2}$ after 100 steps). Momentum ($\beta=0.7$, same $\alpha$) overshoots and oscillates but travels the valley far faster ($4\times10^{-15}$). Adam ($\alpha=0.1$) takes roughly equal-sized steps in both coordinates and heads more directly to the minimum, then hovers near it ($4\times10^{-4}$).*
-
-**Learning-rate schedules.** A constant step leaves SGD bouncing around the minimum; the classical [[Stochastic Approximation|Robbins–Monro]] conditions $\sum_t\alpha_t=\infty$, $\sum_t\alpha_t^2<\infty$ call for decaying steps. Common practical schedules: step decay (divide by 10 at fixed epochs), cosine decay to zero, and a short linear **warm-up** from a small value at the start, which stabilizes Adam and large-batch training.
+- **Mini-batch SGD is the default.** Batch sizes of 32 to a few thousand are typical, and the gradient noise is cheap regularization that also helps escape saddle points, which are common in non-convex losses.[^bottou2018]
+- **Momentum and initialization interact.** Sutskever et al. showed that a good initialization together with momentum makes a large difference when training deep networks.[^sutskever2013]
+- **Adam is the usual first choice**, because its per-coordinate step sizes cope with gradients whose scales differ by orders of magnitude across layers.[^kingma2015] Well-tuned SGD with momentum sometimes generalizes slightly better, and AdamW (decoupled weight decay) is the standard variant for transformers.
 
 ### Regularization
 

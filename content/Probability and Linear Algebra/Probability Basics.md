@@ -5,7 +5,7 @@ tags:
   - foundations
 date: 2026-11-12
 draft: false
-prev: "[[Index (Probability and Linear Algebra)]]"
+prev: "[[Five Factorizations of a Matrix]]"
 next: "[[Random Variables]]"
 ---
 

@@ -312,7 +312,7 @@ $$
 p(\mathbf{x})=\frac{1}{(2\pi)^{D/2}|\boldsymbol\Sigma|^{1/2}}\exp\Big(-\frac12(\mathbf{x}-\boldsymbol\mu)^\top\boldsymbol\Sigma^{-1}(\mathbf{x}-\boldsymbol\mu)\Big).
 $$
 
-The best way to understand it is to **build** it. Start with a vector $\boldsymbol\epsilon$ of $D$ independent standard Gaussians: a round cloud. Write $\boldsymbol\Sigma=\mathbf{U}\boldsymbol\Lambda\mathbf{U}^\top$ (its eigendecomposition, [[Matrix Factorization and Dimensionality Reduction#The spectral theorem (symmetric matrices)|the spectral theorem]]) and set
+The best way to understand it is to **build** it. Start with a vector $\boldsymbol\epsilon$ of $D$ independent standard Gaussians: a round cloud. Write $\boldsymbol\Sigma=\mathbf{U}\boldsymbol\Lambda\mathbf{U}^\top$ (its eigendecomposition, [[Eigenvalues and Eigenvectors#The spectral theorem|the spectral theorem]]) and set
 
 $$
 \mathbf{x}=\boldsymbol\mu+\mathbf{U}\boldsymbol\Lambda^{1/2}\boldsymbol\epsilon.

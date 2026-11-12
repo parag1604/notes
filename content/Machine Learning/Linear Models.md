@@ -9,7 +9,7 @@ prev: "[[Bayesian Decision Theory]]"
 next: "[[Discriminant Analysis]]"
 ---
 
-> **Prerequisites:** linear algebra (rank, column space, inverses, the SVD) and basic probability ([[Probability Basics|Gaussian and Bernoulli distributions]], likelihood).
+> **Prerequisites:** linear algebra, studied first: [[Column Space and Rank|the column space and rank]], [[Orthogonality and Least Squares|projections and least squares]], and [[First-Order Optimization|gradient descent]]; the SVD from [[Matrix Factorization and Dimensionality Reduction#Singular value decomposition (SVD)|Matrix Factorization]] is used once. Also basic probability ([[Probability Basics|Gaussian and Bernoulli distributions]], likelihood).
 >
 > **TL;DR:**
 > - **Linear regression** finds $\mathbf{w}$ so that $\mathbf{X}\mathbf{w}\approx\mathbf{y}$. Geometrically it projects $\mathbf{y}$ onto the column space of $\mathbf{X}$; probabilistically it is maximum likelihood under Gaussian noise. Both views give the same least-squares objective and the normal equations.
@@ -88,10 +88,10 @@ $$
 
 The inverse exists exactly when $\mathbf{X}$ has full column rank, which justifies the assumption. With several outputs per example, stacked as the columns of $\mathbf{Y}\in\mathbb{R}^{N\times K}$, the problem decouples into one least-squares problem per output, and $\mathbf{W}_*=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{Y}$ solves them all at once.
 
-**The projection view gives the same equations.** The residual $\mathbf{y}-\mathbf{X}\mathbf{w}_*$ must be perpendicular to every column of $\mathbf{X}$, i.e. $\mathbf{X}^\top(\mathbf{y}-\mathbf{X}\mathbf{w}_*)=\mathbf{0}$. That is the normal equations again. The word "normal" refers to this orthogonality.
+**The projection view gives the same equations** (worked out in full, with projection matrices and a QR solver, in [[Orthogonality and Least Squares#The normal equations|Orthogonality and Least Squares]]). The residual $\mathbf{y}-\mathbf{X}\mathbf{w}_*$ must be perpendicular to every column of $\mathbf{X}$, i.e. $\mathbf{X}^\top(\mathbf{y}-\mathbf{X}\mathbf{w}_*)=\mathbf{0}$. That is the normal equations again. The word "normal" refers to this orthogonality.
 
 > [!note] When $\mathbf{X}^\top\mathbf{X}$ is singular: the pseudo-inverse
-> If the columns of $\mathbf{X}$ are linearly dependent (duplicated or collinear features, or $N<D$), infinitely many $\mathbf{w}$ minimize the loss. Write the SVD $\mathbf{X}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$. Here the columns of $\mathbf{V}$ are eigenvectors of $\mathbf{X}^\top\mathbf{X}$, the columns of $\mathbf{U}$ are eigenvectors of $\mathbf{X}\mathbf{X}^\top$, and the singular values on the diagonal of $\boldsymbol{\Sigma}$ are the square roots of their nonzero eigenvalues. The **Moore–Penrose pseudo-inverse** is $\mathbf{X}^+=\mathbf{V}\boldsymbol{\Sigma}^+\mathbf{U}^\top$, where $\boldsymbol{\Sigma}^+$ inverts the *nonzero* singular values and leaves the zeros. Then $\mathbf{w}=\mathbf{X}^+\mathbf{y}$ is the least-squares solution with the **smallest norm**. When $\mathbf{X}$ has full column rank, $\mathbf{X}^+=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$. See [[Matrix Factorization and Dimensionality Reduction#The pseudo-inverse|the SVD lecture]] for more.
+> If the columns of $\mathbf{X}$ are linearly dependent (duplicated or collinear features, or $N<D$), infinitely many $\mathbf{w}$ minimize the loss. The standard choice is the one with the smallest norm, $\mathbf{w}_*=\mathbf{X}^+\mathbf{y}$, where $\mathbf{X}^+$ is the **Moore–Penrose pseudo-inverse** built from the SVD. The derivation and a worked example are in [[Matrix Factorization and Dimensionality Reduction#The pseudo-inverse|the pseudo-inverse]]; ridge regression (below) is a smoothed version of the same idea.
 
 ---
 
@@ -108,24 +108,17 @@ Computing $\mathbf{X}^\top\mathbf{X}$ costs $O(ND^2)$ and inverting it costs $O(
 >
 > $B=N$ is full-batch **gradient descent**; $B=1$ is **stochastic gradient descent** (SGD). Stop after a fixed budget, or when the loss on held-out data stops improving.
 
-- **Full-batch GD** on this quadratic converges with any *constant* step $0<\alpha<2/\lambda_{\max}(\frac1N\mathbf{X}^\top\mathbf{X})$.
-- **SGD's** gradient is noisy, so with a constant step it ends up bouncing around $\mathbf{w}_*$. Converging exactly needs decaying steps with $\sum_t\alpha_t=\infty$ and $\sum_t\alpha_t^2<\infty$, for example $\alpha_t\propto1/t$. These are the same Robbins–Monro conditions as in [[Multi-Armed Bandits#Estimating action values|stochastic approximation]].
-- **Scaling.** These conditions are stated for the *mean* loss $\frac1N\mathcal{L}$, which is what the averaged gradient $\mathbf{g}_t$ above descends. Using the summed loss instead just multiplies the gradient by $N$, so the step size must be divided by $N$.
-- **Mini-batches** trade off the two: less noise than $B=1$, much cheaper than $B=N$, and well suited to vectorized hardware. See Bottou et al. for a thorough survey.[^bottou2018]
+- **Full-batch GD** on this quadratic converges with any *constant* step $0<\alpha<2/\lambda_{\max}(\frac1N\mathbf{X}^\top\mathbf{X})$; with a constant step **SGD** keeps bouncing around $\mathbf{w}_*$, and converging exactly needs decaying steps. **Mini-batches** sit in between, with less noise than $B=1$ and far cheaper steps than $B=N$.[^bottou2018]
+- Why these hold, how fast each method converges, and how to pick step sizes, batch sizes, momentum or Adam: see [[First-Order Optimization]] (prerequisite), especially [[First-Order Optimization#Gradient descent on a quadratic|gradient descent on a quadratic]], which analyses exactly this loss.
 
 ![[Machine Learning/images/linear-models-gd-paths.svg]]
 *Figure 2: paths of full-batch GD, mini-batch SGD and single-sample SGD on a two-parameter least-squares loss (contours), all starting from the same point. Full-batch GD moves smoothly downhill; the stochastic versions zig-zag because each step sees only part of the data, but all head to $\mathbf{w}_*$. The contours are elongated because the two features are correlated, which slows GD down (see the pre-processing aside).*
-
-> [!tip] Aside: choosing the step size, and momentum
-> The least-squares loss is a convex quadratic, so gradient descent cannot get stuck: there are no local minima other than the global one. The only question is speed.
-> - **Line search.** Instead of a fixed $\alpha$, pick the step at each iteration by (approximately) minimizing $\mathcal{L}(\mathbf{w}_t-\alpha\mathbf{g}_t)$ over $\alpha$. For a quadratic the exact minimizer is $\alpha_t=\mathbf{g}_t^\top\mathbf{g}_t/(\mathbf{g}_t^\top\mathbf{X}^\top\mathbf{X}\mathbf{g}_t)$, up to the $1/N$ scaling. In general, backtracking (shrink $\alpha$ until the loss decreases enough) is cheap and robust.
-> - **Momentum.** Elongated contours make GD zig-zag across the valley while creeping along it (Figure 2). Momentum keeps a running average of past gradients, $\mathbf{v}_{t+1}=\beta\mathbf{v}_t+\mathbf{g}_t$ and $\mathbf{w}_{t+1}=\mathbf{w}_t-\alpha\mathbf{v}_{t+1}$ with $\beta\approx0.9$. The zig-zag components cancel and the consistent downhill component accumulates. Adam and its relatives add a per-coordinate step size on top.[^bottou2018]
 
 > [!tip] Aside: data pre-processing
 > Suppose we predict age from height in metres (say $1.5$) and weight in kilograms (say $50$). The raw features live on very different scales.
 > - **Plain least squares doesn't care.** Rescaling a feature by $c$ simply rescales its optimal weight by $1/c$, so the predictions are unchanged.
 > - **Regularization cares,** because the penalty $\lambda\lVert\mathbf{w}\rVert^2$ treats all weights alike. A feature measured in small units needs a large weight, and so gets penalized more.
-> - **Gradient descent cares,** because badly scaled features stretch the loss contours (Figure 2) and force a small step size.
+> - **Gradient descent cares,** because badly scaled features stretch the loss contours (Figure 2) and force a small step size; see [[First-Order Optimization#Feature scaling and conditioning|feature scaling and conditioning]].
 >
 > Two common fixes, applied per feature column $j$:
 > 1. **Min–max scaling:** $x_{ij}\leftarrow\dfrac{x_{ij}-x^{\min}_j}{x^{\max}_j-x^{\min}_j}$, which maps every feature to $[0,1]$.

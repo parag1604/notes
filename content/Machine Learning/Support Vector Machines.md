@@ -9,7 +9,7 @@ prev: "[[Discriminant Analysis]]"
 next: "[[Neural Networks]]"
 ---
 
-> **Prerequisites:** [[Linear Models]] (linear classifiers, logistic regression, $L_2$ regularization) and the basics of constrained optimization (Lagrange multipliers).
+> **Prerequisites:** [[Linear Models]] (linear classifiers, logistic regression, $L_2$ regularization) and [[Multivariable Calculus#Constrained optimization: Lagrange multipliers|constrained optimization]] (Lagrange multipliers, duality and the KKT conditions; study it first if it is new).
 >
 > **TL;DR:**
 > - Among all hyperplanes that separate two classes, the SVM picks the one with the **largest margin**.
@@ -68,52 +68,10 @@ $$
 
 All $N$ constraints must stay, as inequalities. We do not know in advance which points will end up on the margin. The fact that only those points matter is a *consequence* of the optimization (complementary slackness, below), not something we can impose.
 
-> [!tip]- Aside: from constrained to unconstrained optimization — penalties, the Lagrangian, and the KKT conditions
-> **Unconstrained problems are easy to characterize.** For a differentiable $f$, every (local) minimizer satisfies $\nabla f(\mathbf{x}^*)=\mathbf{0}$. If $f$ is also **convex**, the converse holds too: $\nabla f(\mathbf{x}^*)=\mathbf{0}\iff\mathbf{x}^*$ is a global minimizer. (Without convexity, $\nabla f=\mathbf{0}$ is only necessary; think of saddle points and maxima.)
->
-> **Constrained problems are not.** Consider
-> $$
-> \min_\mathbf{x}\ f(\mathbf{x})\qquad\text{s.t.}\qquad g_i(\mathbf{x})\le0,\quad i=1,\dots,m.
-> $$
-> Here $\nabla f=\mathbf{0}$ is **neither necessary nor sufficient**. Take the toy problem $\min x^2$ s.t. $x\ge1$, i.e. $g(x)=1-x\le0$. The optimum is $x^*=1$, where $f'(1)=2\neq0$. The only point with $f'=0$ is $x=0$, which is infeasible. So the optimality test itself must change. To find the right one, turn the constrained problem back into an unconstrained one.
->
-> **Idea 1: penalize infeasibility.** Replace the constraint by a penalty $P(\mathbf{x})$ that is zero on the feasible set and positive outside it, and minimize $f+P$ with no constraints. The *ideal* penalty is the indicator
-> $$
-> P_\infty(\mathbf{x})=\begin{cases}0&\text{if }g_i(\mathbf{x})\le0\ \forall i,\\+\infty&\text{otherwise,}\end{cases}
-> $$
-> which makes $\min_\mathbf{x}f+P_\infty$ *exactly* the constrained problem. But it is discontinuous and useless for gradients. Practical penalties are compromises:
-> - **Quadratic** $\mu\sum_i\max(0,g_i)^2$: smooth, but only approximately right. Its minimizer sits slightly *outside* the feasible set and reaches the true optimum only as $\mu\to\infty$, where the problem becomes badly conditioned.
-> - **Exact $\ell_1$** $\mu\sum_i\max(0,g_i)$: gives the exact solution once $\mu$ is large enough, but has a kink.
-> - **Log barrier** $-\frac1t\sum_i\log(-g_i)$: stays strictly *inside* the feasible set and approaches the optimum as $t\to\infty$. This is the engine of interior-point methods, including cvxopt.
->
-> ![[Machine Learning/images/support-vector-machines-penalties.svg]]
-> *Top: penalized versions of $x^2$ s.t. $x\ge1$. The quadratic penalty's minimizer approaches $x^*=1$ from outside as $\mu$ grows; the $\ell_1$ penalty hits it exactly; the barrier approaches it from inside. Bottom: the Lagrangian $x^2+\lambda(1-x)$ for several $\lambda$. Only at the "right price" $\lambda^*=2$ does its unconstrained minimizer coincide with the constrained optimum.*
->
-> **Idea 2: a linear penalty, with an adversarial price.** Use the simplest penalty of all, a *linear* one, $\lambda_i\,g_i(\mathbf{x})$ with $\lambda_i\ge0$. Then let an adversary choose the prices $\boldsymbol{\lambda}$ to make the penalty as large as possible:
-> $$
-> \max_{\lambda\ge0}\ \lambda\,g(\mathbf{x})=\begin{cases}0&\text{if }g(\mathbf{x})\le0\quad(\text{best choice }\lambda=0),\\+\infty&\text{if }g(\mathbf{x})>0\quad(\text{let }\lambda\to\infty).\end{cases}
-> $$
-> The inner maximization **rebuilds the ideal indicator penalty exactly** from smooth linear pieces. With the **Lagrangian** $\mathcal{L}(\mathbf{x},\boldsymbol{\lambda})=f(\mathbf{x})+\sum_i\lambda_ig_i(\mathbf{x})$:
-> $$
-> \min_\mathbf{x}\ \max_{\boldsymbol{\lambda}\ge0}\ \mathcal{L}(\mathbf{x},\boldsymbol{\lambda})=\min_\mathbf{x}\ \big[f(\mathbf{x})+P_\infty(\mathbf{x})\big]=\text{the constrained problem.}
-> $$
-> An equality constraint $h(\mathbf{x})=0$ works the same way with an *unrestricted* multiplier: $\max_{\nu\in\mathbb{R}}\nu\,h(\mathbf{x})$ is $0$ if $h=0$ and $+\infty$ otherwise. Read $\lambda_i$ as the **price** of violating constraint $i$: the adversary raises the price of any violated constraint until we stop violating it.
->
-> **Swapping min and max gives the dual.** Because $\mathcal{L}$ is linear in $\boldsymbol{\lambda}$, the *dual function* $d(\boldsymbol{\lambda})=\min_\mathbf{x}\mathcal{L}(\mathbf{x},\boldsymbol{\lambda})$ is a minimum of linear functions, hence always concave. And always $\max_{\boldsymbol{\lambda}\ge0}d(\boldsymbol{\lambda})\le$ the primal optimum (*weak duality*). For convex problems with a strictly feasible point (Slater's condition), equality holds (*strong duality*), and a saddle point $(\mathbf{x}^*,\boldsymbol{\lambda}^*)$ solves both.[^boyd2004] In the toy problem, $d(\lambda)=\min_x x^2+\lambda(1-x)=\lambda-\lambda^2/4$, which is maximized at $\lambda^*=2$ with value $1=f(x^*)$. Exactly the right price.
->
-> **The KKT conditions fall out of the saddle point.** At $(\mathbf{x}^*,\boldsymbol{\lambda}^*)$:
-> 1. **Stationarity.** $\mathbf{x}^*$ minimizes the *unconstrained* function $\mathcal{L}(\cdot,\boldsymbol{\lambda}^*)$, so the familiar test applies, but to $\mathcal{L}$ instead of $f$: $\nabla f(\mathbf{x}^*)+\sum_i\lambda_i^*\nabla g_i(\mathbf{x}^*)=\mathbf{0}$.
-> 2. **Primal feasibility.** The inner max is finite, so $g_i(\mathbf{x}^*)\le0$.
-> 3. **Dual feasibility.** The prices were restricted to $\lambda_i^*\ge0$. A negative price would *reward* violations.
-> 4. **Complementary slackness.** The adversary maximizes $\lambda_ig_i$ with $g_i\le0$. If a constraint is slack ($g_i<0$), any positive price only lowers the penalty, so $\lambda_i^*=0$. A positive price is only possible on an **active** constraint ($g_i=0$). Together, $\lambda_i^*g_i(\mathbf{x}^*)=0$.
->
-> In the toy problem, $2x^*-\lambda^*=0$, $1-x^*\le0$, $\lambda^*=2\ge0$ and $\lambda^*(1-x^*)=0$ all hold at $x^*=1$. Geometrically, stationarity says $-\nabla f$ is a non-negative combination of the gradients of the *active* constraints. Every direction that would decrease $f$ points out of the feasible set, so the constraints "push back" with force $\lambda_i$.
->
-> **Why gradient $=0$ is no longer enough.** In unconstrained convex optimization, $\nabla f=\mathbf{0}$ alone certifies optimality. In constrained optimization, stationarity of $\mathcal{L}$ alone does not. $\nabla_\mathbf{x}\mathcal{L}=\mathbf{0}$ holds for *every* $\lambda$ at that $\lambda$'s minimizer (the dots in the bottom panel), and most of those points are infeasible or suboptimal. Only together with feasibility, non-negative prices and complementary slackness does it pin down the optimum. For convex problems satisfying Slater's condition, the four KKT conditions are **necessary and sufficient**, the constrained analogue of $\nabla f=\mathbf{0}\iff$ optimal. For non-convex problems they are only necessary (under a constraint qualification).
+> [!tip] Prerequisite: constrained optimization
+> This lecture leans on Lagrange multipliers, duality and the KKT conditions. If they are new, study [[Multivariable Calculus#Constrained optimization: Lagrange multipliers|constrained optimization]] first: it covers penalties, the Lagrangian as a min–max, weak and strong duality, and the four KKT conditions, with worked examples. Chapter 5 of Boyd and Vandenberghe is the standard reference.[^boyd2004]
 >
 > **For the SVM:** $g_i=1-y_i(\mathbf{w}^\top\mathbf{x}_i+b)\le0$ and $\lambda_i=\alpha_i$. Stationarity gives $\mathbf{w}=\sum_i\alpha_iy_i\mathbf{x}_i$, dual feasibility gives $\alpha_i\ge0$, and complementary slackness says only points on the margin can have $\alpha_i>0$. Those are the support vectors.
->
-> For a visual walkthrough of the KKT conditions and how interior-point solvers such as cvxopt use them, see Visually Explained's *The Karush–Kuhn–Tucker (KKT) Conditions and the Interior Point Method for Convex Optimization*.[^kktvideo]
 
 ### The Lagrangian dual
 
@@ -419,5 +377,4 @@ On the problem of Figure 5, this agrees with scikit-learn's `SVR` to within $0.0
 [^scholkopf2002]: Schölkopf, B., & Smola, A. J. (2002). *Learning with Kernels*. MIT Press. [doi:10.7551/mitpress/4175.001.0001](https://doi.org/10.7551/mitpress/4175.001.0001)
 [^pegasos2011]: Shalev-Shwartz, S., Singer, Y., Srebro, N., & Cotter, A. (2011). *Pegasos: Primal Estimated Sub-Gradient Solver for SVM*. Mathematical Programming, 127, 3–30. [doi:10.1007/s10107-010-0420-4](https://doi.org/10.1007/s10107-010-0420-4)
 [^smolasvr2004]: Smola, A. J., & Schölkopf, B. (2004). *A Tutorial on Support Vector Regression*. Statistics and Computing, 14, 199–222. [doi:10.1023/B:STCO.0000035301.49549.88](https://doi.org/10.1023/B:STCO.0000035301.49549.88)
-[^kktvideo]: Visually Explained (YouTube). *The Karush–Kuhn–Tucker (KKT) Conditions and the Interior Point Method for Convex Optimization*. [video](https://www.youtube.com/watch?v=uh1Dk68cfWs)
 [^cvxopt]: Andersen, M., Dahl, J., & Vandenberghe, L. *CVXOPT: Python Software for Convex Optimization*. [cvxopt.org](https://cvxopt.org/)
