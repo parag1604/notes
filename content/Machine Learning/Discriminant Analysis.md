@@ -15,8 +15,6 @@ next: "[[Support Vector Machines]]"
 > - **Fisher's discriminant** looks for the projection direction that separates two classes best: large spread *between* the projected class means, small spread *within* each class. The answer is $\mathbf{w}^*\propto\mathbf{S}_W^{-1}(\boldsymbol{\mu}_1-\boldsymbol{\mu}_0)$.
 > - **Generative classifiers** instead model each class's distribution $p(\mathbf{x}\mid y=k)$ and classify with Bayes' rule. With Gaussian classes this gives **QDA** (one covariance per class, quadratic boundaries) or **LDA** (shared covariance, linear boundaries).
 > - LDA recovers Fisher's direction, and its posterior is exactly a logistic regression.
->
-> **Code:** [Naive-Bayes](https://github.com/parag1604/Naive-Bayes): Gaussian naive Bayes from scratch.
 
 ## Motivation: discriminative vs. generative
 
@@ -200,7 +198,7 @@ with $\mathbf{w}=\boldsymbol{\Sigma}^{-1}(\boldsymbol{\mu}_1-\boldsymbol{\mu}_0)
 | Parameters (2 classes) | $2D+\frac{D(D+1)}{2}+1$ | $D+1$ |
 | Strength | data-efficient when the assumptions hold; handles missing features | robust when the Gaussian assumption fails |
 
-Ng and Jordan made this precise:[^ngjordan2001] generative models often reach their (higher) asymptotic error with fewer samples, while discriminative models win once data is plentiful. QDA needs even more parameters, $\frac{D(D+1)}{2}$ per class, which is why LDA (or a *regularized* QDA that shrinks each $\boldsymbol{\Sigma}_k$ towards a common $\boldsymbol{\Sigma}$) is often preferred in high dimensions. Assuming **diagonal** class covariances gives **Gaussian naive Bayes**.
+Ng and Jordan made this precise, comparing logistic regression with [[Bayesian Decision Theory#Naive Bayes|naive Bayes]]:[^ngjordan2001] generative models often reach their (higher) asymptotic error with fewer samples, while discriminative models win once data is plentiful. QDA needs even more parameters, $\frac{D(D+1)}{2}$ per class, which is why LDA (or a *regularized* QDA that shrinks each $\boldsymbol{\Sigma}_k$ towards a common $\boldsymbol{\Sigma}$) is often preferred in high dimensions. Assuming **diagonal** class covariances gives **Gaussian naive Bayes**.
 
 ## Key takeaways
 

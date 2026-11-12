@@ -5,7 +5,7 @@ tags:
   - parzen-windows
   - kernel-density-estimation
   - non-parametric
-prev: "[[Support Vector Machines]]"
+prev: "[[Applications of Neural Networks]]"
 next: "[[Matrix Factorization and Dimensionality Reduction]]"
 ---
 

@@ -17,6 +17,9 @@ next: "[[Linear Models]]"
 > - With unequal costs of mistakes, minimize the expected loss (the **conditional risk**) instead. For two classes this is a **likelihood ratio test**: the costs and priors only move the threshold.
 > - Variations: a **reject option** for uncertain cases, and the **minimax** rule when the priors are unknown.
 > - With Gaussian class-conditionals the optimal boundaries are linear (equal covariances) or quadratic (different covariances). Every classifier in this series is an attempt to approximate the Bayes classifier from data.
+> - **Naive Bayes** is the simplest way to do that: assume the features are independent given the class, so $p(\mathbf{x}\mid k)=\prod_j p(x_j\mid k)$ needs only one-dimensional estimates. The assumption is usually false, but the decisions are often good even when the probabilities are not.
+>
+> **Code:** [Naive-Bayes](https://github.com/parag1604/Naive-Bayes): Gaussian naive Bayes from scratch, then in log space with variance smoothing, checked against scikit-learn.
 
 ## Motivation
 
@@ -285,12 +288,101 @@ The boundaries are quadric surfaces: ellipses, parabolas, hyperbolas, or pairs o
 > print(delta, stats.norm.cdf(-delta / 2))                       # about 1.98 and 0.161
 > ```
 
+## Naive Bayes
+
+Everything so far assumed $\pi_k$ and $p(\mathbf{x}\mid k)$ were known. In practice we estimate them from a labelled dataset and plug the estimates into the Bayes rule. The priors are easy, $\hat\pi_k=N_k/N$. The class-conditional densities are the hard part, because they live in $D$ dimensions:
+- A full Gaussian per class needs $D$ means and $D(D+1)/2$ covariance entries. For $64$-pixel images that is already $2144$ numbers per class, and the covariance estimate is singular whenever a class has fewer than $D+1$ points.
+- For $D$ binary features, an unrestricted $p(\mathbf{x}\mid k)$ is a table with $2^D-1$ free entries per class. Most of its cells never see a single training example.
+
+**The naive assumption.** Assume the features are [[Probability Basics#Conditional probability and independence|conditionally independent]] given the class:
+
+$$
+p(\mathbf{x}\mid k)=\prod_{j=1}^{D}p(x_j\mid k).
+\tag{6}
+$$
+
+Now each factor is a one-dimensional density, estimated from the $N_k$ points of class $k$ alone, and the parameter count grows linearly in $D$. Taking logs, the Bayes rule becomes a sum of per-feature votes,
+
+$$
+\hat y(\mathbf{x})=\arg\max_k\Big[\ln\hat\pi_k+\sum_{j=1}^{D}\ln\hat p(x_j\mid k)\Big].
+$$
+
+Each feature adds its own log-likelihood evidence for each class, ignoring what the other features said.
+
+### Three common variants
+
+**Gaussian naive Bayes** (continuous features). Each $p(x_j\mid k)=\mathcal{N}(\mu_{kj},\sigma^2_{kj})$, fitted by maximum likelihood: $\hat\mu_{kj}$ and $\hat\sigma^2_{kj}$ are the mean and variance of feature $j$ over class $k$. The discriminant is
+
+$$
+g_k(\mathbf{x})=\ln\pi_k-\frac12\sum_{j=1}^{D}\Big[\ln(2\pi\sigma^2_{kj})+\frac{(x_j-\mu_{kj})^2}{\sigma^2_{kj}}\Big].
+$$
+
+This is exactly Case 3 of the previous section with **diagonal** covariances $\boldsymbol\Sigma_k=\operatorname{diag}(\sigma^2_{k1},\dots,\sigma^2_{kD})$. So the boundaries are quadratic, with axis-aligned quadratic terms. If all classes also share their variances, they become linear. Figure 7a shows what is lost when the features are in fact correlated.
+
+**Bernoulli naive Bayes** (binary features, e.g. "does word $j$ appear in this email?"). With $\theta_{kj}=\mathbb{P}(x_j=1\mid k)$,
+
+$$
+g_k(\mathbf{x})=\ln\pi_k+\sum_{j=1}^{D}\big[x_j\ln\theta_{kj}+(1-x_j)\ln(1-\theta_{kj})\big],
+$$
+
+which is **linear** in $\mathbf{x}$. For two classes the log posterior odds $g_1-g_0$ is $\mathbf{w}^\top\mathbf{x}+b$ with
+
+$$
+w_j=\ln\frac{\theta_{1j}(1-\theta_{0j})}{\theta_{0j}(1-\theta_{1j})},\qquad b=\ln\frac{\pi_1}{\pi_0}+\sum_{j=1}^{D}\ln\frac{1-\theta_{1j}}{1-\theta_{0j}}.
+$$
+
+That is the same functional form as [[Linear Models#Logistic Regression|logistic regression]]. The two models differ only in how they fit $\mathbf{w}$. Naive Bayes estimates each feature separately from class counts, which is fast and data-efficient but trusts the independence assumption. Logistic regression fits the weights jointly to the conditional likelihood, so it can correct for correlated features. Ng and Jordan showed that naive Bayes approaches its (higher) asymptotic error with far fewer samples, so it often wins on small datasets and loses on large ones.[^ngjordan2001]
+
+**Multinomial naive Bayes** (counts, e.g. word frequencies in a document). A document with $n_j$ occurrences of word $j$ has $\ln p(\mathbf{x}\mid k)=\sum_j n_j\ln\phi_{kj}+\text{const}$, where $\phi_{kj}$ is the probability that a word drawn from a class-$k$ document is word $j$. This is the classic baseline for text classification and spam filtering.[^mccallum1998]
+
+### Smoothing: never estimate a zero
+
+The maximum-likelihood estimate of $\theta_{kj}$ or $\phi_{kj}$ is a count ratio. If a word never appears in the spam training set, its estimate is $0$, and one occurrence of that word in a new email sets $\ln p(\mathbf{x}\mid\text{spam})=-\infty$, overruling all the other evidence. The fix is **Laplace (add-$\alpha$) smoothing**:
+
+$$
+\hat\phi_{kj}=\frac{c_{kj}+\alpha}{\sum_{j'}c_{kj'}+\alpha V},
+$$
+
+where $c_{kj}$ counts word $j$ in class $k$, $V$ is the vocabulary size, and $\alpha=1$ is the usual default. This is the posterior mean under a symmetric Dirichlet prior: pseudo-counts, exactly as in the [[Linear Models#Warm-up: maximum likelihood and MAP for a coin|coin example]]. The Gaussian version of the same problem is a feature with zero variance in some class (a pixel that is always black for the digit 1), which makes the density infinite or zero. Practical implementations add a small constant to every variance ("variance smoothing").
+
+The second practical rule is to **work in log space**. A product of hundreds of densities underflows or overflows floating point, and comparing sums of logs is both stable and faster.
+
+> [!example]- Code: Gaussian naive Bayes in log space
+> ```python
+> import numpy as np
+>
+> def fit_gnb(X, y, eps=1e-9):
+>     classes = np.unique(y)
+>     log_prior = np.log(np.array([np.mean(y == k) for k in classes]))
+>     mu = np.array([X[y == k].mean(axis=0) for k in classes])
+>     var = np.array([X[y == k].var(axis=0) for k in classes]) + eps * X.var(axis=0).max()  # variance smoothing
+>     return classes, log_prior, mu, var
+>
+> def predict_gnb(model, X):
+>     classes, log_prior, mu, var = model
+>     # log p(x|k) = sum_j log N(x_j; mu_kj, var_kj), for every test point and class at once
+>     ll = -0.5 * (np.log(2 * np.pi * var)[None] + (X[:, None, :] - mu[None]) ** 2 / var[None]).sum(axis=2)
+>     return classes[np.argmax(ll + log_prior, axis=1)]
+>
+> # On scikit-learn's 8x8 digits (80/20 split) this agrees with sklearn.naive_bayes.GaussianNB
+> # on every test point (accuracy 0.825 for this split).
+> ```
+
+### Why does a wrong assumption work?
+
+Conditional independence almost never holds: neighbouring pixels are correlated, and so are the words "machine" and "learning". Yet naive Bayes is a strong baseline. The reason is that the Bayes rule only needs the **argmax** to be right, not the probabilities. Naive Bayes can be badly miscalibrated and still pick the correct class over large regions of the input space.[^domingos1997]
+
+Figure 7b makes this concrete. Copy one feature ten times. The true posterior does not change, since the copies carry no new information, but naive Bayes counts the same evidence ten times and becomes almost certain. Its decision boundary, however, stays exactly where it was. So naive Bayes is often a good *classifier* and a poor *probability estimator*. If the probabilities matter, for a reject option or for unequal costs in (3), calibrate them on held-out data first.
+
+![[Machine Learning/images/bayesian-decision-theory-naive-bayes.svg]]
+*Figure 7. (a) Two correlated Gaussian classes with equal priors. The Bayes boundary uses the full covariances (red). Naive Bayes, given the true per-feature means and variances but no correlations, draws a different boundary (green, dashed). By simulation, the Bayes error is 7.0% and the naive Bayes error is 8.8%. (b) Two 1-D classes, $\mathcal{N}(0,1)$ and $\mathcal{N}(2,1)$. When the single feature is copied 3 or 10 times, naive Bayes treats the copies as independent evidence. The posterior becomes overconfident, but the boundary at $x=1$ does not move.*
+
 ## From decision theory to learning
 
 Everything above assumed the distributions were known. In practice we have only a labelled dataset $\mathcal{D}=\{(\mathbf{x}_i,y_i)\}_{i=1}^N$, and the rest of the supervised-learning lectures are different strategies for getting close to the Bayes classifier from data:
-- **Generative (plug-in) classifiers** estimate $\pi_k$ and $p(\mathbf{x}\mid k)$ and then apply Bayes' rule. With Gaussian class-conditionals these are LDA and QDA, and with independent features, naive Bayes ([[Discriminant Analysis]]).
+- **Generative (plug-in) classifiers** estimate $\pi_k$ and $p(\mathbf{x}\mid k)$ and then apply Bayes' rule. With Gaussian class-conditionals these are LDA and QDA ([[Discriminant Analysis]]), and with conditionally independent features, naive Bayes (above).
 - **Discriminative probabilistic classifiers** model the posterior $\mathbb{P}(k\mid\mathbf{x})$ directly, as [[Linear Models#Logistic regression|logistic and softmax regression]] do.
-- **Discriminant-function methods** learn the boundary itself, without probabilities, by minimizing a surrogate for the empirical risk: [[Support Vector Machines]] (hinge loss) and neural networks.
+- **Discriminant-function methods** learn the boundary itself, without probabilities, by minimizing a surrogate for the empirical risk: [[Support Vector Machines]] (hinge loss) and [[Neural Networks|neural networks]].
 - **Non-parametric methods** estimate the posterior locally, from the training points near $\mathbf{x}$. The 1-nearest-neighbour rule's asymptotic error is at most twice the Bayes error ([[Non-parametric Models]]).
 
 ### Learning as risk minimization
@@ -340,12 +432,13 @@ Decision theory also separates two questions that are easy to conflate. **Infere
 - Discriminant functions are equivalent up to increasing transformations; $\ln p(\mathbf{x}\mid k)+\ln\pi_k$ is the convenient one. For two classes it gives the log posterior odds.
 - Learning from data is (regularized) empirical risk minimization over a hypothesis class. Its excess risk over the Bayes risk splits into estimation and approximation error; held-out data are needed because training error is optimistic.
 - Gaussian class-conditionals give linear boundaries with equal covariances (nearest mean, LDA) and quadratic ones otherwise (QDA). The priors shift the boundaries.
+- Naive Bayes assumes conditional independence, $p(\mathbf{x}\mid k)=\prod_jp(x_j\mid k)$, so it needs only one-dimensional estimates. Gaussian naive Bayes is QDA with diagonal covariances; Bernoulli naive Bayes is linear, like logistic regression, but fitted feature by feature. Smooth the counts, work in log space, and trust its decisions more than its probabilities.
 
 ## Where this shows up next
 
 - [[Linear Models]] models the log posterior odds directly (logistic regression), and fits regression by minimizing squared loss, the regression analogue of the risk.
-- [[Discriminant Analysis]] estimates the Gaussian discriminants of this lecture from data (LDA, QDA, naive Bayes).
-- [[Support Vector Machines]] and neural networks learn decision boundaries directly; [[Non-parametric Models]] relate $k$-NN's error to the Bayes error.
+- [[Discriminant Analysis]] estimates the Gaussian discriminants of this lecture from data (LDA, QDA) and compares generative with discriminative classifiers.
+- [[Support Vector Machines]] and [[Neural Networks|neural networks]] learn decision boundaries directly; [[Non-parametric Models]] relate $k$-NN's error to the Bayes error.
 - In [[Introduction to Reinforcement Learning]], an agent again chooses actions to minimize expected loss (or maximize expected reward), but its actions also change the future.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
@@ -357,3 +450,6 @@ Decision theory also separates two questions that are easy to conflate. **Infere
 [^chow1970]: Chow, C. K. (1970). *On optimum recognition error and reject tradeoff*. IEEE Transactions on Information Theory, 16(1), 41–46. [doi:10.1109/TIT.1970.1054406](https://doi.org/10.1109/TIT.1970.1054406)
 [^shalev2014]: Shalev-Shwartz, S., & Ben-David, S. (2014). *Understanding Machine Learning: From Theory to Algorithms*, Chapters 2–5. Cambridge University Press. [Free online edition](https://www.cs.huji.ac.il/~shais/UnderstandingMachineLearning/)
 [^bartlett2006]: Bartlett, P. L., Jordan, M. I., & McAuliffe, J. D. (2006). *Convexity, Classification, and Risk Bounds*. Journal of the American Statistical Association, 101(473), 138–156. [doi:10.1198/016214505000000907](https://doi.org/10.1198/016214505000000907)
+[^ngjordan2001]: Ng, A. Y., & Jordan, M. I. (2001). *On Discriminative vs. Generative Classifiers: A comparison of logistic regression and naive Bayes*. NeurIPS. [link](https://papers.nips.cc/paper_files/paper/2001/hash/7b7a53e239400a13bd6be6c91c4f6c4e-Abstract.html)
+[^mccallum1998]: McCallum, A., & Nigam, K. (1998). *A Comparison of Event Models for Naive Bayes Text Classification*. AAAI-98 Workshop on Learning for Text Categorization. [pdf](https://cdn.aaai.org/Workshops/1998/WS-98-05/WS98-05-007.pdf)
+[^domingos1997]: Domingos, P., & Pazzani, M. (1997). *On the Optimality of the Simple Bayesian Classifier under Zero-One Loss*. Machine Learning, 29, 103–130. [doi:10.1023/A:1007413511361](https://doi.org/10.1023/A:1007413511361)
