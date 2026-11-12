@@ -2,7 +2,7 @@
 title: Index (Machine Learning)
 ---
 
-Machine learning built up from first principles: classical supervised and unsupervised methods, then representation learning and deep generative models. Each lecture lists its prerequisites at the top; the probability they use is in the [[Index (Probability and Linear Algebra)|Probability and Linear Algebra]] series.
+Machine learning built up from first principles: supervised learning, then unsupervised learning, from matrix factorization and clustering to deep generative models. Each lecture lists its prerequisites at the top; the probability they use is in the [[Index (Probability and Linear Algebra)|Probability and Linear Algebra]] series.
 
 ## How machine learning works in practice
 
@@ -37,16 +37,13 @@ Typical proportions are 60/20/20 or 80/10/10. When data are scarce, **$k$-fold c
 
 ## Unsupervised learning
 
-5. [[Clustering and Expectation Maximization]]: K-Means (with k-means++ and choosing $K$), fuzzy and kernel K-Means, EM and the ELBO, Gaussian mixtures, spectral clustering, modularity and Louvain, hierarchical clustering, DBSCAN and evaluation metrics.
-6. [[Matrix Factorization and Dimensionality Reduction]]: eigen-decomposition, SVD and Eckart–Young (with proof), power iteration and QR, pseudo-inverse, recommender systems, NMF and CUR; PCA (max variance, min error, via SVD), autoencoders, kernel PCA, and manifold methods.
+Learning structure from data without labels: compact representations, clusters, and generative models that can produce new data. The lectures build on each other in this order. Matrix factorization gives linear representations; EM fits latent-variable models; VAEs and GANs make those models deep; energy-based and score-based models lead to diffusion.
 
-## Representation learning and generative models
-
-Learning representations of data, and generative models that learn to produce new data. The linear methods (PCA, kernel PCA, autoencoders) are in [[Matrix Factorization and Dimensionality Reduction]] above.
-
+5. [[Matrix Factorization and Dimensionality Reduction]]: eigen-decomposition, SVD and Eckart–Young (with proof), power iteration and QR, pseudo-inverse, recommender systems, NMF and CUR; PCA (max variance, min error, via SVD), autoencoders, kernel PCA, and manifold methods.
+6. [[Clustering and Expectation Maximization]]: K-Means (with k-means++ and choosing $K$), fuzzy and kernel K-Means, EM and the ELBO, Gaussian mixtures, spectral clustering, modularity and Louvain, hierarchical clustering, DBSCAN and evaluation metrics.
 7. [[Variational Autoencoders]]: the ELBO as amortized EM, score-function vs reparameterization gradients, the Gaussian VAE with its closed-form KL, sampling through the aggregate posterior, forward vs reverse KL, and practical issues (blurry samples, posterior collapse, β-VAE).
 8. [[Generative Adversarial Networks]]: f-divergences and Fenchel conjugates, the variational lower bound and the f-GAN, the original GAN as a special case ($D^*$, $2\,\mathrm{JSD}-\log4$), training in practice, mode collapse, and the Wasserstein GAN.
 9. [[Energy-Based Models]]: the Boltzmann distribution (staircase intuition and maximum entropy), Hopfield networks as associative memory, Boltzmann machines and RBMs with contrastive divergence, the EBM likelihood gradient and Langevin sampling, contrastive losses (InfoNCE, CLIP) derived from energy, and modern Hopfield networks as attention.
 10. [[Score-Based Models]]: the score and its properties, implicit, sliced and denoising score matching, Tweedie's formula (the score is the optimal denoiser), why naive score-based sampling fails, noise-conditional score networks with annealed Langevin dynamics, and a preview of the SDE view.
 
-Coming soon, in this order: Denoising Diffusion Models, Flow Matching. Also planned: Normalizing Flows.
+Coming soon, in this order: Denoising Diffusion Models, (Conditional) Flow Matching, and Contrastive Representation Learning. Also planned: Normalizing Flows.

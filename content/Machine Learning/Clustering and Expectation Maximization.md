@@ -9,7 +9,7 @@ tags:
   - community-detection
 ---
 
-> **Prerequisites:** [[Discriminant Analysis]] (Gaussian class models, Bayes' rule), [[Non-parametric Models]] (distances, RBF similarities), and [[Support Vector Machines]] (kernels, Lagrange multipliers).
+> **Prerequisites:** [[Discriminant Analysis]] (Gaussian class models, Bayes' rule), [[Non-parametric Models]] (distances, RBF similarities), [[Support Vector Machines]] (kernels, Lagrange multipliers), and [[Matrix Factorization and Dimensionality Reduction]] (eigenvectors, used by spectral clustering).
 >
 > **TL;DR:**
 > - **Clustering** groups unlabelled points. Doing it optimally is NP-hard, so practical algorithms optimize relaxations.
