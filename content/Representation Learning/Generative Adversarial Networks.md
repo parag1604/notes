@@ -321,7 +321,8 @@ Sample quality is usually judged by the Inception Score[^salimans2016] or the Fr
 - [[Linear Models]]: the discriminator is a logistic-regression classifier on learned features, trained with cross-entropy.
 - [[Support Vector Machines]]: the Lagrangian aside there is the same convex duality that gives the variational bound here.
 - [[Policy Gradients]]: the generator gets *pathwise* gradients through the critic, while RL with a non-differentiable reward needs the score function. Adversarial imitation learning (GAIL) combines the two, using a GAN discriminator as the reward for [[Imitation Learning|imitation]].
-- Later lectures (planned): energy-based models, normalizing flows and diffusion models, and adversarial losses in modern image tokenizers.
+- [[Energy-Based Models]]: noise-contrastive estimation trains an unnormalized density with a GAN-like classifier against fixed noise.
+- Later lectures (planned): normalizing flows and diffusion models, and adversarial losses in modern image tokenizers.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

@@ -341,6 +341,7 @@ gives a dial between reconstruction and regularity. With $\beta>1$, Higgins et a
 - [[Generative Adversarial Networks]] drop the likelihood entirely and train a sampler against a learned critic, using the f-divergences and Fenchel duality.
 - [[Policy Gradients]] use the score-function estimator from this lecture. The [[Policy Gradients#Straight-Through Gumbel-Softmax (STGS) for PG Algorithms|Gumbel-softmax]] section shows a pathwise alternative for discrete variables.
 - [[Matrix Factorization and Dimensionality Reduction#Principal component analysis (PCA)|PCA]] is the linear-Gaussian limit: a VAE with linear encoder and decoder recovers probabilistic PCA.
+- [[Energy-Based Models]] give up the sampler instead: a single energy network defines an unnormalized density, sampled with MCMC.
 - Later lectures (planned): VQ-VAE tokenizers, hierarchical VAEs, and diffusion models, which can be read as very deep VAEs with a fixed encoder.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->

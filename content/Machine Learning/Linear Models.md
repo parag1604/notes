@@ -355,6 +355,7 @@ Where weighted least squares shows up:
 
 - [[Discriminant Analysis]]: a *generative* route to linear classifiers. Its posterior turns out to be a logistic or softmax function of $\mathbf{x}$.
 - [[Support Vector Machines]]: maximum-margin linear classifiers and the kernel trick.
+- [[Energy-Based Models]]: the softmax is a Boltzmann distribution with energy = negative logit, and temperature controls its sharpness.
 - [[Imitation Learning]] and [[Policy Gradients]]: maximum likelihood and weighted maximum likelihood, applied to policies.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
