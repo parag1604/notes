@@ -6,6 +6,8 @@ tags:
   - classification
 date: 2026-11-12
 draft: false
+prev: "[[Index (Machine Learning)]]"
+next: "[[Linear Models]]"
 ---
 
 > **Prerequisites:** [[Probability Basics#Bayes' theorem|Bayes' theorem]], [[Random Variables]] (densities, expectation) and [[Joint Distributions#The multivariate Gaussian|the multivariate Gaussian]].

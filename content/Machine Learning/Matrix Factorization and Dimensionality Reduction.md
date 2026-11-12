@@ -7,6 +7,8 @@ tags:
   - matrix-factorization
   - dimensionality-reduction
   - recommender-systems
+prev: "[[Non-parametric Models]]"
+next: "[[Clustering and Expectation Maximization]]"
 ---
 
 > **Prerequisites:** linear algebra (eigenvalues, orthogonality, rank), [[Linear Models]] (least squares, ridge regression), and [[Support Vector Machines#Kernels|kernels]].

@@ -1,5 +1,6 @@
 ---
 title: Index (Reinforcement Learning)
+next: "[[Multi-Armed Bandits]]"
 ---
 
 A blog-style lecture series on reinforcement learning. It starts with the methods that need the fewest assumptions: learning from demonstrations and from trial and error, without a model of the environment. Then it turns to planning when the model is known (or learned), and ends with the mathematics that proves the learning algorithms converge. Each lecture lists its prerequisites at the top.

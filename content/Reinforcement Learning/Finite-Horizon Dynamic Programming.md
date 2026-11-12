@@ -8,6 +8,8 @@ tags:
   - model-based
 date: 2026-11-12
 draft: false
+prev: "[[Off-Policy Learning with Function Approximation]]"
+next: "[[Dynamic Programming]]"
 ---
 
 > **Prerequisites:** [[Introduction to Reinforcement Learning]] (MDPs, the Markov property, [[Introduction to Reinforcement Learning#Horizons and discounting|horizons]], value functions and Bellman equations) and [[Markov Chains]]. Conditional expectation and the tower rule ([[Joint Distributions#Conditional expectation|here]]) are used in the proofs.

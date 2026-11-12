@@ -5,6 +5,8 @@ tags:
   - mdp
   - bellman-equations
   - value-functions
+prev: "[[Multi-Armed Bandits]]"
+next: "[[Imitation Learning]]"
 ---
 
 > **Prerequisites:** basic probability ([[Joint Distributions#Conditional expectation|conditional expectation, the tower rule]]) and [[Markov Chains]]. Some familiarity with supervised learning ([[Linear Models]]) helps for the motivation. [[Multi-Armed Bandits]] introduces exploration in the simplest, single-state setting.

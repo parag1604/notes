@@ -1,5 +1,6 @@
 ---
 title: Index (Probability and Linear Algebra)
+next: "[[Probability Basics]]"
 ---
 
 The probability and linear algebra needed for the rest of the series.

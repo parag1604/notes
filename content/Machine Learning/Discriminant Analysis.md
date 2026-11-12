@@ -5,6 +5,8 @@ tags:
   - linear-discriminant-analysis
   - quadratic-discriminant-analysis
   - generative-models
+prev: "[[Linear Models]]"
+next: "[[Support Vector Machines]]"
 ---
 
 > **Prerequisites:** [[Linear Models]] (logistic regression, maximum likelihood), [[Probability Basics#Bayes' theorem|Bayes' rule]], and [[Joint Distributions#The multivariate Gaussian|the multivariate Gaussian]].

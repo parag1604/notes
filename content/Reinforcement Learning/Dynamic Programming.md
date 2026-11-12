@@ -6,6 +6,8 @@ tags:
   - policy-iteration
   - value-iteration
   - bellman-equations
+prev: "[[Finite-Horizon Dynamic Programming]]"
+next: "[[Stochastic Shortest Path Problems]]"
 ---
 
 > **Prerequisites:** [[Introduction to Reinforcement Learning]], in particular the Bellman expectation and optimality equations, the matrix form $V^\pi=(I-\gamma P^\pi)^{-1}r_\pi$, and the Bellman operators $\mathcal{T}^\pi$ and $\mathcal{T}^*$. [[Finite-Horizon Dynamic Programming]] treats the case of a fixed, finite horizon; this lecture is its infinite-horizon, discounted counterpart.

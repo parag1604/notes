@@ -7,6 +7,8 @@ tags:
   - representation-learning
 date: 2026-11-12
 draft: false
+prev: "[[Clustering and Expectation Maximization]]"
+next: "[[Generative Adversarial Networks]]"
 ---
 
 > **Prerequisites:** [[Matrix Factorization and Dimensionality Reduction#Autoencoders|Autoencoders]] (encoder, bottleneck, decoder) and [[Clustering and Expectation Maximization#The evidence lower bound (ELBO)|the evidence lower bound]] from the EM lecture. [[Policy Gradients]] is helpful for the gradient-estimator aside.

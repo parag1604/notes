@@ -5,6 +5,8 @@ tags:
   - foundations
 date: 2026-11-12
 draft: false
+prev: "[[Probability Basics]]"
+next: "[[Joint Distributions]]"
 ---
 
 > **Prerequisites:** [[Probability Basics]] (events, axioms, conditioning, independence).

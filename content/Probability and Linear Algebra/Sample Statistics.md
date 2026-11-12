@@ -5,6 +5,8 @@ tags:
   - foundations
 date: 2026-11-12
 draft: false
+prev: "[[Joint Distributions]]"
+next: "[[Markov Chains]]"
 ---
 
 > **Prerequisites:** [[Random Variables]] (expectation, variance, Markov and Chebyshev) and [[Joint Distributions]] (independence, variance of a sum, convolution).

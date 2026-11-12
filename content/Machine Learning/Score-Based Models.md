@@ -7,6 +7,8 @@ tags:
   - representation-learning
 date: 2026-11-12
 draft: false
+prev: "[[Energy-Based Models]]"
+next: "[[Index (Machine Learning)]]"
 ---
 
 > **Prerequisites:** [[Energy-Based Models]], especially [[Energy-Based Models#Sampling with Langevin dynamics|Langevin dynamics]] and [[Energy-Based Models#From energies to scores|From energies to scores]]. Gaussian [[Non-parametric Models#Kernel density estimation|kernel density estimation]] reappears as the "noisy data" distribution.

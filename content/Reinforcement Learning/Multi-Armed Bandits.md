@@ -6,6 +6,8 @@ tags:
   - exploration
   - ucb
   - stochastic-approximation
+prev: "[[Index (Reinforcement Learning)]]"
+next: "[[Introduction to Reinforcement Learning]]"
 ---
 
 > **Prerequisites:** basic probability ([[Probability Basics|expectations, the law of large numbers]]). Familiarity with [[Introduction to Reinforcement Learning|MDPs]] helps for the closing section but is not needed.

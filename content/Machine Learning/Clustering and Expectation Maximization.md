@@ -7,6 +7,8 @@ tags:
   - gaussian-mixture-models
   - spectral-clustering
   - community-detection
+prev: "[[Matrix Factorization and Dimensionality Reduction]]"
+next: "[[Variational Autoencoders]]"
 ---
 
 > **Prerequisites:** [[Discriminant Analysis]] (Gaussian class models, Bayes' rule), [[Non-parametric Models]] (distances, RBF similarities), [[Support Vector Machines]] (kernels, Lagrange multipliers), and [[Matrix Factorization and Dimensionality Reduction]] (eigenvectors, used by spectral clustering).

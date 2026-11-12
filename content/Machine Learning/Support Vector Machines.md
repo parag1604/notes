@@ -5,6 +5,8 @@ tags:
   - kernels
   - convex-optimization
   - max-margin
+prev: "[[Discriminant Analysis]]"
+next: "[[Non-parametric Models]]"
 ---
 
 > **Prerequisites:** [[Linear Models]] (linear classifiers, logistic regression, $L_2$ regularization) and the basics of constrained optimization (Lagrange multipliers).

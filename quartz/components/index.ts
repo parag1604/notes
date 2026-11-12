@@ -20,8 +20,10 @@ import MobileOnly from "./MobileOnly"
 import RecentNotes from "./RecentNotes"
 import Breadcrumbs from "./Breadcrumbs"
 import Comments from "./Comments"
+import PrevNext from "./PrevNext"
 
 export {
+  PrevNext,
   ArticleTitle,
   Content,
   TagContent,

@@ -1,5 +1,6 @@
 ---
 title: Index (Machine Learning)
+next: "[[Bayesian Decision Theory]]"
 ---
 
 Machine learning built up from first principles: supervised learning, then unsupervised learning, from matrix factorization and clustering to deep generative models. Each lecture lists its prerequisites at the top; the probability they use is in the [[Index (Probability and Linear Algebra)|Probability and Linear Algebra]] series.

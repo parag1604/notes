@@ -9,6 +9,8 @@ tags:
   - stochastic-approximation
 date: 2026-11-12
 draft: false
+prev: "[[Monte Carlo and Temporal-Difference Learning]]"
+next: "[[Linear Function Approximation]]"
 ---
 
 > **Prerequisites:** [[Monte Carlo and Temporal-Difference Learning]] (TD(0) and its stochastic-approximation view), [[Introduction to Reinforcement Learning]] ($Q^*$, the Bellman optimality equation, on- vs off-policy), and $\varepsilon$-greedy exploration from [[Multi-Armed Bandits]]. Contraction facts are proved in [[Dynamic Programming]] and the convergence machinery in [[Stochastic Approximation]]; neither is needed to follow the algorithms.

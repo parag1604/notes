@@ -8,6 +8,8 @@ tags:
   - planning
 date: 2026-11-12
 draft: false
+prev: "[[Stochastic Shortest Path Problems]]"
+next: "[[Stochastic Approximation]]"
 ---
 
 > **Prerequisites:** [[Dynamic Programming]] (value iteration, policy iteration, the Bellman operators), [[Q-Learning and SARSA]] (for Dyna-Q), [[Imitation Learning]] (distribution shift and compounding errors). The exploration discussion uses UCB from [[Multi-Armed Bandits]].

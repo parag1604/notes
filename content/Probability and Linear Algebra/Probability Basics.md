@@ -5,6 +5,8 @@ tags:
   - foundations
 date: 2026-11-12
 draft: false
+prev: "[[Index (Probability and Linear Algebra)]]"
+next: "[[Random Variables]]"
 ---
 
 > **Prerequisites:** none beyond sets, sums, integrals and limits. Every other lecture in the series builds on this one.

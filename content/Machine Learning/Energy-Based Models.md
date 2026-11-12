@@ -8,6 +8,8 @@ tags:
   - representation-learning
 date: 2026-11-12
 draft: false
+prev: "[[Generative Adversarial Networks]]"
+next: "[[Score-Based Models]]"
 ---
 
 > **Prerequisites:** [[Variational Autoencoders]] and [[Generative Adversarial Networks]] (the other two families of generative models), and the softmax from [[Linear Models#More than two classes: softmax regression|softmax regression]]. The Lagrangian aside in [[Support Vector Machines]] is used once, for the maximum-entropy derivation.

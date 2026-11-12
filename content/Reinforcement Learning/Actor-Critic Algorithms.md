@@ -7,6 +7,8 @@ tags:
   - advantage-estimation
 date: 2026-11-12
 draft: false
+prev: "[[Policy Gradients]]"
+next: "[[Monte Carlo and Temporal-Difference Learning]]"
 ---
 
 > **Prerequisites:** [[Policy Gradients]] (REINFORCE, baselines, reward-to-go), [[Introduction to Reinforcement Learning]] (returns, $V^\pi$, $Q^\pi$, $A^\pi$, the Bellman expectation equation). How to learn the critic *well* is the subject of the next lecture, [[Monte Carlo and Temporal-Difference Learning]], and its theory with features is in [[Linear Function Approximation]].

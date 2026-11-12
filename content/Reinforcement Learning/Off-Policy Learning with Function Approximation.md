@@ -3,6 +3,8 @@ title: Off-Policy Learning with Function Approximation
 tags: [reinforcement-learning, function-approximation, off-policy, temporal-difference, deadly-triad]
 date: 2026-11-12
 draft: false
+prev: "[[Linear Function Approximation]]"
+next: "[[Finite-Horizon Dynamic Programming]]"
 ---
 > **Prerequisites:** [[Linear Function Approximation]] (the TD fixed point, $A=\Phi^\top D(I-\gamma P^\pi)\Phi$ and why it is positive definite), [[Q-Learning and SARSA]] (off-policy control in the tabular case), [[Policy Gradients#Off-policy Policy Gradients|importance sampling]].
 >

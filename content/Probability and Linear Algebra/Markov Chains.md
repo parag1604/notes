@@ -5,6 +5,8 @@ tags:
   - stochastic-processes
 date: 2026-11-12
 draft: false
+prev: "[[Sample Statistics]]"
+next: "[[Index (Probability and Linear Algebra)]]"
 ---
 
 > **Prerequisites:** [[Probability Basics]] (conditional independence), [[Random Variables]] (first-step analysis, geometric distribution) and [[Sample Statistics]] (the law of large numbers, Borel–Cantelli).

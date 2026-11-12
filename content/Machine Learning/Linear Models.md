@@ -5,6 +5,8 @@ tags:
   - logistic-regression
   - regularization
   - maximum-likelihood
+prev: "[[Bayesian Decision Theory]]"
+next: "[[Discriminant Analysis]]"
 ---
 
 > **Prerequisites:** linear algebra (rank, column space, inverses, the SVD) and basic probability ([[Probability Basics|Gaussian and Bernoulli distributions]], likelihood).

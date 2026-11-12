@@ -5,6 +5,8 @@ tags:
   - policy-gradients
   - reinforce
   - importance-sampling
+prev: "[[Imitation Learning]]"
+next: "[[Actor-Critic Algorithms]]"
 ---
 
 > **Prerequisites:** [[Introduction to Reinforcement Learning]] (MDPs, trajectories, $Q^\pi$ and $V^\pi$), [[Imitation Learning]] (behavior cloning as maximum likelihood).

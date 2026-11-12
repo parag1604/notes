@@ -9,6 +9,8 @@ tags:
   - stochastic-approximation
 date: 2026-11-12
 draft: false
+prev: "[[Actor-Critic Algorithms]]"
+next: "[[Q-Learning and SARSA]]"
 ---
 
 > **Prerequisites:** [[Introduction to Reinforcement Learning]] (returns, $V^\pi$, the Bellman expectation equation). For motivation, [[Policy Gradients]] and [[Actor-Critic Algorithms]], whose critic needs $V^\pi$. The incremental mean from [[Multi-Armed Bandits#Incremental updates|bandits]] and the law of large numbers ([[Sample Statistics]]) are used throughout. Convergence proofs live in [[Stochastic Approximation]].

@@ -8,6 +8,8 @@ tags:
   - theory
 date: 2026-11-12
 draft: false
+prev: "[[Model-Based Reinforcement Learning]]"
+next: "[[Index (Reinforcement Learning)]]"
 ---
 
 > **Prerequisites:** [[Multi-Armed Bandits]] (the incremental update $q\leftarrow q+\alpha(r-q)$), [[Introduction to Reinforcement Learning]] (the Bellman equations and operators), [[Sample Statistics]] (almost-sure convergence, the strong law), and [[Markov Chains]] (stationary distributions). The contraction property of the Bellman operators is proved in [[Dynamic Programming]].

@@ -5,6 +5,8 @@ tags:
   - foundations
 date: 2026-11-12
 draft: false
+prev: "[[Random Variables]]"
+next: "[[Sample Statistics]]"
 ---
 
 > **Prerequisites:** [[Probability Basics]] and [[Random Variables]] (PMFs, PDFs, expectation, variance, the law of total expectation).

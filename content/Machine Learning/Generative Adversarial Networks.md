@@ -8,6 +8,8 @@ tags:
   - representation-learning
 date: 2026-11-12
 draft: false
+prev: "[[Variational Autoencoders]]"
+next: "[[Energy-Based Models]]"
 ---
 
 > **Prerequisites:** [[Variational Autoencoders]] (latent-variable generators, forward vs reverse KL) and the Lagrangian/duality aside in [[Support Vector Machines]] (conjugates and lower bounds are the same idea).

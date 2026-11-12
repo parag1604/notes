@@ -8,6 +8,8 @@ tags:
   - policy-iteration
 date: 2026-11-12
 draft: false
+prev: "[[Dynamic Programming]]"
+next: "[[Model-Based Reinforcement Learning]]"
 ---
 
 > **Prerequisites:** [[Dynamic Programming]] (Bellman operators, policy evaluation, policy and value iteration), [[Introduction to Reinforcement Learning]] (episodic tasks, $V^\pi$, the Bellman equations) and [[Markov Chains]] (absorbing states, first-step analysis). [[Finite-Horizon Dynamic Programming]] helps for the $k$-stage interpretation of the operators.

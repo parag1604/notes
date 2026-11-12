@@ -1,0 +1,51 @@
+.prev-next {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 2.5rem 0 1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--lightgray);
+
+  .pn-cell {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+  }
+
+  .pn-prev {
+    justify-content: flex-start;
+  }
+
+  .pn-next {
+    justify-content: flex-end;
+    text-align: right;
+  }
+
+  .pn-link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    max-width: 100%;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--lightgray);
+    border-radius: 6px;
+    background-color: transparent;
+    text-decoration: none;
+    transition: border-color 0.2s ease;
+
+    &:hover {
+      border-color: var(--secondary);
+    }
+  }
+
+  .pn-label {
+    font-size: 0.8rem;
+    color: var(--gray);
+  }
+
+  .pn-title {
+    font-weight: 600;
+    color: var(--secondary);
+    overflow-wrap: anywhere;
+  }
+}

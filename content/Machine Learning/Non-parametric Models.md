@@ -5,6 +5,8 @@ tags:
   - parzen-windows
   - kernel-density-estimation
   - non-parametric
+prev: "[[Support Vector Machines]]"
+next: "[[Matrix Factorization and Dimensionality Reduction]]"
 ---
 
 > **Prerequisites:** basic probability (densities, Bayes' rule). [[Discriminant Analysis]] is useful for the generative view of classification.

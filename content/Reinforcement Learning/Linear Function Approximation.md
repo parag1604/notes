@@ -3,6 +3,8 @@ title: Linear Function Approximation
 tags: [reinforcement-learning, function-approximation, temporal-difference, policy-evaluation]
 date: 2026-11-12
 draft: false
+prev: "[[Q-Learning and SARSA]]"
+next: "[[Off-Policy Learning with Function Approximation]]"
 ---
 > **Prerequisites:** [[Introduction to Reinforcement Learning]] (MDPs, $V^\pi$, the Bellman expectation equation in matrix form), [[Monte Carlo and Temporal-Difference Learning]] (tabular TD(0)), [[Markov Chains]] (stationary distributions), [[Linear Models]] (least squares as a projection).
 >

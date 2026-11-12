@@ -5,6 +5,8 @@ tags:
   - imitation-learning
   - behavior-cloning
   - dagger
+prev: "[[Introduction to Reinforcement Learning]]"
+next: "[[Policy Gradients]]"
 ---
 
 > **Prerequisites:** [[Introduction to Reinforcement Learning]] (MDPs, POMDPs, cost vs. reward), maximum likelihood estimation ([[Linear Models]]).
