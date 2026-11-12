@@ -166,7 +166,7 @@ $$
 \nabla_\theta J(\theta)\approx\frac{1}{N}\sum_{i=1}^{N}\sum_{t=0}^{T-1}\nabla_\theta\log\pi_\theta(a_{i,t}\mid s_{i,t})\Big(\hat Q_{i,t}-b(s_{i,t})\Big).
 $$
 
-The best such baseline is close to the value function, $b(s_t)\approx V^{\pi}(s_t)$. The weight then becomes an estimate of the **advantage** $A^{\pi}(s_t,a_t)=Q^{\pi}(s_t,a_t)-V^{\pi}(s_t)$: how much better this action was than the policy's average action. Learning $V^\pi$ with a neural network ("the critic") turns REINFORCE into an **actor-critic** method (a future lecture).[^schulman2016gae]
+The best such baseline is close to the value function, $b(s_t)\approx V^{\pi}(s_t)$. The weight then becomes an estimate of the **advantage** $A^{\pi}(s_t,a_t)=Q^{\pi}(s_t,a_t)-V^{\pi}(s_t)$: how much better this action was than the policy's average action. Learning $V^\pi$ with a neural network ("the critic") turns REINFORCE into an **actor-critic** method ([[Actor-Critic Algorithms]], next).[^schulman2016gae]
 
 ![[Reinforcement Learning/images/policy-gradients-reward-to-go.svg]]
 *Figure 2: in reward design A, the reward-to-go $\hat Q_t$ shrinks linearly along the trajectory. A constant baseline (dashed) fits it only at one point, while a state-dependent baseline $b(s_t)\approx V^\pi(s_t)$ tracks it at every step.*
@@ -354,7 +354,7 @@ actor_loss.backward()                                   # gradients flow through
 
 ## Where this shows up next
 
-- Actor-critic methods learn $V^\pi$ as a baseline (future lecture).
+- [[Actor-Critic Algorithms]] (next) learn $V^\pi$ as a baseline, and [[Monte Carlo and Temporal-Difference Learning]] shows how to learn it well.
 - Trust-region and proximal policy optimization (TRPO/PPO) formalize the "stay close to $\pi_\theta$" approximation (future lecture).
 - [[Imitation Learning]] is the unweighted special case: maximum likelihood on expert data.
 - [[Variational Autoencoders#Gradients of an expectation|Variational autoencoders]] face the same problem, the gradient of an expectation under a parameterized distribution, and compare the score-function estimator used here with the lower-variance reparameterization (pathwise) estimator.

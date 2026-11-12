@@ -40,6 +40,8 @@ The second form comes from expanding the square and dropping $\lVert\mathbf{x}\r
 ![[Machine Learning/images/discriminant-analysis-nearest-mean.svg]]
 *Figure 1: the nearest-class-mean classifier. Each class is summarized by its mean (crosses), and the decision boundary is the perpendicular bisector between them.*
 
+For two classes the rule is a hyperplane in explicit form: decide class 1 when $\mathbf{w}^\top\mathbf{x}+b>0$ with $\mathbf{w}=\boldsymbol\mu_1-\boldsymbol\mu_0$ and $b=\frac12\big(\lVert\boldsymbol\mu_0\rVert^2-\lVert\boldsymbol\mu_1\rVert^2\big)$. The rule uses the data only through inner products $\langle\mathbf{x},\mathbf{x}_i\rangle$, since $\langle\boldsymbol\mu_k,\mathbf{x}\rangle=\frac1{N_k}\sum_{i:y_i=k}\langle\mathbf{x}_i,\mathbf{x}\rangle$ and $\lVert\boldsymbol\mu_k\rVert^2=\frac1{N_k^2}\sum_{i,j:y_i=y_j=k}\langle\mathbf{x}_i,\mathbf{x}_j\rangle$. Replacing every inner product by a [[Support Vector Machines#Kernels|kernel]] $\kappa(\mathbf{x},\mathbf{x}')$ gives a **kernel nearest-mean classifier**, which compares $\mathbf{x}$ with the class means in a feature space and so produces curved boundaries in the input space, at no extra cost in theory.
+
 Nearest-mean ignores the **shape** of each class: how spread out it is, and in which directions. Fisher's idea, and later LDA, fix exactly that. (In fact nearest-mean is the special case of LDA with isotropic covariance $\sigma^2\mathbf{I}$ and equal priors.)
 
 ---

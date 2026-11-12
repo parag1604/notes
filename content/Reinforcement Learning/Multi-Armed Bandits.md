@@ -98,23 +98,27 @@ This needs constant memory per arm, so $O(K)$ in total. Its form, **new estimate
 > &\alpha_n=\frac{\log(n+2)}{n+2},&&\alpha_n=\frac{1}{(n+2)\log(n+2)}.
 > \end{aligned}
 > $$
+>
+> **Why $\frac{1}{n+1}$ is special.** Unrolling the update with $\alpha_k=\frac{1}{k+1}$, the weight on the $k$-th reward is $\alpha_k\prod_{j>k}(1-\alpha_j)=\frac{1}{k+1}\cdot\frac{k+1}{n}=\frac1n$, the same for every reward. That is exactly the sample average, which is why the two derivations agree. Other schedules weight early and late rewards differently but still converge.
+>
+> **The Euler picture.** Without noise the update $q_{n+1}=q_n+\alpha_n(\mathbb{E}[r^a]-q_n)$ is the Euler method for the ODE above with time step $\alpha_n$. Place the $n$-th estimate at "algorithmic time" $\tau_n=\sum_{m<n}\alpha_m$. Unlike textbook Euler, the time step shrinks and the drift is noisy. Condition 2 makes $\tau_n\to\infty$, so the iterates have time to reach the equilibrium, and conditions 3–4 make both the discretization error and the accumulated noise vanish, so late in the run the iterates shadow the ODE. The theory, with exact conditions, proofs and figures, is in [[Stochastic Approximation]].
 
 ### Non-stationary bandits: constant step sizes
 
-If the arm means drift over time (for example, the returns of a stock), a sample average is a poor estimator, because it weights a reward from long ago as much as one from a moment ago. The fix is a **constant** step size $\alpha\in(0,1)$, such as $\alpha=0.05$. Unrolling the update:
+If the arm means drift over time (for example, the returns of a stock), a sample average is a poor estimator, because it weights a reward from long ago as much as one from a moment ago. The fix is a **constant** step size $\alpha\in(0,1)$, such as $\alpha=0.05$. Start from an initial estimate $q^a_0$ (for example $0$, or an optimistic value) and unroll the update:
 
 $$
 \begin{aligned}
 q^a_{n+1}&=q^a_n+\alpha\big(r^a_{n+1}-q^a_n\big)=(1-\alpha)\,q^a_n+\alpha\,r^a_{n+1}\\
 &=(1-\alpha)^2q^a_{n-1}+\alpha(1-\alpha)\,r^a_n+\alpha\,r^a_{n+1}\\
 &\;\;\vdots\\
-&=(1-\alpha)^{n}q^a_1+\sum_{i=2}^{n+1}\alpha(1-\alpha)^{n+1-i}\,r^a_i.
+&=(1-\alpha)^{n+1}q^a_0+\sum_{i=1}^{n+1}\alpha(1-\alpha)^{n+1-i}\,r^a_i.
 \end{aligned}
 $$
 
-The weights decay **exponentially** with age. The newest reward gets weight $\alpha$, the previous one $\alpha(1-\alpha)$, and so on, and the weights sum to one. Old history is overwritten gradually, and recent samples have the most say: an **exponential recency-weighted average**.
+(Check $n=0$: $q^a_1=(1-\alpha)q^a_0+\alpha r^a_1$.) The weights decay **exponentially** with age. The newest reward gets weight $\alpha$, the previous one $\alpha(1-\alpha)$, the first one $\alpha(1-\alpha)^n$, and the initial estimate $(1-\alpha)^{n+1}$. They sum to one, since $(1-\alpha)^{n+1}+\alpha\sum_{k=0}^{n}(1-\alpha)^k=1$. Old history is overwritten gradually, and recent samples have the most say: an **exponential recency-weighted average**. The initial value is never completely forgotten, only discounted geometrically, which is what makes optimistic initial values (below) work.
 
-Note what we give up. A constant $\alpha$ violates $\sum_n\alpha_n^2<\infty$, so $q^a_n$ **never converges**. It keeps fluctuating around the (moving) mean, with a spread of order $\sqrt{\alpha}$. That is exactly the behaviour we want when the target moves.
+Note what we give up. A constant $\alpha$ violates $\sum_n\alpha_n^2<\infty$, so $q^a_n$ **never converges**. It keeps fluctuating around the (moving) mean, with a spread of order $\sqrt{\alpha}$. That is exactly the behaviour we want when the target moves. Choosing $\alpha$ is a bias–variance trade-off: a large $\alpha$ passes on more reward noise, a small one lags further behind the drift. [[Stochastic Approximation#Constant step sizes: tracking and the bias–variance trade-off|Stochastic Approximation]] computes the best constant step size for a random-walk mean.
 
 ![[Reinforcement Learning/images/multi-armed-bandits-step-sizes.svg]]
 *Figure 1: left, the weights that the sample average (uniform, $1/n$) and a constant step size (exponentially increasing towards recent rewards) put on 30 past rewards. Right, tracking an arm whose mean drifts as a random walk. The sample average lags further and further behind; the constant-$\alpha$ estimate follows it.*
@@ -312,7 +316,9 @@ Replacing the expectation by the single sample we observe gives a stochastic gra
 > 2. Update **every** arm's preference: $\;h_{t+1}(a)=h_t(a)+\alpha\,(r_t-\bar r_t)\big(\mathbb{1}\{a=a_t\}-\pi_t(a)\big)$. The chosen arm moves by $+\alpha(r_t-\bar r_t)(1-\pi_t(a_t))$, and every other arm by $-\alpha(r_t-\bar r_t)\pi_t(a)$.
 > 3. Update the baseline with the new reward: $\bar r_{t+1}=\bar r_t+\frac1t(r_t-\bar r_t)$.
 
-If a reward is better than the baseline, the chosen arm becomes more likely and the others less likely; if it is worse, the reverse. Without a baseline, if all rewards are positive (say around $4$), *every* pulled arm gets reinforced, and learning becomes much slower and noisier. With a decreasing step size this is a stochastic-gradient method that converges to a stationary point of the expected reward. Here that means a policy concentrated on the best arm, with preferences diverging.
+If a reward is better than the baseline, the chosen arm becomes more likely and the others less likely; if it is worse, the reverse. Without a baseline, if all rewards are positive (say around $4$), *every* pulled arm gets reinforced, and learning becomes much slower and noisier.
+
+**The stochastic-approximation view.** Write $J(h)=\sum_x\pi_h(x)\,q_*(x)$ for the expected reward. Given the past, the expected update is exactly $\alpha\,\nabla_hJ(h_t)$, because the baseline uses past rewards only. So the update is $h_{t+1}=h_t+\alpha\big[\nabla J(h_t)+M_{t+1}\big]$ with martingale-difference noise $M_{t+1}$, and with decreasing step sizes it follows the gradient-flow ODE $\dot h=\nabla J(h)$. Along this flow $\frac{d}{dt}J=\lVert\nabla J\rVert^2\ge0$, so the expected reward never decreases. Its stationary points are not where one might expect: $\frac{\partial J}{\partial h(a)}=\pi_h(a)\big(q_*(a)-J(h)\big)$ vanishes for every $a$ only if all arms have the same mean. When one arm is strictly best there is **no finite equilibrium**: the preferences drift off to infinity and $\pi_h$ approaches a one-hot policy. For the exact gradient flow it is the optimal arm.[^mei2020] Two caveats. The boundedness assumption of the standard convergence theorem fails here, so it does not apply directly. And with a *constant* $\alpha$, as in the algorithm box, the iterates only track the ODE approximately (see [[Stochastic Approximation]]).
 
 ![[Reinforcement Learning/images/multi-armed-bandits-gradient-baseline.svg]]
 *Figure 4: the gradient bandit on 10-armed Gaussian bandits whose means are around $4$ (averaged over 400 instances). The average-reward baseline raises the fraction of optimal pulls substantially at both step sizes: from about 48% to 83% at $\alpha=0.1$, and from about 27% to 67% at $\alpha=0.4$ (last 100 steps). The experiment follows Sutton & Barto, Figure 2.5.[^suttonbarto]*
@@ -370,7 +376,8 @@ What the experiment shows:
 - [[Introduction to Reinforcement Learning]]: add states and transitions to get MDPs.
 - [[Dynamic Programming]]: what to do once the model is known, so that no exploration is needed.
 - [[Policy Gradients]]: the gradient-bandit derivation, extended to whole trajectories.
-- **Q-learning** (future lecture): $\varepsilon$-greedy exploration and the stochastic-approximation (ODE) argument, reused for MDPs.
+- [[Q-Learning and SARSA]]: $\varepsilon$-greedy exploration and the stochastic-approximation (ODE) argument, reused for MDPs.
+- [[Stochastic Approximation]]: the general theory behind incremental updates, step-size conditions and the ODE method.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 
@@ -385,4 +392,5 @@ What the experiment shows:
 [^agrawalgoyal2012]: Agrawal, S., & Goyal, N. (2012). *Analysis of Thompson Sampling for the Multi-armed Bandit Problem*. COLT. [arXiv:1111.1797](https://arxiv.org/abs/1111.1797)
 [^kaufmann2012]: Kaufmann, E., Korda, N., & Munos, R. (2012). *Thompson Sampling: An Asymptotically Optimal Finite Time Analysis*. ALT. [arXiv:1205.4217](https://arxiv.org/abs/1205.4217)
 [^russo2018]: Russo, D., Van Roy, B., Kazerouni, A., Osband, I., & Wen, Z. (2018). *A Tutorial on Thompson Sampling*. Foundations and Trends in Machine Learning. [arXiv:1707.02038](https://arxiv.org/abs/1707.02038)
+[^mei2020]: Mei, J., Xiao, C., Szepesvári, C., & Schuurmans, D. (2020). *On the Global Convergence Rates of Softmax Policy Gradient Methods*. ICML. [arXiv:2005.06392](https://arxiv.org/abs/2005.06392)
 [^li2010]: Li, L., Chu, W., Langford, J., & Schapire, R. E. (2010). *A Contextual-Bandit Approach to Personalized News Article Recommendation*. WWW. [arXiv:1003.0146](https://arxiv.org/abs/1003.0146)

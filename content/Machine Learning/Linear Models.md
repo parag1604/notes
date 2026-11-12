@@ -28,11 +28,22 @@ $$
 
 The bias $b$ can be absorbed into the weights by appending a constant feature $1$ to every $\mathbf{x}_i$, so that $\mathbf{X}$ becomes $N\times(D+1)$. We assume this from now on and simply write $\hat{y}=\mathbf{w}^\top\mathbf{x}$, or $\hat{\mathbf{y}}=\mathbf{X}\mathbf{w}$ for the whole dataset.
 
+**Warm-up in one dimension.** With a single feature and no intercept, $\hat y=wx$, minimizing $\sum_i(y_i-wx_i)^2$ gives $w=\sum_ix_iy_i/\sum_ix_i^2$. With an intercept, $\hat y=wx+b$, the solution is
+
+$$
+w=\frac{\sum_i(x_i-\bar x)(y_i-\bar y)}{\sum_i(x_i-\bar x)^2}=\frac{\widehat{\operatorname{Cov}}(x,y)}{\widehat{\operatorname{Var}}(x)},\qquad b=\bar y-w\,\bar x.
+$$
+
+The slope is the sample covariance divided by the sample variance, and the line passes through the point of means $(\bar x,\bar y)$. Everything below generalizes this to many features.
+
+**Linear in the parameters, not in the inputs.** "Linear" refers to the weights. We can first map each input through fixed **basis functions** $\boldsymbol\phi(\mathbf{x})=(\phi_1(\mathbf{x}),\dots,\phi_M(\mathbf{x}))$ and predict $\hat y=\mathbf{w}^\top\boldsymbol\phi(\mathbf{x})$. Polynomials $\phi_j(x)=x^j$, Gaussian bumps $\phi_j(x)=e^{-(x-c_j)^2/2s^2}$, or hand-crafted features all work. The prediction is still linear in $\mathbf{w}$, so every formula in this lecture applies with the design matrix $\mathbf{X}$ replaced by the matrix $\boldsymbol\Phi$ of basis-function values. This is how a "linear" model fits curves. The price is the choice of basis: too few functions underfit, too many overfit (Figure 4 below). [[Support Vector Machines#Kernels|Kernels]] take the idea to its limit by using infinitely many basis functions implicitly.
+
 ### A system of linear equations
 
 Asking for $\mathbf{X}\mathbf{w}=\mathbf{y}$ means solving $N$ linear equations in $D$ unknowns.
 
-- **$N\le D$ (as many unknowns as equations, or more).** If $\mathbf{X}$ has rank $N$, the system is consistent and has *infinitely many* exact solutions. Any of them fits the training data perfectly: the model **memorizes** the data and typically generalizes badly (overfitting).
+- **$N<D$ (more unknowns than equations).** If $\mathbf{X}$ has rank $N$, the system is consistent and has *infinitely many* exact solutions. Any of them fits the training data perfectly: the model **memorizes** the data and typically generalizes badly (overfitting).
+- **$N=D$ with $\mathbf{X}$ invertible.** Exactly one solution, which interpolates every training point, noise included.
 - **$N>D$ (the practical case: many more data points than features).** With noisy data the system is **inconsistent**: there is *no* $\mathbf{w}$ that satisfies all equations at once. (Inconsistent means no solution, not merely no unique solution.)
 
 So we look for the $\mathbf{w}$ that makes $\mathbf{X}\mathbf{w}$ **as close as possible** to $\mathbf{y}$.
@@ -71,7 +82,7 @@ $$
 \mathbf{X}^\top\mathbf{X}\,\mathbf{w}=\mathbf{X}^\top\mathbf{y}\qquad\Longrightarrow\qquad\boxed{\;\mathbf{w}_*=\big(\mathbf{X}^\top\mathbf{X}\big)^{-1}\mathbf{X}^\top\mathbf{y}\;}
 $$
 
-The inverse exists exactly when $\mathbf{X}$ has full column rank, which justifies the assumption.
+The inverse exists exactly when $\mathbf{X}$ has full column rank, which justifies the assumption. With several outputs per example, stacked as the columns of $\mathbf{Y}\in\mathbb{R}^{N\times K}$, the problem decouples into one least-squares problem per output, and $\mathbf{W}_*=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{Y}$ solves them all at once.
 
 **The projection view gives the same equations.** The residual $\mathbf{y}-\mathbf{X}\mathbf{w}_*$ must be perpendicular to every column of $\mathbf{X}$, i.e. $\mathbf{X}^\top(\mathbf{y}-\mathbf{X}\mathbf{w}_*)=\mathbf{0}$. That is the normal equations again. The word "normal" refers to this orthogonality.
 
@@ -95,10 +106,16 @@ Computing $\mathbf{X}^\top\mathbf{X}$ costs $O(ND^2)$ and inverting it costs $O(
 
 - **Full-batch GD** on this quadratic converges with any *constant* step $0<\alpha<2/\lambda_{\max}(\frac1N\mathbf{X}^\top\mathbf{X})$.
 - **SGD's** gradient is noisy, so with a constant step it ends up bouncing around $\mathbf{w}_*$. Converging exactly needs decaying steps with $\sum_t\alpha_t=\infty$ and $\sum_t\alpha_t^2<\infty$, for example $\alpha_t\propto1/t$. These are the same Robbins–Monro conditions as in [[Multi-Armed Bandits#Estimating action values|stochastic approximation]].
+- **Scaling.** These conditions are stated for the *mean* loss $\frac1N\mathcal{L}$, which is what the averaged gradient $\mathbf{g}_t$ above descends. Using the summed loss instead just multiplies the gradient by $N$, so the step size must be divided by $N$.
 - **Mini-batches** trade off the two: less noise than $B=1$, much cheaper than $B=N$, and well suited to vectorized hardware. See Bottou et al. for a thorough survey.[^bottou2018]
 
 ![[Machine Learning/images/linear-models-gd-paths.svg]]
 *Figure 2: paths of full-batch GD, mini-batch SGD and single-sample SGD on a two-parameter least-squares loss (contours), all starting from the same point. Full-batch GD moves smoothly downhill; the stochastic versions zig-zag because each step sees only part of the data, but all head to $\mathbf{w}_*$. The contours are elongated because the two features are correlated, which slows GD down (see the pre-processing aside).*
+
+> [!tip] Aside: choosing the step size, and momentum
+> The least-squares loss is a convex quadratic, so gradient descent cannot get stuck: there are no local minima other than the global one. The only question is speed.
+> - **Line search.** Instead of a fixed $\alpha$, pick the step at each iteration by (approximately) minimizing $\mathcal{L}(\mathbf{w}_t-\alpha\mathbf{g}_t)$ over $\alpha$. For a quadratic the exact minimizer is $\alpha_t=\mathbf{g}_t^\top\mathbf{g}_t/(\mathbf{g}_t^\top\mathbf{X}^\top\mathbf{X}\mathbf{g}_t)$, up to the $1/N$ scaling. In general, backtracking (shrink $\alpha$ until the loss decreases enough) is cheap and robust.
+> - **Momentum.** Elongated contours make GD zig-zag across the valley while creeping along it (Figure 2). Momentum keeps a running average of past gradients, $\mathbf{v}_{t+1}=\beta\mathbf{v}_t+\mathbf{g}_t$ and $\mathbf{w}_{t+1}=\mathbf{w}_t-\alpha\mathbf{v}_{t+1}$ with $\beta\approx0.9$. The zig-zag components cancel and the consistent downhill component accumulates. Adam and its relatives add a per-coordinate step size on top.[^bottou2018]
 
 > [!tip] Aside: data pre-processing
 > Suppose we predict age from height in metres (say $1.5$) and weight in kilograms (say $50$). The raw features live on very different scales.
@@ -113,6 +130,24 @@ Computing $\mathbf{X}^\top\mathbf{X}$ costs $O(ND^2)$ and inverting it costs $O(
 > Compute $x^{\min}_j$, $x^{\max}_j$, $\mu_j$ and $\sigma_j$ on the **training set only**, and reuse them on test data.
 
 ---
+
+### Warm-up: maximum likelihood and MAP for a coin
+
+Before the regression model, the two estimation principles on the simplest example. A coin with unknown probability of heads $\theta$ is tossed $N$ times and shows $k$ heads. The **likelihood** is the probability of the data as a function of the parameter,
+
+$$
+p(\mathcal{D}\mid\theta)=\theta^{k}(1-\theta)^{N-k},\qquad\log p(\mathcal{D}\mid\theta)=k\log\theta+(N-k)\log(1-\theta).
+$$
+
+Setting the derivative $k/\theta-(N-k)/(1-\theta)$ to zero gives the **maximum-likelihood estimate** $\hat\theta_{\text{MLE}}=k/N$, the observed fraction of heads. Reasonable, but brittle: after three tosses that all land heads, the MLE says the coin can never show tails.
+
+**MAP** adds prior knowledge. With a Beta prior $p(\theta)\propto\theta^{a-1}(1-\theta)^{b-1}$, the posterior is proportional to $\theta^{k+a-1}(1-\theta)^{N-k+b-1}$, again a Beta distribution, and its mode is
+
+$$
+\hat\theta_{\text{MAP}}=\frac{k+a-1}{N+a+b-2}.
+$$
+
+The prior acts like $a-1$ imaginary heads and $b-1$ imaginary tails added to the data (**pseudo-counts**). With $a=b=2$, three heads in three tosses give $\hat\theta_{\text{MAP}}=4/5$ instead of 1. A flat prior ($a=b=1$) gives back the MLE, and as $N$ grows the data swamp any fixed prior, so the two estimates agree. Linear regression follows the same pattern: least squares is the MLE, and regularization is a prior.
 
 ### The probabilistic perspective: maximum likelihood
 
@@ -148,6 +183,9 @@ $$
 
 **Maximum likelihood under Gaussian noise is least squares.** Maximizing over $\sigma^2$ as well gives the noise estimate $\hat\sigma^2=\frac1N\sum_i(y_i-\mathbf{w}_{\text{MLE}}^\top\mathbf{x}_i)^2$, the mean squared residual.
 
+> [!note] Aside: other noise models, robust regression
+> The squared loss is not a law of nature; it comes from assuming Gaussian noise. Assume instead **Laplace** noise, $p(\epsilon)\propto e^{-\lvert\epsilon\rvert/s}$, whose tails are heavier. The negative log-likelihood becomes $\sum_i\lvert y_i-\mathbf{w}^\top\mathbf{x}_i\rvert$, the **absolute loss**. Its minimizer predicts the conditional *median* of $y$ rather than the mean ([[Random Variables#Mean, median and mode|Random Variables]]), and a single wild outlier moves it far less, because the outlier's influence no longer grows quadratically. The **Huber loss**, quadratic for small residuals and linear for large ones, combines the efficiency of least squares with this robustness. Neither has a closed form, but both are convex.
+
 ---
 
 ### MAP estimation and regularization
@@ -174,9 +212,14 @@ $$
 \boxed{\;\mathbf{w}_{\text{ridge}}=\big(\mathbf{X}^\top\mathbf{X}+\lambda\mathbf{I}\big)^{-1}\mathbf{X}^\top\mathbf{y}\;}
 $$
 
-As with MLE, it can also be found iteratively with mini-batch SGD. In practice, the bias weight is usually left unregularized.
+As with MLE, it can also be found iteratively with mini-batch SGD. In practice, the bias weight is usually left unregularized. MAP keeps only the peak of the posterior. Keeping the whole posterior, which is again Gaussian, gives **Bayesian linear regression**, with error bars on every prediction.[^bishop2006] Note also the two conventions for the prior: written with variance $\tau^2$ as here, or with precision $1/\tau^2$; only the ratio $\lambda=\sigma^2/\tau^2$ matters.
 
-**Why regularize?** Regularization constrains the parameters, trading a little bias for a large reduction in variance. It matters most for over-parameterized models ($D$ large relative to $N$) and correlated features.
+**Why regularize?** Regularization constrains the parameters, trading a little bias for a large reduction in variance. It matters most for over-parameterized models ($D$ large relative to $N$) and correlated features. Figure 4 shows the problem with polynomial basis functions. A degree-11 polynomial through 12 noisy points fits the training data exactly, but swings wildly between them, and its validation error explodes. Adding a tiny ridge penalty to the same degree-11 model tames it, bringing the validation error back to the level of the best small model.
+
+![[Machine Learning/images/linear-models-overfitting.svg]]
+*Figure 4: overfitting with polynomial basis functions. (a) Fits of degree 1 (underfits), 3 (about right) and 11 (interpolates the noise) to 12 noisy samples of $\sin2\pi x$, and degree 11 with ridge $\lambda=10^{-3}$ (dashed). (b) Training error keeps falling with the degree, while validation error is smallest around degree 3–6 and then explodes. The ridge-regularized degree-11 model (dashed line) generalizes almost as well as the best small model.*
+
+Why do *small* weights help? For a linear model, $\lvert\mathbf{w}^\top\mathbf{x}-\mathbf{w}^\top\mathbf{x}'\rvert\le\lVert\mathbf{w}\rVert\,\lVert\mathbf{x}-\mathbf{x}'\rVert$, so a small $\lVert\mathbf{w}\rVert$ guarantees that nearby inputs get similar predictions. The function cannot wiggle to chase individual noisy points. The same smoothness argument is behind weight decay in neural networks.
 
 **$L_2$ (ridge): shrink everything, smoothly.** In the SVD basis the effect is exact. If $\mathbf{X}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ has singular values $d_j$, ridge predictions are
 
@@ -197,7 +240,7 @@ $$
 The objective is still convex, and its solutions contain **exact zeros**. In MAP terms, this is a **Laplace prior** $p(w_j)\propto e^{-\lvert w_j\rvert/b}$, with $\lambda=\sigma^2/b$.
 
 ![[Machine Learning/images/linear-models-l1-vs-l2.svg]]
-*Figure 4: why $L_1$ gives sparsity. The regularized solution is where the loss contours (around the OLS solution) first touch the constraint region. The $L_2$ ball is round, so the contact point generically has every coordinate nonzero. The $L_1$ ball has corners on the axes, and the contours usually hit a corner, which sets some weights exactly to zero.*
+*Figure 5: why $L_1$ gives sparsity. The regularized solution is where the loss contours (around the OLS solution) first touch the constraint region. The $L_2$ ball is round, so the contact point generically has every coordinate nonzero. The $L_1$ ball has corners on the axes, and the contours usually hit a corner, which sets some weights exactly to zero.*
 
 There is no closed form for the lasso, because $\lvert w\rvert$ is not differentiable at $0$. For intuition, take orthonormal features ($\mathbf{X}^\top\mathbf{X}=\mathbf{I}$). Then the lasso **soft-thresholds** the least-squares weights:
 
@@ -225,7 +268,7 @@ $$
 The *logit* function is the inverse of the sigmoid, $\operatorname{logit}(p)=\log\frac{p}{1-p}$, the **log-odds**. So logistic regression models the log-odds as a linear function: $\log\frac{p(y=1\mid\mathbf{x})}{p(y=0\mid\mathbf{x})}=\mathbf{w}^\top\mathbf{x}$. The decision rule "predict $1$ if $p>\frac12$" is the same as $\mathbf{w}^\top\mathbf{x}>0$, so the **decision boundary is a hyperplane**. That is why logistic regression counts as a *linear* classifier.
 
 ![[Machine Learning/images/linear-models-logistic.svg]]
-*Figure 5: left, the sigmoid maps any logit to $(0,1)$, with $\sigma(0)=\frac12$. Right, a logistic regression fitted to two classes. The predicted probability changes smoothly across the plane, and the decision boundary $p=\frac12$ is the straight line $\mathbf{w}^\top\mathbf{x}=0$.*
+*Figure 6: left, the sigmoid maps any logit to $(0,1)$, with $\sigma(0)=\frac12$. Right, a logistic regression fitted to two classes. The predicted probability changes smoothly across the plane, and the decision boundary $p=\frac12$ is the straight line $\mathbf{w}^\top\mathbf{x}=0$.*
 
 ### Maximum likelihood = binary cross-entropy
 
@@ -250,6 +293,9 @@ $$
 \end{aligned}
 $$
 
+> [!note] Why not squared loss on the sigmoid?
+> One could fit $\sigma(\mathbf{w}^\top\mathbf{x})$ to the labels by least squares. Two things go wrong. The loss $\sum_i(y_i-\sigma(\mathbf{w}^\top\mathbf{x}_i))^2$ is **not convex** in $\mathbf{w}$, so gradient descent can stall in flat regions or poor local minima. And its gradient carries a factor $\sigma'(z)=\sigma(z)(1-\sigma(z))$, which vanishes when $\lvert z\rvert$ is large. A confidently *wrong* prediction therefore produces almost no gradient, exactly when a large correction is needed. The cross-entropy's gradient, $(\sigma-y)\mathbf{x}$ below, has no such factor: the more wrong the prediction, the larger the step.
+
 ### Optimizing it
 
 Using $\sigma'(z)=\sigma(z)(1-\sigma(z))$, the gradient and Hessian are
@@ -262,6 +308,7 @@ where $\boldsymbol{\sigma}=\sigma(\mathbf{X}\mathbf{w})$ elementwise and $\mathb
 
 - **Compare with linear regression.** The gradient has exactly the same form, *prediction minus target, times input*.
 - **Convex.** The Hessian is positive semi-definite, so the loss is convex and has no spurious local minima.
+- **Labels in $\{-1,+1\}$.** Writing $\tilde y_i=2y_i-1$, the loss takes the compact form $\mathcal{L}(\mathbf{w})=\sum_i\log\big(1+e^{-\tilde y_i\mathbf{w}^\top\mathbf{x}_i}\big)$, a function of the **margin** $\tilde y_i\mathbf{w}^\top\mathbf{x}_i$. This is the form compared with the SVM's hinge loss in [[Support Vector Machines]].
 - **No closed form.** Setting the gradient to zero gives nonlinear equations, so we solve them iteratively: (mini-batch) gradient descent as before, or **Newton's method**.
 
 > [!tip] Newton's method is iteratively reweighted least squares

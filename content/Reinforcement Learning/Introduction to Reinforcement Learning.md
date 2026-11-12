@@ -117,6 +117,44 @@ Since $r(s,a)=\mathbb{E}_{s'\sim p(\cdot\mid s,a)}[r(s,a,s')]$, and the objectiv
 > [!note] Cost instead of reward
 > Control theory often specifies an MDP with a **cost** $c(s,a)$ to be *minimized*. Setting $r=-c$ makes the two formulations equivalent. [[Imitation Learning]] uses a cost.
 
+### Example: the recycling robot
+
+A small, complete finite MDP (Sutton & Barto, Example 3.3).[^suttonbarto] A mobile robot collects empty cans in an office. Its state is its battery level, $\mathcal{S}=\{\text{high},\text{low}\}$, and the feasible actions depend on it: $\mathcal{A}(\text{high})=\{\text{search},\text{wait}\}$ and $\mathcal{A}(\text{low})=\{\text{search},\text{wait},\text{recharge}\}$.
+
+- **Search** finds more cans than waiting, $r_{\text{search}}>r_{\text{wait}}$, but drains the battery. From *high*, the battery stays high with probability $\beta_H$ and drops to low otherwise. From *low*, it stays low with probability $\beta_L$; otherwise the battery dies, and the robot has to be rescued and recharged (it ends in *high*) with a reward of $-3$.
+- **Wait** keeps the battery level and earns $r_{\text{wait}}$.
+- **Recharge** (only when low) returns the robot to *high* with reward $0$.
+
+Figure 2 is the whole MDP. Each edge carries "probability, reward", so the figure *is* the table of $p(s',r\mid s,a)$. ($\beta_H,\beta_L$ are probabilities here, not step sizes.)
+
+![[Reinforcement Learning/images/intro-rl-recycling-robot.svg]]
+*Figure 2: transition graph of the recycling robot. Large circles are states, small dots are state–action pairs, and each arrow out of a dot is labelled with the probability of that outcome and the reward it pays.*
+
+The derived quantities above are easy to read off. For instance, searching when low has three-argument rewards $r(\text{low},\text{search},\text{low})=r_{\text{search}}$ and $r(\text{low},\text{search},\text{high})=-3$, and two-argument reward
+
+$$
+r(\text{low},\text{search})=\beta_L\,r_{\text{search}}-3\,(1-\beta_L).
+$$
+
+We return to this robot to compute its optimal policy in the optimality section below.
+
+### Example: routing packets
+
+Real problems do not come with an MDP attached; someone has to choose the state, the actions and the reward. Consider a router $R_1$ that receives packets from several sources and forwards each one along path $p_1$ (through router $R_2$) or path $p_2$ (through router $R_3$); both paths meet again at $R_4$ and continue to the destinations.
+
+- **State:** the queue lengths at the two intermediate routers, $s_t=(n_2,n_3)\in\{0,\dots,B\}^2$ for buffers of size $B$. The other queues matter less for the routing decision, and leaving them out is a modelling choice that keeps the state space small.
+- **Action:** the path for the next packet, $a_t\in\{p_1,p_2\}$.
+- **Transitions:** for example, in each time slot a packet arrives with probability $\lambda$ and joins the chosen queue (it is dropped if that buffer is full), and each non-empty queue forwards one packet with probability $q$. Ignoring arrivals and departures for a moment, from $(2,3)$ the action $p_1$ leads to $(3,3)$ and $p_2$ leads to $(2,4)$.
+- **Reward:** this is the designer's choice, and different choices define different problems. Three natural candidates, all functions of the next state $s'=(n_2',n_3')$:
+
+$$
+r^{(1)}=-(n_2'+n_3'),\qquad r^{(2)}=\frac{1}{n_2'+n_3'+1},\qquad r^{(3)}=-\big(n_2'^2+n_3'^2\big).
+$$
+
+$r^{(1)}$ penalizes the total backlog, which by Little's law is proportional to the average delay of accepted packets.[^little1961] $r^{(2)}$ is a bounded, positive version of the same preference. $r^{(3)}$ also penalizes *imbalance*. From $(2,3)$, $r^{(1)}$ pays $-6$ for both actions, so the immediate reward cannot tell them apart, while $r^{(3)}$ pays $-18$ for $(3,3)$ and $-20$ for $(2,4)$ and prefers balancing right away.
+
+Immediate ties are not the end of the story, because what matters is the long-term value. With $B=10$, $\lambda=0.8$, $q=0.5$ and $\gamma=0.95$, the optimal action values at $(2,3)$ under $r^{(1)}$ are $Q^*=-59.53$ for $p_1$ and $-59.59$ for $p_2$: joining the shorter queue is still better, because it keeps both routers busy. Under $r^{(3)}$ the gap is larger ($-146.57$ vs $-149.34$). These rewards depend on the next state, so they are of the $r(s,a,s')$ form; their expectation over $s'$ gives $r(s,a)$.
+
 ### State and action spaces
 
 - **Discrete (finite):** for example a grid world, board games, or choosing among $K$ items. Values and policies can be stored as tables, and expectations are sums. This lecture's Bellman-equation section and [[Dynamic Programming]] work in this **tabular** setting.
@@ -150,11 +188,26 @@ $$
 
 Depending on the MDP, the length of a trajectory falls into one of three categories:
 
-1. **Fixed horizon:** every episode lasts exactly $T$ steps (e.g. a 100-step control task). The return is $\sum_{t=0}^{T-1}\gamma^t r_t$, and $\gamma=1$ is fine.
+1. **Fixed horizon:** every episode lasts exactly $T$ steps (e.g. a 100-step control task). The return is $\sum_{t=0}^{T-1}\gamma^t r_t$, and $\gamma=1$ is fine. Optimal policies then depend on the time left; [[Finite-Horizon Dynamic Programming]] solves this case exactly by backward induction.
 2. **Finite (episodic, indefinite) horizon:** every episode ends *eventually* in a terminal state, but the length $T$ is random (e.g. a game of chess). Model the terminal state as **absorbing**: it transitions to itself with reward $0$. Then every episode can be written as an infinite sequence, and $\gamma=1$ is fine as long as termination is guaranteed.
 3. **Infinite horizon (continuing):** the interaction never ends (e.g. a thermostat or a data-centre cooling system). The undiscounted sum can diverge, so we need $\gamma\in[0,1)$. Then, for bounded rewards $|r|\le r_{\max}$, the return is bounded: $\big|\sum_{k\ge0}\gamma^k r_{t+k}\big|\le r_{\max}/(1-\gamma)$.
 
 Besides keeping sums finite, $\gamma$ expresses a preference for earlier reward. It also acts as a soft horizon of about $1/(1-\gamma)$ steps: $\gamma=0.99$ "looks" about 100 steps ahead.
+
+> [!example] Reward design and discounting: pole balancing
+> A cart moves along a track, and the agent pushes it left or right to keep a hinged pole upright. **Failure** means the pole tilts past a given angle (or the cart hits the end of the track); the pole is then reset. Number the steps so that the $K$-th action, taken at time $t=K-1$, causes the failure ($s_K$ is a failure state). Treat each attempt as an episode that ends at failure, and compare two reward designs.
+>
+> - **(i) Penalize failure:** $r_t=-1$ if $s_{t+1}$ is a failure, and $0$ otherwise.
+> - **(ii) Reward survival:** $r_t=+1$ if $s_{t+1}$ is not a failure, and $0$ otherwise.
+>
+> With $\gamma=1$, design (i) gives $G_0=-1$ for *every* episode that ends in failure, however long the pole stayed up, so it cannot distinguish good policies from bad ones. Design (ii) gives $G_0=K-1$, the number of steps survived, which is exactly the right signal. But a policy that never fails would earn an infinite return, so in practice episodes are also capped at a maximum length (making the horizon fixed).
+>
+> With $\gamma<1$ both designs work. Design (i) gives $G_0=-\gamma^{K-1}$, which rises towards $0$ the longer the pole survives (more generally $G_t=-\gamma^{K-1-t}$). Design (ii) gives $G_0=(1-\gamma^{K-1})/(1-\gamma)$, which is bounded by $1/(1-\gamma)$. For $\gamma=0.9$: a failure at $K=10$ gives $-0.387$ under (i) and $6.13$ under (ii), and a failure at $K=50$ gives $-0.0057$ and $9.94$.
+>
+> The lesson: the reward *and* the discount factor are part of the problem specification. The same physical task can be turned into a well-posed objective or a degenerate one.
+
+![[Reinforcement Learning/images/intro-rl-pole-balancing.svg]]
+*Figure 3: return $G_0$ of an episode that fails at step $K$, for the two pole-balancing reward designs. Undiscounted, design (i) is flat and carries no information; discounting makes longer survival better under both designs.*
 
 > [!note] Default in these notes
 > The general derivations ([[Imitation Learning]], [[Policy Gradients]]) use a finite horizon with $t=0,\dots,T-1$. Where it is undiscounted, $\gamma=1$. The Bellman equations below use the infinite-horizon discounted form ($\gamma<1$), which also covers episodic tasks through absorbing terminal states.
@@ -232,7 +285,7 @@ Q^\pi(s,a)=r(s,a)+\gamma\sum_{s'}p(s'\mid s,a)\sum_{a'}\pi(a'\mid s')\,Q^\pi(s',
 $$
 
 ![[Reinforcement Learning/images/intro-rl-backup-diagrams.svg]]
-*Figure 2: backup diagrams. Open circles are states and filled dots are state–action pairs. The value at the root is computed from its successors: an expectation over the policy's actions and the environment's transitions (left two), or a **max** over actions (right two; see the optimality section below).*
+*Figure 4: backup diagrams. Open circles are states and filled dots are state–action pairs. The value at the root is computed from its successors: an expectation over the policy's actions and the environment's transitions (left two), or a **max** over actions (right two; see the optimality section below).*
 
 ### Matrix form and closed-form policy evaluation
 
@@ -260,7 +313,7 @@ $$
 
 This also reads naturally: $(P^\pi)^k r_\pi$ is the expected reward $k$ steps in the future. (For $\gamma=1$ the inverse can fail to exist, which is another reason to insist on $\gamma<1$ or absorbing terminal states.)
 
-So **given a policy, we can compute its value function exactly** for a finite MDP. Solving the system costs $O(n^3)$. [[Dynamic Programming#Policy evaluation (prediction)|Dynamic Programming]] (next lecture) evaluates it iteratively instead, which scales much better.
+So **given a policy, we can compute its value function exactly** for a finite MDP. Solving the system costs $O(n^3)$. [[Dynamic Programming#Policy evaluation (prediction)|Dynamic Programming]] evaluates it iteratively instead, which scales much better.
 
 > [!example] Worked example: evaluating a fixed policy
 > A fixed policy $\pi$ in a three-state MDP induces the chain below. $C$ is an absorbing terminal state with reward $0$; $\gamma=0.9$.
@@ -274,7 +327,21 @@ So **given a policy, we can compute its value function exactly** for a finite MD
 > $B$ pays more per step than $A$ ($2$ vs $1$), yet $V^\pi(B)<V^\pi(A)$: from $B$ there is a 30% chance per step of falling into the zero-reward terminal state. Values account for *where you go next*, not just what you get now. Check: $r_\pi(B)+\gamma\big[0.3\,V^\pi(A)+0.4\,V^\pi(B)\big]=2+0.9\,(2.069+2.414)=6.03$. ✓
 
 ![[Reinforcement Learning/images/intro-rl-worked-example.svg]]
-*Figure 3: the Markov chain $P^\pi$ from the worked example, with each state's reward $r_\pi$ and value $V^\pi$.*
+*Figure 5: the Markov chain $P^\pi$ from the worked example, with each state's reward $r_\pi$ and value $V^\pi$.*
+
+> [!example] Worked example: hand-checking the Bellman equation on a gridworld
+> The $5\times5$ gridworld of Sutton & Barto (Example 3.5)[^suttonbarto] has four deterministic actions: up, down, left and right. A move off the grid leaves the agent in place with reward $-1$. From the special cell $A$, **every** action moves the agent to $A'$ with reward $+10$, and from $B$ every action moves it to $B'$ with reward $+5$. All other moves pay $0$. The policy picks each action with probability $\tfrac14$, and $\gamma=0.9$. Solving the $25\times25$ linear system gives the values in Figure 6(b).
+>
+> A table of numbers is only convincing if it satisfies $V^\pi(s)=r_\pi(s)+\gamma\sum_{s'}P^\pi(s,s')V^\pi(s')$ at every cell. Check three cells by hand with the rounded values:
+>
+> - **Cell $A$:** every action pays $10$ and leads to $A'$, so $V^\pi(A)=10+0.9\,V^\pi(A')=10+0.9\times(-1.3)=8.83\approx8.8$. (The exact values are $V^\pi(A')=-1.35$ and $V^\pi(A)=8.79$.)
+> - **Cell $C$** (the centre): no move leaves the grid, so $r_\pi(C)=0$, and the four neighbours have values $2.3$, $0.7$, $0.4$ and $-0.4$. So $V^\pi(C)=0.9\times\tfrac14(2.3+0.7+0.4-0.4)=0.675\approx0.7$ (exact: $0.673$).
+> - **Cell $D$** (bottom-right corner): two of the four moves hit a wall, pay $-1$ and stay in $D$, so $r_\pi(D)=-\tfrac12$. The other two lead to the neighbours with values $-1.2$ (up) and $-1.4$ (left). The equation involves $V^\pi(D)$ on both sides: $V^\pi(D)=-\tfrac12+0.9\times\tfrac14\big(-1.2-1.4+2V^\pi(D)\big)=-0.5-0.585+0.45\,V^\pi(D)$. Hence $0.55\,V^\pi(D)=-1.085$ and $V^\pi(D)\approx-1.97$ (exact: $-1.98$).
+>
+> Two values are instructive. $V^\pi(A)=8.79<10$: the jackpot sends the agent to $A'$ on the bottom edge, where a random walk keeps bumping into the wall. $V^\pi(B)=5.32>5$: the smaller prize lands at $B'$, a better neighbourhood ($V^\pi(B')=0.36$, and $5+0.9\times0.36=5.32$).
+
+![[Reinforcement Learning/images/intro-rl-gridworld.svg]]
+*Figure 6: (a) the gridworld's special transitions. (b) $V^\pi$ of the uniformly random policy with $\gamma=0.9$, computed as $(I-\gamma P^\pi)^{-1}r_\pi$. The cells $A$, $C$ and $D$ are the ones checked by hand above.*
 
 ---
 
@@ -287,14 +354,15 @@ V^*(s)\triangleq\sup_\pi V^\pi(s),\qquad Q^*(s,a)\triangleq\sup_\pi Q^\pi(s,a)\q
 $$
 
 > [!note] Existence of an optimal policy
-> A priori, a different policy might be best from each state. A fundamental theorem for finite MDPs with $\gamma<1$ says otherwise. There is a **single deterministic, stationary** policy $\pi^*$ that is optimal from *every* state simultaneously, so $V^*=V^{\pi^*}$ and $Q^*=Q^{\pi^*}$, and the $\sup$ is a $\max$ (Puterman, Thm. 6.2.7).[^puterman1994] [[Dynamic Programming#Policy iteration|Policy iteration]] (next lecture) gives a constructive proof.
+> A priori, a different policy might be best from each state. A fundamental theorem for finite MDPs with $\gamma<1$ says otherwise. There is a **single deterministic, stationary** policy $\pi^*$ that is optimal from *every* state simultaneously, so $V^*=V^{\pi^*}$ and $Q^*=Q^{\pi^*}$, and the $\sup$ is a $\max$ (Puterman, Thm. 6.2.7).[^puterman1994] [[Dynamic Programming#Policy iteration|Policy iteration]] gives a constructive proof.
 
 Because $\pi^*$ is optimal everywhere, acting optimally means taking the best first action and then continuing optimally:
 
 $$
 \begin{aligned}
 V^*(s)&=\max_{a\in\mathcal{A}(s)}Q^*(s,a),\\
-Q^*(s,a)&=\mathbb{E}\big[r_t+\gamma\,V^*(s_{t+1})\mid s_t=s,a_t=a\big]=r(s,a)+\gamma\sum_{s'}p(s'\mid s,a)\,V^*(s').
+Q^*(s,a)&=\mathbb{E}\big[r_t+\gamma\,V^*(s_{t+1})\mid s_t=s,a_t=a\big]\\
+&=r(s,a)+\gamma\sum_{s'}p(s'\mid s,a)\,V^*(s').
 \end{aligned}
 $$
 
@@ -317,8 +385,20 @@ $$
 
 This is why so many RL algorithms aim to learn $Q^*$: the policy comes for free, with no model needed, if we have $Q^*$ itself.
 
+> [!example] The recycling robot, continued
+> Abbreviate the states as $h$ and $l$. The Bellman optimality equations for the robot of Figure 2 have one term per feasible action:
+> $$
+> \begin{aligned}
+> V^*(h)=\max\big\{&\,r_{\text{search}}+\gamma\big[\beta_H V^*(h)+(1-\beta_H)V^*(l)\big],\\
+> &\,r_{\text{wait}}+\gamma V^*(h)\big\},\\
+> V^*(l)=\max\big\{&\,\beta_Lr_{\text{search}}-3(1-\beta_L)+\gamma\big[\beta_LV^*(l)+(1-\beta_L)V^*(h)\big],\\
+> &\,r_{\text{wait}}+\gamma V^*(l),\ \ \gamma V^*(h)\big\}.
+> \end{aligned}
+> $$
+> Two nonlinear equations in two unknowns. Take $r_{\text{search}}=2$, $r_{\text{wait}}=1$, $\beta_H=0.7$, $\beta_L=0.6$ and $\gamma=0.9$ and solve them (by value iteration, see [[Dynamic Programming]]). The result is $V^*(h)=15.75$ and $V^*(l)=14.17$. In the low state the action values are $Q^*(l,\text{search})=13.32$, $Q^*(l,\text{wait})=13.76$ and $Q^*(l,\text{recharge})=14.17$; in the high state they are $15.75$ (search) and $15.17$ (wait). So the optimal policy **searches when the battery is high and recharges when it is low**. Note that recharging pays nothing immediately, and waiting has the best immediate reward in the low state ($1$, against $0$ for both other actions), yet recharging is optimal: it is the action that leads back to the profitable state.
+
 > [!tip] Bellman operators
-> It is convenient to write the right-hand sides as operators on value vectors: $(\mathcal{T}^\pi V)(s)=r_\pi(s)+\gamma\sum_{s'}P^\pi(s,s')V(s')$ and $(\mathcal{T}^*V)(s)=\max_a\big[r(s,a)+\gamma\sum_{s'}p(s'\mid s,a)V(s')\big]$. Then the Bellman equations say $V^\pi=\mathcal{T}^\pi V^\pi$ and $V^*=\mathcal{T}^*V^*$: the value functions are **fixed points**. Both operators are $\gamma$-contractions in the max-norm. That single fact, [[Dynamic Programming#The foundation: Bellman operators are contractions|proved in the next lecture]], gives the uniqueness of $V^\pi$ and $V^*$ and the convergence of policy evaluation, value iteration and (in the stochastic-approximation sense) Q-learning.
+> It is convenient to write the right-hand sides as operators on value vectors: $(\mathcal{T}^\pi V)(s)=r_\pi(s)+\gamma\sum_{s'}P^\pi(s,s')V(s')$ and $(\mathcal{T}^*V)(s)=\max_a\big[r(s,a)+\gamma\sum_{s'}p(s'\mid s,a)V(s')\big]$. Then the Bellman equations say $V^\pi=\mathcal{T}^\pi V^\pi$ and $V^*=\mathcal{T}^*V^*$: the value functions are **fixed points**. Both operators are $\gamma$-contractions in the max-norm. That single fact, [[Dynamic Programming#The foundation: Bellman operators are contractions|proved in Dynamic Programming]], gives the uniqueness of $V^\pi$ and $V^*$ and the convergence of policy evaluation, value iteration and (in the stochastic-approximation sense) Q-learning.
 
 ---
 
@@ -337,7 +417,7 @@ Methods that learn and use such a model (to plan, or to generate synthetic exper
 ### Anatomy of an RL algorithm
 
 ![[Reinforcement Learning/images/intro-rl-anatomy.svg]]
-*Figure 4: almost every RL algorithm cycles through three stages, following the CS285 framing.[^cs285] Algorithms differ in how expensive each stage is: in policy gradients the "estimate" stage is just summing rewards, while in model-based RL it means fitting a dynamics model.*
+*Figure 7: almost every RL algorithm cycles through three stages, following the CS285 framing.[^cs285] Algorithms differ in how expensive each stage is: in policy gradients the "estimate" stage is just summing rewards, while in model-based RL it means fitting a dynamics model.*
 
 1. **Generate samples:** run the current policy in the environment.
 2. **Fit a model / estimate the return:** e.g. sum the rewards (Monte Carlo), fit $V^\pi$ or $Q^\pi$, or fit $\hat p$.
@@ -369,9 +449,9 @@ Methods that learn and use such a model (to plan, or to generate synthetic exper
 
 ## Where this shows up next
 
-- [[Dynamic Programming]] (next lecture): solving the Bellman equations when the model is known, with policy evaluation, policy iteration and value iteration, plus the contraction argument behind all three.
-- [[Imitation Learning]]: learning a policy from expert demonstrations, and why distribution shift makes it hard.
+- [[Imitation Learning]] (next): learning a policy from expert demonstrations, and why distribution shift makes it hard. It opens the model-free part of the series.
 - [[Policy Gradients]]: optimizing $J(\theta)$ directly by gradient ascent.
+- [[Finite-Horizon Dynamic Programming]] and [[Dynamic Programming]] (model-based part): solving the Bellman equations exactly when the model is known, by backward induction for a fixed horizon and by policy and value iteration for the discounted case, with the contraction argument behind them.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 
@@ -379,4 +459,5 @@ Methods that learn and use such a model (to plan, or to generate synthetic exper
 [^kaelbling1998]: Kaelbling, L. P., Littman, M. L., & Cassandra, A. R. (1998). *Planning and Acting in Partially Observable Stochastic Domains*. Artificial Intelligence, 101(1–2), 99–134. [doi:10.1016/S0004-3702(98)00023-X](https://doi.org/10.1016/S0004-3702(98)00023-X)
 [^puterman1994]: Puterman, M. L. (1994). *Markov Decision Processes: Discrete Stochastic Dynamic Programming*. Wiley. [doi:10.1002/9780470316887](https://doi.org/10.1002/9780470316887)
 [^watkins1992]: Watkins, C. J. C. H., & Dayan, P. (1992). *Q-learning*. Machine Learning, 8, 279–292. [doi:10.1007/BF00992698](https://doi.org/10.1007/BF00992698)
+[^little1961]: Little, J. D. C. (1961). *A Proof for the Queuing Formula: L = λW*. Operations Research, 9(3), 383–387. [doi:10.1287/opre.9.3.383](https://doi.org/10.1287/opre.9.3.383)
 [^cs285]: Levine, S. *CS 285: Deep Reinforcement Learning*, UC Berkeley, Lecture 4 (Introduction to RL). [course page](https://rail.eecs.berkeley.edu/deeprlcourse/)

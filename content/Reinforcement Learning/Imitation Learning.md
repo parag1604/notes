@@ -120,8 +120,10 @@ $$
 \begin{aligned}
 \mathbb{E}\left[\sum_{t=0}^{T-1}c(o_t,a_t)\right]
 &=\sum_{t=0}^{T-1}\sum_{o_t}p_{\theta^*}(o_t)\,\bar c_t(o_t)\\
-&=\sum_{t=0}^{T-1}\left[\sum_{o_t}p_{\text{train}}(o_t)\,\bar c_t(o_t)+\sum_{o_t}\big(p_{\theta^*}(o_t)-p_{\text{train}}(o_t)\big)\,\bar c_t(o_t)\right]\\
-&\le\sum_{t=0}^{T-1}\left[\underbrace{\mathbb{E}_{o_t\sim p_{\text{train}}}\big[\bar c_t(o_t)\big]}_{\le\,\epsilon\ \text{(assumption)}}+\underbrace{\sum_{o_t}\big|p_{\theta^*}(o_t)-p_{\text{train}}(o_t)\big|}_{\le\,2\epsilon t}\cdot\underbrace{\max_o\bar c_t(o)}_{\le 1}\right]\\
+&=\sum_{t=0}^{T-1}\Big[\sum_{o_t}p_{\text{train}}(o_t)\,\bar c_t(o_t)\\
+&\qquad\quad+\sum_{o_t}\big(p_{\theta^*}(o_t)-p_{\text{train}}(o_t)\big)\,\bar c_t(o_t)\Big]\\
+&\le\sum_{t=0}^{T-1}\Bigg[\underbrace{\mathbb{E}_{o_t\sim p_{\text{train}}}\big[\bar c_t(o_t)\big]}_{\le\,\epsilon\ \text{(assumption)}}\\
+&\qquad\quad+\underbrace{\sum_{o_t}\big|p_{\theta^*}(o_t)-p_{\text{train}}(o_t)\big|}_{\le\,2\epsilon t}\cdot\underbrace{\max_o\bar c_t(o)}_{\le 1}\Bigg]\\
 &\le\sum_{t=0}^{T-1}\big(\epsilon+2\epsilon t\big)=\epsilon T+2\epsilon\frac{T(T-1)}{2}=\epsilon T^2.
 \end{aligned}
 $$
@@ -176,6 +178,7 @@ $$
 ## Where this shows up next
 
 - [[Policy Gradients]]: the policy-gradient estimator is the behavior-cloning (MLE) gradient with each trajectory's log-likelihood **weighted by its return**. Imitation copies every action; RL copies the good ones more.
+- [[Model-Based Reinforcement Learning]]: a learned dynamics model suffers the same distribution shift as behavior cloning: errors compound when the planner visits states the model was not trained on.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 
