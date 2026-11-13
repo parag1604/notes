@@ -1,5 +1,5 @@
 ---
-title: Index (Machine Learning)
+title: Machine Learning
 next: "[[Bayesian Decision Theory]]"
 ---
 

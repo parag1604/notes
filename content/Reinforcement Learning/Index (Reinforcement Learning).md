@@ -1,5 +1,5 @@
 ---
-title: Index (Reinforcement Learning)
+title: Reinforcement Learning
 next: "[[Multi-Armed Bandits]]"
 ---
 
