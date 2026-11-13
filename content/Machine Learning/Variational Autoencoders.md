@@ -7,7 +7,7 @@ tags:
   - representation-learning
 date: 2026-11-12
 draft: false
-prev: "[[Clustering and Expectation Maximization]]"
+prev: "[[Language Representations and Language Models]]"
 next: "[[Generative Adversarial Networks]]"
 ---
 

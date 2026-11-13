@@ -8,7 +8,7 @@ tags:
   - spectral-clustering
   - community-detection
 prev: "[[Matrix Factorization and Dimensionality Reduction]]"
-next: "[[Variational Autoencoders]]"
+next: "[[Neural Networks]]"
 ---
 
 > **Prerequisites:** [[Discriminant Analysis]] (Gaussian class models, Bayes' rule), [[Non-parametric Models]] (distances, RBF similarities), [[Support Vector Machines]] (kernels, Lagrange multipliers), and [[Matrix Factorization and Dimensionality Reduction]] (eigenvectors, used by spectral clustering).
@@ -507,6 +507,8 @@ It is $1$ for identical partitions, about $0$ for random ones, and invariant to 
 - [[Discriminant Analysis]]: the supervised version of the GMM, with QDA/LDA and the same estimates under hard labels.
 - [[Non-parametric Models]]: RBF similarities and density estimation. A GMM sits between one Gaussian and a full KDE.
 - [[Matrix Factorization and Dimensionality Reduction]]: PCA and kernel PCA. K-Means is a matrix factorization with one-hot codes, and spectral clustering is a Laplacian eigenmap followed by K-Means.
+- Graph representation learning (a planned lecture, next in the series): spectral embeddings, modularity and the graph Laplacian lead to graph neural networks and knowledge-graph embeddings.
+- [[Neural Networks]]: learned, non-linear features, starting the deep-learning lectures.
 - [[Variational Autoencoders]]: the ELBO with a learned, amortized E-step.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->

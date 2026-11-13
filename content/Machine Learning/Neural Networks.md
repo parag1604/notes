@@ -7,7 +7,7 @@ tags:
   - deep-learning
   - optimization
 date: 2026-11-12
-prev: "[[Non-parametric Models]]"
+prev: "[[Clustering and Expectation Maximization]]"
 next: "[[Convolutional Neural Networks]]"
 ---
 

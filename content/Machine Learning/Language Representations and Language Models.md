@@ -9,10 +9,10 @@ tags:
 date: 2026-11-13
 draft: false
 prev: "[[Self-Supervised Representation Learning]]"
-next: "[[Matrix Factorization and Dimensionality Reduction]]"
+next: "[[Variational Autoencoders]]"
 ---
 
-> **Prerequisites:** [[Self-Supervised Representation Learning]] (NCE and InfoNCE: learning by telling real pairs from fake ones), [[Sequence Models]] (attention, the transformer block, causal masks), [[Linear Models#More than two classes: softmax regression|softmax regression]] and cross-entropy, and the [[Sample Statistics#Chernoff bounds|Chernoff bound]] with the [[Sample Statistics#Concentration and the union bound|union bound]] for the near-orthogonality argument.
+> **Prerequisites:** [[Self-Supervised Representation Learning]] (NCE and InfoNCE: learning by telling real pairs from fake ones), [[Matrix Factorization and Dimensionality Reduction]] (SVD and low-rank approximation), [[Sequence Models]] (attention, the transformer block, causal masks), [[Linear Models#More than two classes: softmax regression|softmax regression]] and cross-entropy, and the [[Sample Statistics#Chernoff bounds|Chernoff bound]] with the [[Sample Statistics#Concentration and the union bound|union bound]] for the near-orthogonality argument.
 >
 > **TL;DR:**
 > - Text is the largest unlabelled dataset there is, and it supervises itself: **hide part of it and predict the hidden part from the rest**. Three choices of what to hide give three families: neighbouring words (**word2vec**, **GloVe**), masked words (**BERT**), and the next word (**GPT**).
@@ -192,7 +192,7 @@ so skip-gram factorizes the matrix $\operatorname{PMI}-\log k$: the word vectors
 > [!proof]- Proof of (3)
 > $\ell'(x)=\#(w,c)\,\sigma(-x)-k\,\#(w)P_n(c)\,\sigma(x)=0$, so $\sigma(x)/\sigma(-x)=\#(w,c)/(k\,\#(w)P_n(c))$. Since $\sigma(x)/\sigma(-x)=e^x$, taking logs gives (3). The second derivative, $-\big(\#(w,c)+k\#(w)P_n(c)\big)\sigma(x)\sigma(-x)$, is negative, so this is the maximum. With $P_n(c)=\#(c)/|\mathcal{D}|$ and $p(w,c)=\#(w,c)/|\mathcal{D}|$, $p(w)=\#(w)/|\mathcal{D}|$, the first term of (3) is $\log\frac{\#(w,c)|\mathcal{D}|}{\#(w)\#(c)}=\operatorname{PMI}(w,c)$.
 
-In practice $d$ (a few hundred) is much smaller than $V$, so skip-gram finds a **low-rank** approximation of the shifted PMI matrix, weighted by how often each pair occurs. The best low-rank approximation of a matrix is the business of the singular value decomposition, which we'll meet in [[Matrix Factorization and Dimensionality Reduction]]; indeed, an SVD of the (positive) PMI matrix gives word vectors competitive with word2vec.[^levy2014] Figure 2(b) checks (3) on a toy corpus.
+In practice $d$ (a few hundred) is much smaller than $V$, so skip-gram finds a **low-rank** approximation of the shifted PMI matrix, weighted by how often each pair occurs. The best low-rank approximation of a matrix is the business of the singular value decomposition and the Eckart–Young theorem from [[Matrix Factorization and Dimensionality Reduction]]; indeed, an SVD of the (positive) PMI matrix gives word vectors competitive with word2vec.[^levy2014] Figure 2(b) checks (3) on a toy corpus.
 
 ### GloVe: regression on log co-occurrence counts
 
@@ -552,7 +552,7 @@ $$
 
 - [[Sequence Models]]: the transformer and state-space architectures that implement every model in this lecture, where most of the knowledge sits in the MLP layers, and how mixture-of-experts layers scale them.
 - [[Self-Supervised Representation Learning]]: the contrastive and non-contrastive objectives behind sentence embeddings and CLIP's text encoder.
-- [[Matrix Factorization and Dimensionality Reduction]] (next): the SVD and Eckart–Young explain why a low-rank factorization of the PMI matrix is the best rank-$d$ summary of co-occurrence statistics.
+- [[Matrix Factorization and Dimensionality Reduction]] (earlier): the SVD and Eckart–Young explain why a low-rank factorization of the PMI matrix is the best rank-$d$ summary of co-occurrence statistics.
 - [[Energy-Based Models]]: temperature sampling and the DPO solution are Boltzmann distributions; contrastive learning is EBM training with the batch as negatives.
 - [[Policy Gradients]]: the REINFORCE and PPO machinery used in RLHF. [[Actor-Critic Algorithms]] covers the value-function baselines that PPO uses in practice.
 - **Textbooks and courses.** Jurafsky and Martin's *Speech and Language Processing* covers embeddings and language models in depth, and Prince's *Understanding Deep Learning* covers transformers and their training.

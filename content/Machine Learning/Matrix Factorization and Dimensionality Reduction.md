@@ -7,7 +7,7 @@ tags:
   - matrix-factorization
   - dimensionality-reduction
   - recommender-systems
-prev: "[[Language Representations and Language Models]]"
+prev: "[[Non-parametric Models]]"
 next: "[[Clustering and Expectation Maximization]]"
 ---
 

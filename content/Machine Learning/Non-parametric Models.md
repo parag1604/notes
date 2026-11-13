@@ -6,7 +6,7 @@ tags:
   - kernel-density-estimation
   - non-parametric
 prev: "[[Support Vector Machines]]"
-next: "[[Neural Networks]]"
+next: "[[Matrix Factorization and Dimensionality Reduction]]"
 ---
 
 > **Prerequisites:** basic probability (densities, Bayes' rule). [[Discriminant Analysis]] is useful for the generative view of classification.
@@ -257,7 +257,8 @@ Libraries such as FAISS combine these ideas (inverted files + PQ + GPUs) to sear
 - [[Discriminant Analysis]]: parametric (Gaussian) class densities instead of KDE.
 - [[Support Vector Machines]]: kernels as similarities, and a sparse alternative to storing every point (only the support vectors).
 - [[Clustering and Expectation Maximization]]: $k$-means is nearest-mean classification with unknown labels, and Gaussian mixtures sit between a single Gaussian and a KDE.
-- [[Neural Networks]], next in the series: instead of storing the data, learn features from it. Similarity-weighted averaging returns as attention in [[Sequence Models#Attention as a soft dictionary lookup|Sequence Models]].
+- [[Matrix Factorization and Dimensionality Reduction]], next in the series: the curse of dimensionality motivates learning a low-dimensional representation first.
+- [[Neural Networks]]: instead of storing the data, learn features from it. Similarity-weighted averaging returns as attention in [[Sequence Models#Attention as a soft dictionary lookup|Sequence Models]].
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 
