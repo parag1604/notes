@@ -393,7 +393,7 @@ LSTD($\lambda$) replaces $\boldsymbol\phi(s_t)$ by the trace $\mathbf{z}_t$ in t
 
 - [[Off-Policy Learning with Function Approximation]]: when states are sampled from a different policy's distribution, Lemma 1 fails, $A$ can lose positive definiteness, and TD can diverge. This is the "deadly triad".
 - [[Actor-Critic Algorithms]]: a critic with linear features is exactly linear TD (or LSTD) run on the actor's current policy. Everything here, including the bias of $\mathbf{w}_{\mathrm{TD}}$ relative to the best fit, applies to it.
-- Part II of the series assumes the model is known: [[Finite-Horizon Dynamic Programming]], [[Dynamic Programming]] (where the sup-norm versions of these contraction arguments are proved), [[Stochastic Shortest Path Problems]], and [[Model-Based Reinforcement Learning]].
+- The second half of the series asks what these methods approximate, assuming the model is known: [[Finite-Horizon Dynamic Programming]], [[Dynamic Programming]] (where the sup-norm versions of these contraction arguments are proved), [[Stochastic Shortest Path Problems]], and [[Model-Based Reinforcement Learning]].
 - [[Stochastic Approximation]]: the ODE method and the Markov-noise convergence theorem used in this lecture.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->

@@ -340,7 +340,7 @@ Two things to note:
 ## Where this shows up next
 
 - [[Actor-Critic Algorithms]]: off-policy actor-critic methods learn their critics with exactly these tools (importance ratios, emphatic or gradient-TD corrections) and inherit the same stability questions.
-- Part II of the series assumes the model is known: [[Finite-Horizon Dynamic Programming]], [[Dynamic Programming]], [[Stochastic Shortest Path Problems]], and [[Model-Based Reinforcement Learning]], where the deadly triad reappears when a learned model is used to generate off-policy data.
+- Next, the second half of the series asks what these methods approximate, assuming the model is known: [[Finite-Horizon Dynamic Programming]], [[Dynamic Programming]], [[Stochastic Shortest Path Problems]], and [[Model-Based Reinforcement Learning]], where the deadly triad reappears when a learned model is used to generate off-policy data.
 - [[Stochastic Approximation]]: the Markov-noise ODE theorem and two-timescale schemes behind every convergence claim here.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->

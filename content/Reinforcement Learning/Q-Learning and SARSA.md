@@ -333,7 +333,7 @@ Everything above assumes a table with one entry per pair, visited infinitely oft
 
 - [[Linear Function Approximation]]: TD with features instead of tables, and its projected fixed point.
 - [[Off-Policy Learning with Function Approximation]]: why off-policy bootstrapping with function approximation can diverge (the "deadly triad"), and the methods that fix it.
-- Part II, model-based RL: [[Finite-Horizon Dynamic Programming]], [[Dynamic Programming]] (Q-learning is sampled value iteration) and [[Model-Based Reinforcement Learning]] (learn $p$, then plan).
+- Planning with a known model: [[Finite-Horizon Dynamic Programming]], [[Dynamic Programming]] (Q-learning is sampled value iteration) and [[Model-Based Reinforcement Learning]] (learn $p$, then plan).
 - [[Stochastic Approximation]]: the general theorems used in the convergence proof.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->

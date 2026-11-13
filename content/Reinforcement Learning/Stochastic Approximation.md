@@ -8,8 +8,8 @@ tags:
   - theory
 date: 2026-11-12
 draft: false
-prev: "[[Model-Based Reinforcement Learning]]"
-next: "[[Index (Reinforcement Learning)]]"
+prev: "[[Stochastic Shortest Path Problems]]"
+next: "[[Model-Based Reinforcement Learning]]"
 ---
 
 > **Prerequisites:** [[Multi-Armed Bandits]] (the incremental update $q\leftarrow q+\alpha(r-q)$), [[Introduction to Reinforcement Learning]] (the Bellman equations and operators), [[Sample Statistics]] (almost-sure convergence, the strong law), and [[Markov Chains]] (stationary distributions). The contraction property of the Bellman operators is proved in [[Dynamic Programming]].
@@ -24,7 +24,7 @@ next: "[[Index (Reinforcement Learning)]]"
 
 ## Motivation
 
-This is the analysis lecture behind Part I. The model-free lectures state convergence results such as "TD(0) converges to $V^\pi$" or "Q-learning converges to $Q^*$ if every pair is visited infinitely often and the step sizes satisfy the Robbins–Monro conditions". Here is where those conditions come from.
+This lecture explains why the learning methods of the first half converge. Those lectures state convergence results such as "TD(0) converges to $V^\pi$" or "Q-learning converges to $Q^*$ if every pair is visited infinitely often and the step sizes satisfy the Robbins–Monro conditions". Here is where those conditions come from.
 
 Start with the simplest problem from [[Multi-Armed Bandits]]: estimate the mean $\mu$ of a random variable from samples $r_1,r_2,\dots$ that arrive one at a time. The running average can be computed incrementally:
 
@@ -463,7 +463,7 @@ Note the linear TD row. The limit is the **TD fixed point**, which in general is
 
 ## Where this shows up next
 
-This lecture is the analysis behind Part I. Each of these lectures states its convergence results with exact conditions and links back here:
+This lecture is the analysis behind the learning methods of the first half. Each of these lectures states its convergence results with exact conditions and links back here:
 
 - [[Multi-Armed Bandits]]: the incremental sample average and the gradient bandit as stochastic approximation.
 - [[Policy Gradients]]: REINFORCE is stochastic gradient ascent, so it converges to stationary points of $J(\theta)$ under Robbins–Monro steps.

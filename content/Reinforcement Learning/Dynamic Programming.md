@@ -12,7 +12,7 @@ next: "[[Stochastic Shortest Path Problems]]"
 
 > **Prerequisites:** [[Introduction to Reinforcement Learning]], in particular the Bellman expectation and optimality equations, the matrix form $V^\pi=(I-\gamma P^\pi)^{-1}r_\pi$, and the Bellman operators $\mathcal{T}^\pi$ and $\mathcal{T}^*$. [[Finite-Horizon Dynamic Programming]] treats the case of a fixed, finite horizon; this lecture is its infinite-horizon, discounted counterpart.
 >
-> **Part II (model-based).** Here we assume the transition model $p(s'\mid s,a)$ and the rewards are **known**: this is planning. In practice they usually are not, which is why Part I of the series is model-free; its methods approximate the computations below from samples. The model can also be learned from data, see [[Model-Based Reinforcement Learning]].
+> **Planning with a known model.** Here we assume the transition model $p(s'\mid s,a)$ and the rewards are **known**: this is planning. In practice they usually are not, which is why the earlier lectures learned from experience; their methods approximate the computations below from samples. The model can also be learned from data, see [[Model-Based Reinforcement Learning]].
 >
 > **TL;DR:** When the MDP's model $p(s',r\mid s,a)$ is known, the Bellman equations can be solved directly by repeatedly applying them. Both Bellman operators are **$\gamma$-contractions**. This one fact implies that **policy evaluation** converges to $V^\pi$ and **value iteration** converges to $V^*$, both geometrically. The **policy improvement theorem** implies that **policy iteration** reaches an optimal policy in finitely many steps. Most model-free RL algorithms are sampled, approximate versions of these procedures.
 >
@@ -382,8 +382,8 @@ In the new problem every policy terminates with probability one, after $1/(1-\ga
 
 - [[Stochastic Shortest Path Problems]]: the undiscounted, episodic case. Termination replaces $\gamma$, properness of policies becomes the key assumption, and the contraction holds only in a weighted norm, if at all.
 - [[Model-Based Reinforcement Learning]]: when $p$ and $r$ are unknown, learn them and plan with the algorithms of this lecture.
-- Part I does without a model and approximates these computations from samples: [[Monte Carlo and Temporal-Difference Learning]] is sampled policy evaluation, [[Q-Learning and SARSA]] is sampled value iteration, and [[Actor-Critic Algorithms]] and [[Policy Gradients]] are approximate policy iteration with a parametric policy. [[Imitation Learning]] needs none of this machinery, which is both its appeal and its limitation.
-- [[Stochastic Approximation]] (Part III) explains why the sampled versions still converge.
+- The earlier, model-free lectures approximate these computations from samples: [[Monte Carlo and Temporal-Difference Learning]] is sampled policy evaluation, [[Q-Learning and SARSA]] is sampled value iteration, and [[Actor-Critic Algorithms]] and [[Policy Gradients]] are approximate policy iteration with a parametric policy. [[Imitation Learning]] needs none of this machinery, which is both its appeal and its limitation.
+- [[Stochastic Approximation]] (after [[Stochastic Shortest Path Problems]]) explains why the sampled versions still converge.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

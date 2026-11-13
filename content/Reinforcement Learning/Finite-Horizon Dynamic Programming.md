@@ -16,8 +16,8 @@ next: "[[Dynamic Programming]]"
 >
 > **TL;DR:** When the interaction lasts exactly $T$ steps, the best action depends on *how much time is left*, so optimal policies are **non-stationary**: one decision rule $\mu_t$ per stage. **Backward induction**, $V_T=r_T$ and $V_t(s)=\max_a\mathbb{E}\big[r_t(s,a,s')+V_{t+1}(s')\big]$, computes the optimal value and an optimal policy from every state at once, in $O(T|\mathcal{S}|^2|\mathcal{A}|)$ operations. Letting $T\to\infty$ with discounting turns the recursion into value iteration, the subject of [[Dynamic Programming]].
 
-> [!note] Part II: model-based RL
-> This lecture opens the model-based part of the series. Here we assume the transition model $p(s'\mid s,a)$ and the rewards are **known**, so the problem is *planning*: pure computation, no interaction. In practice the model is usually unknown, which is why the model-free lectures ([[Imitation Learning]], [[Policy Gradients]], …) never use it. A model can also be *learned* from data and then planned with; that is the topic of [[Model-Based Reinforcement Learning]].
+> [!note] Why it works: planning with a known model
+> The lectures so far learned from experience. This lecture starts the second half of the series, which asks what those methods are approximating. Here we assume the transition model $p(s'\mid s,a)$ and the rewards are **known**, so the problem is *planning*: pure computation, no interaction. In practice the model is usually unknown, which is why the model-free lectures ([[Imitation Learning]], [[Policy Gradients]], …) never use it. A model can also be *learned* from data and then planned with; that is the topic of [[Model-Based Reinforcement Learning]].
 
 > [!note] Notation in this lecture
 > Series notation (see [[Introduction to Reinforcement Learning]]) with three finite-horizon additions. Rewards may depend on time, $r_t(s,a,s')$, and there is a terminal reward $r_T(s)$. Policies are sequences of **deterministic decision rules** $\pi=(\mu_0,\dots,\mu_{T-1})$. The subscript in $V_t$ is a *time index* (value with $T-t$ steps to go), not an iteration counter.
@@ -296,7 +296,7 @@ The non-stationarity also fades. In a finite MDP, every action that is not optim
 ![[Reinforcement Learning/images/finite-horizon-dp-to-infinite.svg]]
 *Figure 4: a stationary version of the inventory problem ($\lambda=3.5$ every week, $\gamma=0.95$, no salvage). (a) The first-stage value approaches $V^*$ geometrically, under the bound $\gamma^T\lVert V^*\rVert_\infty$. (b) With $T=30$, the optimal order-up-to level equals the stationary optimal level (5) at every stage except the last, where it drops to 4.*
 
-Two other limits lead to the rest of Part II:
+Two other limits lead to the next lectures:
 
 - **Discounted, $T\to\infty$:** stationary policies, the Bellman optimality *equation* $V^*=\mathcal{T}^*V^*$, and the algorithms that solve it (policy evaluation, policy iteration, value iteration) are the subject of [[Dynamic Programming]].
 - **Undiscounted, random horizon:** when episodes end at a random time (reaching a goal, losing a game), the horizon is finite but not fixed. Without discounting, finiteness of the value must come from termination itself. That is the setting of [[Stochastic Shortest Path Problems]].

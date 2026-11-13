@@ -451,9 +451,9 @@ Methods that learn and use such a model (to plan, or to generate synthetic exper
 
 ## Where this shows up next
 
-- [[Imitation Learning]] (next): learning a policy from expert demonstrations, and why distribution shift makes it hard. It opens the model-free part of the series.
+- [[Imitation Learning]] (next): learning a policy from expert demonstrations, and why distribution shift makes it hard. It opens the practical, learning-from-experience half of the series.
 - [[Policy Gradients]]: optimizing $J(\theta)$ directly by gradient ascent.
-- [[Finite-Horizon Dynamic Programming]] and [[Dynamic Programming]] (model-based part): solving the Bellman equations exactly when the model is known, by backward induction for a fixed horizon and by policy and value iteration for the discounted case, with the contraction argument behind them.
+- [[Finite-Horizon Dynamic Programming]] and [[Dynamic Programming]] (the second half): solving the Bellman equations exactly when the model is known, by backward induction for a fixed horizon and by policy and value iteration for the discounted case, with the contraction argument behind them.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

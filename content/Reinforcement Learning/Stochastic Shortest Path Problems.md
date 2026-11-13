@@ -9,12 +9,12 @@ tags:
 date: 2026-11-12
 draft: false
 prev: "[[Dynamic Programming]]"
-next: "[[Model-Based Reinforcement Learning]]"
+next: "[[Stochastic Approximation]]"
 ---
 
 > **Prerequisites:** [[Dynamic Programming]] (Bellman operators, policy evaluation, policy and value iteration), [[Introduction to Reinforcement Learning]] (episodic tasks, $V^\pi$, the Bellman equations) and [[Markov Chains]] (absorbing states, first-step analysis). [[Finite-Horizon Dynamic Programming]] helps for the $k$-stage interpretation of the operators.
 >
-> **Part II (model-based).** As in the rest of Part II, we assume the transition model $p(s'\mid s,a)$ and the rewards are **known**: this is planning. In practice they usually are not, which is why Part I of the series is model-free. The model can also be learned from data, see [[Model-Based Reinforcement Learning]].
+> **Planning with a known model.** As in the previous two lectures, we assume the transition model $p(s'\mid s,a)$ and the rewards are **known**: this is planning. In practice they usually are not, which is why the earlier lectures learned from experience. The model can also be learned from data, see [[Model-Based Reinforcement Learning]].
 >
 > **Notation (local deviations).** Non-terminal states are $\mathcal{S}=\{1,\dots,n\}$ and the terminal state is $0$. Value vectors live in $\mathbb{R}^n$, with the convention $V(0)=0$. A stationary deterministic policy is $\mu$, and $\pi=(\mu_0,\mu_1,\dots)$ denotes a general, possibly non-stationary, policy. $\mathbf{1}$ is the all-ones vector, and inequalities between vectors hold componentwise.
 >
@@ -512,8 +512,8 @@ The [[Dynamic Programming#Discounting as termination: the SSP view|DP lecture]] 
 ## Where this shows up next
 
 - [[Model-Based Reinforcement Learning]]: when $p$ and $r$ are not given, learn them from data and plan in the learned model with exactly these algorithms.
-- [[Monte Carlo and Temporal-Difference Learning]] and [[Q-Learning and SARSA]] (Part I) estimate the same undiscounted episodic values from sampled episodes. Monte Carlo needs episodes to end, which is properness of the behaviour policy. Q-learning is a sampled, asynchronous version of the value iteration analysed here.
-- [[Stochastic Approximation]] (Part III) adds noise to the asynchronous argument of Proposition 4. That is how the convergence of Q-learning, including in SSPs with proper policies, is proved.[^tsitsiklis1994]
+- [[Monte Carlo and Temporal-Difference Learning]] and [[Q-Learning and SARSA]] estimate the same undiscounted episodic values from sampled episodes. Monte Carlo needs episodes to end, which is properness of the behaviour policy. Q-learning is a sampled, asynchronous version of the value iteration analysed here.
+- [[Stochastic Approximation]] (next) adds noise to the asynchronous argument of Proposition 4. That is how the convergence of Q-learning, including in SSPs with proper policies, is proved.[^tsitsiklis1994]
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

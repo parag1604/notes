@@ -11,5 +11,5 @@ next: "[[Neural Networks]]"
 Topics Parag listed:
 - graph neural networks: GCN, and GNNs in general;
 - transductive vs inductive graph learning;
-- knowledge graphs and their embeddings: TransE, TransR, "TransZ" (confirm which model is meant; TransH or TransD?);
+- knowledge graphs and their embeddings: TransE, TransH, TransR and TransD;
 - other representation learning techniques for graphs.

@@ -8,20 +8,20 @@ tags:
   - planning
 date: 2026-11-12
 draft: false
-prev: "[[Stochastic Shortest Path Problems]]"
-next: "[[Stochastic Approximation]]"
+prev: "[[Stochastic Approximation]]"
+next: "[[Index (Reinforcement Learning)]]"
 ---
 
 > **Prerequisites:** [[Dynamic Programming]] (value iteration, policy iteration, the Bellman operators), [[Q-Learning and SARSA]] (for Dyna-Q), [[Imitation Learning]] (distribution shift and compounding errors). The exploration discussion uses UCB from [[Multi-Armed Bandits]].
 >
-> **TL;DR:** Every planning method of Part II needs the transition model $p(s'\mid s,a)$ and the reward $r(s,a)$. When they are unknown we can **learn them from data and then plan**. In the tabular case the count-based estimate plus value iteration ("certainty equivalence") is near-optimal once every state-action pair has been sampled enough, and the **simulation lemma** says how model errors become value errors: they are amplified by $1/(1-\gamma)^2$. **Dyna** interleaves real steps, model learning and planning on simulated steps, so each real transition is used many times. With continuous states we fit a dynamics model by regression and plan with **model-predictive control** (random shooting, the cross-entropy method), replanning at every step and using **ensembles** to stop the planner from exploiting model errors. Finally, the model can be used to train a policy: by backpropagating through it (unstable over long horizons) or by feeding short model rollouts to a model-free learner (MBPO).
+> **TL;DR:** Every planning method of [[Dynamic Programming]] and its neighbours needs the transition model $p(s'\mid s,a)$ and the reward $r(s,a)$. When they are unknown we can **learn them from data and then plan**. In the tabular case the count-based estimate plus value iteration ("certainty equivalence") is near-optimal once every state-action pair has been sampled enough, and the **simulation lemma** says how model errors become value errors: they are amplified by $1/(1-\gamma)^2$. **Dyna** interleaves real steps, model learning and planning on simulated steps, so each real transition is used many times. With continuous states we fit a dynamics model by regression and plan with **model-predictive control** (random shooting, the cross-entropy method), replanning at every step and using **ensembles** to stop the planner from exploiting model errors. Finally, the model can be used to train a policy: by backpropagating through it (unstable over long horizons) or by feeding short model rollouts to a model-free learner (MBPO).
 
 > [!note] Local notation
 > $\hat p$, $\hat r$ and $\hat M$ are the estimated transition probabilities, reward and MDP. $N(s,a)$ counts visits of a state-action pair. A learned deterministic dynamics model is written $f_\phi(s,a)$. $H$ is the **planning horizon** of model-predictive control (the episode horizon is still $T$). The letter $n$ is used twice, in separate sections: the number of samples per state-action pair (certainty equivalence) and the number of Dyna planning updates per real step (as in Sutton & Barto).
 
 ## Motivation
 
-Part II so far ([[Finite-Horizon Dynamic Programming]], [[Dynamic Programming]], [[Stochastic Shortest Path Problems]]) assumed that someone hands us the MDP. With $p(s'\mid s,a)$ and $r(s,a)$ in hand, value iteration and policy iteration compute an optimal policy without a single interaction with the world. Part I took the opposite stance: the model-free methods ([[Policy Gradients]], [[Q-Learning and SARSA]], ...) never write the model down at all.
+The planning lectures ([[Finite-Horizon Dynamic Programming]], [[Dynamic Programming]], [[Stochastic Shortest Path Problems]]) assumed that someone hands us the MDP. With $p(s'\mid s,a)$ and $r(s,a)$ in hand, value iteration and policy iteration compute an optimal policy without a single interaction with the world. The first half of the series took the opposite stance: the model-free methods ([[Policy Gradients]], [[Q-Learning and SARSA]], ...) never write the model down at all.
 
 There is a middle road, and it is often the most sample-efficient one: **learn the model from experience, then plan with it**. A transition $(s_t,a_t,r_t,s_{t+1})$ is a labelled example for a supervised problem ("what happens if I do $a$ in $s$?"). That supervision is far richer than the scalar return that model-free methods learn from. Levine's CS 285 lectures organise the subject into three questions,[^cs285] and this lecture follows the same arc:
 
@@ -29,7 +29,7 @@ There is a middle road, and it is often the most sample-efficient one: **learn t
 2. **Mix learning and planning.** Dyna uses the model to generate extra, simulated experience for an ordinary model-free learner.
 3. **Learn a policy from the model.** Instead of replanning at every step, distil the model's predictions into a policy.
 
-There are also many problems where the model *is* known, at least in principle: board games, simulators, systems that obey known physics. Then everything below reduces to the DP of Part II, and the only question is computational.
+There are also many problems where the model *is* known, at least in principle: board games, simulators, systems that obey known physics. Then everything below reduces to [[Dynamic Programming|dynamic programming]], and the only question is computational.
 
 ## Certainty equivalence: estimate the MDP, then solve it
 
@@ -298,7 +298,7 @@ For high-dimensional observations such as images, predicting the next frame pixe
 
 ## Key takeaways
 
-- Part II's planning algorithms need $p$ and $r$. **Model-based RL learns them** from transitions, which are rich supervised data, and then plans; with an exact model it is just DP.
+- The planning algorithms need $p$ and $r$. **Model-based RL learns them** from transitions, which are rich supervised data, and then plans; with an exact model it is just DP.
 - **Certainty equivalence** (count-based $\hat p,\hat r$ + VI/PI) is consistent. The **simulation lemma** bounds the value error by $\epsilon_r/(1-\gamma)+\gamma\epsilon_pR_{\max}/(1-\gamma)^2$, and the CE policy loses at most twice that. Sample complexity is polynomial; sharp analyses give $\tilde O\big(|\mathcal{S}||\mathcal{A}|/(\varepsilon^2(1-\gamma)^3)\big)$ with a generative model.
 - Online, a greedy planner **exploits model errors** and stops collecting the data that would correct them. Optimism (R-max, E³, count bonuses) is the remedy, as in bandits.
 - **Dyna** makes planning just "learning from simulated experience": a few planning updates per real step can cut the real experience needed by a large factor.
@@ -307,8 +307,8 @@ For high-dimensional observations such as images, predicting the next frame pixe
 
 ## Where this shows up next
 
-- This lecture closes Part II. The convergence statements made throughout Parts I and II (for example, that Q-learning, and Dyna-Q's planning updates, converge) rest on the toolkit of Part III, [[Stochastic Approximation]].
-- The model-free methods of Part I are the learners that Dyna and MBPO accelerate: [[Q-Learning and SARSA]] for Dyna-Q, actor-critic methods ([[Actor-Critic Algorithms]]) for MBPO.
+- This lecture closes the series by joining its two halves: learning from experience and planning. The convergence statements behind both (for example, that Q-learning, and Dyna-Q's planning updates, converge) rest on [[Stochastic Approximation]].
+- The model-free methods of the first half are the learners that Dyna and MBPO accelerate: [[Q-Learning and SARSA]] for Dyna-Q, actor-critic methods ([[Actor-Critic Algorithms]]) for MBPO.
 - The optimism principle used here for exploration is developed in its simplest setting in [[Multi-Armed Bandits]].
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->

@@ -498,8 +498,8 @@ The [Actor-Critic repository](https://github.com/parag1604/Actor-Critic) builds 
 - [[Q-Learning and SARSA]]: learning $Q$ directly. Its maximization bias and double Q-learning are what TD3's clipped double-Q addresses.
 - [[Linear Function Approximation]]: what a linear critic converges to (the TD fixed point) and how far that is from the best fit. This is the source of the bias term in the Konda–Tsitsiklis result.
 - [[Off-Policy Learning with Function Approximation]]: why off-policy critics with bootstrapping and function approximation can diverge (the deadly triad), the instability that target networks and clipped targets only mitigate.
-- [[Model-Based Reinforcement Learning]] (Part II): actor-critic methods trained on data from a learned model (Dyna-style, MBPO).
-- [[Stochastic Approximation]] (Part III): the ODE method, Markov noise and the two-timescale theorem behind the convergence results.
+- [[Model-Based Reinforcement Learning]]: actor-critic methods trained on data from a learned model (Dyna-style, MBPO).
+- [[Stochastic Approximation]]: the ODE method, Markov noise and the two-timescale theorem behind the convergence results.
 - Trust-region and proximal methods (TRPO, PPO) combine GAE with a constrained actor update (future lecture).
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
