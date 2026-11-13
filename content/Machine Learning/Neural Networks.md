@@ -7,8 +7,8 @@ tags:
   - deep-learning
   - optimization
 date: 2026-11-12
-prev: "[[Support Vector Machines]]"
-next: "[[Applications of Neural Networks]]"
+prev: "[[Non-parametric Models]]"
+next: "[[Convolutional Neural Networks]]"
 ---
 
 > **Prerequisites:** [[Linear Models]] (logistic and softmax regression, gradient descent, $L_2$ regularization), [[Support Vector Machines]] (hyperplanes, the hinge loss, kernels), the [[Multivariable Calculus#The Jacobian and the chain rule|multivariable chain rule]] and [[First-Order Optimization]] (study both first if they are new), and [[Random Variables|variance]].
@@ -496,7 +496,8 @@ The companion repositories build everything above from scratch, one idea per fil
 
 ## Where this shows up next
 
-- [[Applications of Neural Networks]]: convolutional networks for images, sequence models and attention, captioning, detection and segmentation, built from the pieces in this lecture.
+- [[Convolutional Neural Networks]]: networks for images (classification, detection and segmentation), built from the pieces in this lecture plus locality and weight sharing.
+- [[Sequence Models]]: networks for text and other sequences: RNNs and LSTMs, attention and transformers, mixture of experts and state space models.
 - [[Support Vector Machines]]: the other way out of linear separability, via kernels and the maximum margin; the perceptron's mistake bound is governed by the same margin.
 - [[Variational Autoencoders]] and [[Generative Adversarial Networks]] use neural networks as encoders, decoders, generators and critics, all trained by backpropagation.
 - [[Energy-Based Models]]: Hopfield networks and Boltzmann machines, the other early family of neural networks, and the link between modern Hopfield networks and attention.

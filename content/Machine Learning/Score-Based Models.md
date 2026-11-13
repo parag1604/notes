@@ -8,7 +8,7 @@ tags:
 date: 2026-11-12
 draft: false
 prev: "[[Energy-Based Models]]"
-next: "[[Index (Machine Learning)]]"
+next: "[[Denoising Diffusion Models]]"
 ---
 
 > **Prerequisites:** [[Energy-Based Models]], especially [[Energy-Based Models#Sampling with Langevin dynamics|Langevin dynamics]] and [[Energy-Based Models#From energies to scores|From energies to scores]]. Gaussian [[Non-parametric Models#Kernel density estimation|kernel density estimation]] reappears as the "noisy data" distribution.
@@ -176,7 +176,7 @@ $$
 J_{\text{DSM}}=\frac{1}{2\sigma^2}\,\mathbb{E}\Big[\big\lVert\boldsymbol\epsilon_\theta(\mathbf{x}+\sigma\boldsymbol\epsilon)-\boldsymbol\epsilon\big\rVert^2\Big]:
 $$
 
-**look at a noisy point and guess the noise that was added.** Remember this form: it is exactly the loss of denoising diffusion models.
+**look at a noisy point and guess the noise that was added.** Remember this form: it is exactly the loss of [[Denoising Diffusion Models|denoising diffusion models]].
 
 ## Tweedie's formula: the score is the optimal denoiser
 
@@ -315,7 +315,7 @@ $$
 with time flowing from $1$ to $0$ and $\bar{\mathbf{w}}$ a reverse-time Brownian motion. The only unknown in (8) is the score of the noisy data at every time, $\nabla\log p_t$, which a time-conditional network $\mathbf{s}_\theta(\mathbf{x},t)$ learns with denoising score matching (6), now with $t$ sampled continuously. Generating data means solving (8) numerically from noise; annealed Langevin is one particular, rather crude, way of doing so.
 
 Two further results from the SDE view set up the next two lectures:
-- A different choice of $\mathbf{f}$ and $g$, which shrinks the data while adding noise so that the total variance stays fixed, gives the **variance-preserving** SDE. Its discretization is the denoising diffusion probabilistic model (DDPM).
+- A different choice of $\mathbf{f}$ and $g$, which shrinks the data while adding noise so that the total variance stays fixed, gives the **variance-preserving** SDE. Its discretization is the denoising diffusion probabilistic model ([[Denoising Diffusion Models|DDPM]]).
 - There is a **deterministic** process with the same marginal densities $p_t$, the **probability flow ODE** (9) below. It maps noise to data along smooth paths, with no randomness at all. It is a continuous normalizing flow, and learning such flows directly is the subject of flow matching.
 
 $$
@@ -337,7 +337,7 @@ $$
 - [[Non-parametric Models#Kernel density estimation|Kernel density estimation]]: the noisy data distribution $q_\sigma$ of a finite dataset is a Gaussian KDE, and its exact score is a responsibility-weighted pull towards the training points.
 - [[Clustering and Expectation Maximization]]: the score of a mixture is a responsibility-weighted average of component scores.
 - [[Variational Autoencoders]]: denoising diffusion models are also very deep VAEs with a fixed noising encoder; the next lecture shows that their ELBO reduces to the noise-prediction loss (6).
-- Next lectures (planned): **denoising diffusion models**, where the VAE route and the score route meet, and then **flow matching**, which learns the probability-flow ODE's velocity field directly.
+- [[Denoising Diffusion Models]]: the next lecture, where the VAE route and the score route meet. Then [[Flow Matching]], which learns the probability-flow ODE's velocity field directly.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

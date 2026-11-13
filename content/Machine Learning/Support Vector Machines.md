@@ -6,7 +6,7 @@ tags:
   - convex-optimization
   - max-margin
 prev: "[[Discriminant Analysis]]"
-next: "[[Neural Networks]]"
+next: "[[Non-parametric Models]]"
 ---
 
 > **Prerequisites:** [[Linear Models]] (linear classifiers, logistic regression, $L_2$ regularization) and [[Multivariable Calculus#Constrained optimization: Lagrange multipliers|constrained optimization]] (Lagrange multipliers, duality and the KKT conditions; study it first if it is new).

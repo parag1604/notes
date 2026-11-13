@@ -5,8 +5,8 @@ tags:
   - parzen-windows
   - kernel-density-estimation
   - non-parametric
-prev: "[[Applications of Neural Networks]]"
-next: "[[Matrix Factorization and Dimensionality Reduction]]"
+prev: "[[Support Vector Machines]]"
+next: "[[Neural Networks]]"
 ---
 
 > **Prerequisites:** basic probability (densities, Bayes' rule). [[Discriminant Analysis]] is useful for the generative view of classification.
@@ -112,7 +112,7 @@ where $\mathbf{y}_i$ is a one-hot label or a regression target.
 - A small $\tau$ concentrates the weight on the most similar point, recovering 1-NN.
 - A large $\tau$ spreads it evenly across all points.
 
-With a Gaussian kernel this is exactly Nadaraya–Watson. With learned similarities $s_i=\mathbf{q}^\top\mathbf{k}_i$ it is the **attention** mechanism of transformers, where a "query" softly retrieves "values" from stored "keys".[^vaswani2017]
+With a Gaussian kernel this is exactly Nadaraya–Watson. With learned similarities $s_i=\mathbf{q}^\top\mathbf{k}_i$ it is the **attention** mechanism of transformers ([[Sequence Models#Attention as a soft dictionary lookup|Sequence Models]]), where a "query" softly retrieves "values" from stored "keys".[^vaswani2017]
 
 ---
 
@@ -257,6 +257,7 @@ Libraries such as FAISS combine these ideas (inverted files + PQ + GPUs) to sear
 - [[Discriminant Analysis]]: parametric (Gaussian) class densities instead of KDE.
 - [[Support Vector Machines]]: kernels as similarities, and a sparse alternative to storing every point (only the support vectors).
 - [[Clustering and Expectation Maximization]]: $k$-means is nearest-mean classification with unknown labels, and Gaussian mixtures sit between a single Gaussian and a KDE.
+- [[Neural Networks]], next in the series: instead of storing the data, learn features from it. Similarity-weighted averaging returns as attention in [[Sequence Models#Attention as a soft dictionary lookup|Sequence Models]].
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

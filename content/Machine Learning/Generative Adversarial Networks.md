@@ -252,9 +252,10 @@ Early in training the generator is poor, and the discriminator rejects its sampl
 The standard fix keeps the same fixed point but changes the generator's loss:
 
 $$
-\text{minimize}\quad\mathbb{E}_{\mathbf{z}}\Big[\log\Big(1-D\big(G_\theta(\mathbf{z})\big)\Big)\Big]
-\quad\longrightarrow\quad
-\text{minimize}\quad-\mathbb{E}_{\mathbf{z}}\Big[\log D\big(G_\theta(\mathbf{z})\big)\Big].
+\begin{aligned}
+&\text{minimize}\quad\mathbb{E}_{\mathbf{z}}\Big[\log\Big(1-D\big(G_\theta(\mathbf{z})\big)\Big)\Big]\\
+\longrightarrow\quad&\text{minimize}\quad-\mathbb{E}_{\mathbf{z}}\Big[\log D\big(G_\theta(\mathbf{z})\big)\Big].
+\end{aligned}
 $$
 
 Both losses push $D(G(\mathbf{z}))$ up. But $-\log D$ is steep near $D=0$, so a bad generator gets strong gradients.[^goodfellow2014]
@@ -326,7 +327,7 @@ Sample quality is usually judged by the Inception Score[^salimans2016] or the Fr
 - [[Support Vector Machines]]: the Lagrangian aside there is the same convex duality that gives the variational bound here.
 - [[Policy Gradients]]: the generator gets *pathwise* gradients through the critic, while RL with a non-differentiable reward needs the score function. Adversarial imitation learning (GAIL) combines the two, using a GAN discriminator as the reward for [[Imitation Learning|imitation]].
 - [[Energy-Based Models]]: noise-contrastive estimation trains an unnormalized density with a GAN-like classifier against fixed noise.
-- Later lectures (planned): normalizing flows and diffusion models, and adversarial losses in modern image tokenizers.
+- [[Denoising Diffusion Models]] reach GAN-level sample quality with a plain regression loss and no adversary, at the price of many network passes per sample. [[Normalizing Flows]] trade the adversary for exact likelihoods; [[Flow Matching]] gives simulation-free training of continuous flows.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

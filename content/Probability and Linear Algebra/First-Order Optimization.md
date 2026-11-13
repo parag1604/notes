@@ -827,7 +827,7 @@ Two sanity checks catch most bugs before any tuning: a [[Neural Networks#Gradien
 
 - [[Five Factorizations of a Matrix]] ends the series by explaining why deep networks are trained by these methods rather than by matrix factorizations or Newton's method.
 - [[Linear Models]] applies GD, SGD and Newton's method to least squares and logistic regression; [[Support Vector Machines]] solves its problem with specialized solvers but also with SGD on the hinge loss (Pegasos).
-- [[Neural Networks]] computes the gradients by backpropagation and trains with the optimizers above; [[Applications of Neural Networks]] uses AdamW, warm-up and cosine schedules for transformers.
+- [[Neural Networks]] computes the gradients by backpropagation and trains with the optimizers above; [[Sequence Models#Inductive bias and data|Sequence Models]] uses AdamW, warm-up and cosine schedules for transformers.
 - [[Matrix Factorization and Dimensionality Reduction]] fits NMF by multiplicative updates, which are gradient steps with a per-entry step size, and recommender models by alternating least squares.
 - [[Stochastic Approximation]] gives the general convergence theory behind SGD (the ODE method, Robbins–Monro conditions, two-timescale iterations), which also covers [[Monte Carlo and Temporal-Difference Learning|TD learning]] and [[Q-Learning and SARSA|Q-learning]].
 - [[Policy Gradients]] and [[Actor-Critic Algorithms]] run stochastic gradient ascent on the expected return, where the variance of the gradient estimate is the central difficulty.

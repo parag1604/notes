@@ -1028,7 +1028,7 @@ $$
 p_Y(\mathbf{y})=p_X\big(\mathbf{T}^{-1}(\mathbf{y})\big)\,\big\lvert\det\mathbf{J}_{\mathbf{T}^{-1}}(\mathbf{y})\big\rvert.
 $$
 
-Where $\mathbf{T}$ stretches space, the same probability is spread over more volume and the density drops; where it squeezes, the density rises. The parallelogram example above is the simplest case. In one dimension this is the change-of-variables formula of [[Random Variables#Functions of a random variable|Random Variables]], and in many dimensions it is the foundation of normalizing flows (a planned lecture), which build flexible densities by composing invertible maps and keeping track of exactly this determinant.
+Where $\mathbf{T}$ stretches space, the same probability is spread over more volume and the density drops; where it squeezes, the density rises. The parallelogram example above is the simplest case. In one dimension this is the change-of-variables formula of [[Random Variables#Functions of a random variable|Random Variables]], and in many dimensions it is the foundation of [[Normalizing Flows|normalizing flows]], which build flexible densities by composing invertible maps and keeping track of exactly this determinant.
 
 ## Key takeaways
 

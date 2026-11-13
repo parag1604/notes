@@ -526,7 +526,7 @@ $$
 
 The drift $f$ moves probability around, and the noise $g$ spreads it out.
 
-**The forward process of a diffusion model is a Markov chain.** In a denoising diffusion probabilistic model (DDPM),[^ho2020] data $\mathbf{x}_0$ is corrupted step by step:
+**The forward process of a diffusion model is a Markov chain.** In a [[Denoising Diffusion Models|denoising diffusion probabilistic model]] (DDPM),[^ho2020] data $\mathbf{x}_0$ is corrupted step by step:
 
 $$
 \mathbf{x}_t=\sqrt{1-\beta_t}\,\mathbf{x}_{t-1}+\sqrt{\beta_t}\,\boldsymbol\epsilon_t,\qquad\boldsymbol\epsilon_t\sim\mathcal{N}(\mathbf{0},\mathbf{I}),\qquad t=1,\dots,T.
@@ -542,7 +542,7 @@ This is a Markov chain with Gaussian transitions, and the ideas of this lecture 
 ![[Probability and Linear Algebra/images/markov-chains-diffusion.svg]]
 *Figure 9. From random walks to diffusion models. (a) Random walks with $n$ steps of size $1/\sqrt n$ in unit time look more and more like a single continuous, rough path: Brownian motion. (b) The DDPM forward chain applied to two-cluster data (red, $t=0$) with the standard linear noise schedule. The clusters blur and merge, and by $t=1000$ the distribution is the stationary $\mathcal{N}(0,1)$ (dotted), with no memory of the data.*
 
-**State space models.** A probabilistic **state space model** pairs a hidden Markov chain $\mathbf{z}_t$, which carries the memory, with observations $\mathbf{y}_t$ that depend only on the current state. With discrete states this is a hidden Markov model. With linear Gaussian dynamics it is the model of the **Kalman filter**, whose update step is the Gaussian conditioning of [[Joint Distributions#The multivariate Gaussian|Joint Distributions]] (the "signal in noise" example) applied once per time step. The deep **structured state space models** used for long sequences, such as S4 and Mamba, keep this structure but make it deterministic.[^gu2021]<sup>,</sup>[^gu2023] A hidden state follows a continuous-time linear system $\dot{\mathbf{h}}(t)=\mathbf{A}\mathbf{h}(t)+\mathbf{B}u(t)$, and it is discretized with a step $\Delta$ using the same matrix exponential, $\mathbf{h}_k=e^{\Delta\mathbf{A}}\mathbf{h}_{k-1}+(\cdots)\,u_k$, that turns a generator $\mathbf{Q}$ into $\mathbf{P}(\Delta)=e^{\Delta\mathbf{Q}}$. In both cases the current state summarizes everything about the past that matters for the future. That is the Markov idea, used as an architecture.
+**State space models.** A probabilistic **state space model** pairs a hidden Markov chain $\mathbf{z}_t$, which carries the memory, with observations $\mathbf{y}_t$ that depend only on the current state. With discrete states this is a hidden Markov model. With linear Gaussian dynamics it is the model of the **Kalman filter**, whose update step is the Gaussian conditioning of [[Joint Distributions#The multivariate Gaussian|Joint Distributions]] (the "signal in noise" example) applied once per time step. The deep **structured state space models** used for long sequences, such as S4 and Mamba ([[Sequence Models#State space models|Sequence Models]]), keep this structure but make it deterministic.[^gu2021]<sup>,</sup>[^gu2023] A hidden state follows a continuous-time linear system $\dot{\mathbf{h}}(t)=\mathbf{A}\mathbf{h}(t)+\mathbf{B}u(t)$, and it is discretized with a step $\Delta$ using the same matrix exponential, $\mathbf{h}_k=e^{\Delta\mathbf{A}}\mathbf{h}_{k-1}+(\cdots)\,u_k$, that turns a generator $\mathbf{Q}$ into $\mathbf{P}(\Delta)=e^{\Delta\mathbf{Q}}$. In both cases the current state summarizes everything about the past that matters for the future. That is the Markov idea, used as an architecture.
 
 > [!example]- Code: the DDPM forward chain forgets the data
 > ```python
@@ -573,7 +573,7 @@ This is a Markov chain with Gaussian transitions, and the ideas of this lecture 
 
 - [[Introduction to Reinforcement Learning]] adds actions and rewards to a Markov chain to get a Markov decision process. [[Dynamic Programming]] solves the first-step (Bellman) equations, and the convergence of value iteration is another contraction argument.
 - [[Energy-Based Models]] use Gibbs sampling in Boltzmann machines and RBMs, and Langevin MCMC for deep EBMs. [[Score-Based Models]] sample with annealed Langevin dynamics, an MCMC method driven by the score.
-- [[Score-Based Models]] reverses the diffusion of Figure 9b with learned scores; the planned lectures on denoising diffusion models and flow matching build on the forward Markov chain and its continuous-time limit.
+- [[Score-Based Models]] reverses the diffusion of Figure 9b with learned scores; [[Denoising Diffusion Models]] is built on the forward Markov chain and its continuous-time limit, and [[Flow Matching]] continues from there.
 - [[Matrix Factorization and Dimensionality Reduction]] covers the eigenvalues and power iteration behind stationary distributions, PageRank and mixing; spectral clustering in [[Clustering and Expectation Maximization]] looks for the same bottlenecks that slow a random walk down.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->

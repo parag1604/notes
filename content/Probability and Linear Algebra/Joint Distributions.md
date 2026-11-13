@@ -338,7 +338,7 @@ This stretches the cloud by $\sqrt{\lambda_i}$ along each axis, rotates it by $\
 
 The Gaussian is closed under almost every operation we need:[^bishop2006]
 - **Affine maps:** $\mathbf{A}\mathbf{x}+\mathbf{b}\sim\mathcal{N}(\mathbf{A}\boldsymbol\mu+\mathbf{b},\,\mathbf{A}\boldsymbol\Sigma\mathbf{A}^\top)$.
-- **Sums:** independent Gaussians add to a Gaussian, with means and covariances adding. Repeatedly adding Gaussian noise is the forward process of diffusion models.
+- **Sums:** independent Gaussians add to a Gaussian, with means and covariances adding. Repeatedly adding Gaussian noise is the forward process of [[Denoising Diffusion Models|diffusion models]].
 - **Marginals:** any subset of the coordinates is Gaussian; just keep the corresponding entries of $\boldsymbol\mu$ and $\boldsymbol\Sigma$.
 - **Conditionals:** split $\mathbf{x}=(\mathbf{x}_1,\mathbf{x}_2)$. Then $\mathbf{x}_1$ given $\mathbf{x}_2$ is Gaussian, with
 

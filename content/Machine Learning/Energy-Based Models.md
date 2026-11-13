@@ -356,36 +356,14 @@ Two classic alternatives train an EBM without any MCMC:
 
 ## Contrastive losses come from energy
 
-Much of modern representation learning (SimCLR, CLIP) trains with a **contrastive loss**. It looks like an ad hoc design, but it is the EBM gradient (9) in disguise.
-
-Consider a **conditional** EBM over pairs: given an input $\mathbf{x}$ (say, an image), score each candidate $\mathbf{y}$ (say, a caption) with an energy $E_\theta(\mathbf{x},\mathbf{y})$:
-
-$$
-p_\theta(\mathbf{y}\mid\mathbf{x})=\frac{e^{-E_\theta(\mathbf{x},\mathbf{y})}}{\sum_{\mathbf{y}'}e^{-E_\theta(\mathbf{x},\mathbf{y}')}} .
-$$
-
-The normalizer sums over **every possible caption**, which is intractable. The fix: in a minibatch of $B$ matched pairs $(\mathbf{x}_i,\mathbf{y}_i)$, approximate the sum using the other captions in the batch as **negatives**. The negative log-likelihood of the correct caption becomes
+Much of modern representation learning (SimCLR, CLIP) trains with a **contrastive loss**. It is an EBM trained with the partition function restricted to a **candidate set**. Take a conditional EBM $p_\theta(\mathbf{y}\mid\mathbf{x})\propto e^{-E_\theta(\mathbf{x},\mathbf{y})}$ over pairs, and replace the intractable sum over every possible $\mathbf{y}$ by a sum over the $B$ partners in a minibatch. The negative log-likelihood of the true partner becomes the **InfoNCE** loss[^oord2018]
 
 $$
 \mathcal{L}_i=E_\theta(\mathbf{x}_i,\mathbf{y}_i)+\log\sum_{j=1}^{B}e^{-E_\theta(\mathbf{x}_i,\mathbf{y}_j)} .
 \tag{11}
 $$
 
-This is the **InfoNCE** loss.[^oord2018] With $E_\theta(\mathbf{x},\mathbf{y})=-f_\theta(\mathbf{x})^\top g_\theta(\mathbf{y})/\tau$ for normalized embeddings $f$ and $g$, it is exactly the loss of CLIP[^radford2021] (image–text pairs) and of SimCLR[^chen2020] (two augmentations of the same image). Its gradient is
-
-$$
-\nabla_\theta\mathcal{L}_i=\nabla_\theta E_\theta(\mathbf{x}_i,\mathbf{y}_i)-\sum_{j=1}^{B}p_{ij}\,\nabla_\theta E_\theta(\mathbf{x}_i,\mathbf{y}_j),
-\qquad
-p_{ij}=\frac{e^{-E_\theta(\mathbf{x}_i,\mathbf{y}_j)}}{\sum_{k}e^{-E_\theta(\mathbf{x}_i,\mathbf{y}_k)}},
-$$
-
-which is (9) term by term:
-- push the energy of the true pair **down** (wake phase);
-- push the energy of the negatives **up**, each weighted by how probable the model currently thinks it is (sleep phase). **Hard negatives**, the wrong captions the model finds plausible, receive the largest push.
-
-The batch replaces MCMC as the source of negative samples. This is why contrastive methods want large batches: more negatives give a better estimate of the partition function. It also explains the collapse failure: with no negatives, the cheapest solution maps everything to the same embedding, the flat landscape again.
-
-An older, margin-based form makes the same point without any softmax.[^hadsell2006] Treat the distance $d$ between two embeddings as the energy, and minimize $\tfrac12d^2$ for similar pairs and $\tfrac12\max(0,m-d)^2$ for dissimilar ones. Positives are pulled into a valley, while negatives are pushed up only until they clear a margin $m$, which plays the role of the negative phase.
+Its gradient is (9) term by term: the true pair's energy goes down, and the other candidates in the batch serve as the negative samples whose energy goes up, in place of MCMC. The details (InfoNCE and mutual information, supervised contrastive learning, SimCLR, MoCo, hard negatives, collapse and the non-contrastive methods that avoid it, CLIP) are in [[Self-Supervised Representation Learning]].
 
 > [!tip] Intuition
 > The physics picture says it all. A good energy landscape needs valleys on the data **and** hills everywhere else. "Contrastive" refers to contrasting the two: every method in this lecture differs only in where it finds the points to push up. Boltzmann machines let the network dream, CD takes one step away from the data, deep EBMs run Langevin chains, NCE uses fixed noise, and InfoNCE uses the rest of the batch.
@@ -421,7 +399,7 @@ It is guaranteed to lower the energy, and for well-separated patterns it converg
 - the patterns returned as a weighted average are **values**;
 - $\beta=1/\sqrt{d_k}$.
 
-Then (12) is exactly the attention of a transformer,[^vaswani2017] $\operatorname{softmax}(\mathbf{q}^\top\mathbf{K}^\top/\sqrt{d_k})\mathbf{V}$. **One attention step is one retrieval step of an associative memory.** The temperature controls what is retrieved (Figure 7). At small $\beta$, the softmax is nearly uniform and the update returns an average of all memories, a "metastable" state. At large $\beta$, it snaps to the single closest memory. The same weighted-average-by-similarity view appeared earlier as [[Non-parametric Models#Similarity-based (dot-product) neighbours|kernel regression]].
+Then (12) is exactly the [[Sequence Models#Attention as a soft dictionary lookup|attention]] of a transformer,[^vaswani2017] $\operatorname{softmax}(\mathbf{q}^\top\mathbf{K}^\top/\sqrt{d_k})\mathbf{V}$. **One attention step is one retrieval step of an associative memory.** The temperature controls what is retrieved (Figure 7). At small $\beta$, the softmax is nearly uniform and the update returns an average of all memories, a "metastable" state. At large $\beta$, it snaps to the single closest memory. The same weighted-average-by-similarity view appeared earlier as [[Non-parametric Models#Similarity-based (dot-product) neighbours|kernel regression]].
 
 ![[Machine Learning/images/energy-based-models-modern-hopfield.svg]]
 *Figure 7. One retrieval step (12) of a modern Hopfield network storing the four glyphs from Figure 3 as continuous vectors. The query is the "T" with its lower half masked (set to 0). Top: the retrieved state; bottom: the softmax weights over the stored patterns. At $\beta=0.002$ the weights are nearly uniform and the output is a blur of all four glyphs; at $\beta=0.03$ the "T" dominates; at $\beta=0.5$ the full "T" is retrieved in one step.*
@@ -436,7 +414,7 @@ Then (12) is exactly the attention of a transformer,[^vaswani2017] $\operatornam
 | training signal | maximize the ELBO | adversarial min–max | push data down, samples up (9) |
 | main difficulty | blurry samples, posterior collapse | instability, mode collapse | intractable $Z_\theta$, slow mixing |
 
-Normalizing flows (planned) keep exact likelihoods by restricting the architecture to invertible maps.
+[[Normalizing Flows]] keep exact likelihoods by restricting the architecture to invertible maps.
 
 ## From energies to scores
 
@@ -450,7 +428,7 @@ So why learn an energy at all? We could instead learn the **score directly**: a 
 1. **How do we fit a score without knowing the true one?** We never observe $\nabla_{\mathbf{x}}\log p_{\text{data}}$, only samples. Score matching answers this, and its denoising version reduces it to "predict the noise that was added to a data point".
 2. **Where is the learned score accurate?** Only where there is data. Between the modes of Figure 6 the density is tiny, the score is learned badly, and Langevin chains mix poorly there anyway. The fix is to **add noise to the data**: noise fills the empty regions and connects the modes. Learning scores at many noise levels and annealing from coarse to fine gives **noise-conditional score networks**.
 
-Follow that idea to its end, with a whole sequence of noise levels that gradually destroys the data, and you arrive at **denoising diffusion models**. They can also be derived as a very deep [[Variational Autoencoders|VAE]], and the two routes meet. Replacing the noisy sampling path by a deterministic one gives **flow matching**.
+Follow that idea to its end, with a whole sequence of noise levels that gradually destroys the data, and you arrive at [[Denoising Diffusion Models|denoising diffusion models]]. They can also be derived as a very deep [[Variational Autoencoders|VAE]], and the two routes meet. Replacing the noisy sampling path by a deterministic one gives **flow matching**.
 
 ## Key takeaways
 
@@ -465,11 +443,11 @@ Follow that idea to its end, with a whole sequence of noise levels that graduall
 ## Where this shows up next
 
 - [[Linear Models#More than two classes: softmax regression|Softmax regression]]: the softmax classifier as a Boltzmann distribution over classes, and the starting point of joint energy models.
-- [[Multi-Armed Bandits#Gradient bandit algorithms|Gradient bandits]] and the Gumbel-softmax in [[Policy Gradients#Straight-Through Gumbel-Softmax (STGS) for PG Algorithms|Policy Gradients]]: Boltzmann exploration and temperature annealing. Maximum-entropy RL (planned) gives policies $\pi(a\mid s)\propto e^{Q(s,a)/\tau}$.
+- [[Multi-Armed Bandits#Gradient bandit algorithms|Gradient bandits]] and the Gumbel-softmax in [[Policy Gradients#Straight-Through Gumbel-Softmax (STGS) for PG Algorithms|Policy Gradients]]: Boltzmann exploration and temperature annealing. Maximum-entropy RL ([[Actor-Critic Algorithms#Soft actor-critic: maximum-entropy RL|soft actor-critic]]) gives policies $\pi(a\mid s)\propto e^{Q(s,a)/\tau}$.
 - [[Clustering and Expectation Maximization]]: GMM responsibilities as a Boltzmann distribution over clusters; RBMs as latent-variable models.
 - [[Generative Adversarial Networks]]: NCE as a classifier between data and noise; contrastive pushes as a fixed-generator cousin of adversarial training.
 - [[Non-parametric Models#Similarity-based (dot-product) neighbours|Similarity-based neighbours]]: attention as soft nearest-neighbour retrieval, now derived from an energy.
-- [[Score-Based Models]]: the next lecture, which learns the score directly. Then, in order: **denoising diffusion models** (DDPM, and why it is the same model reached from the VAE side), then **flow matching**. Also planned: normalizing flows and contrastive representation learning.
+- [[Score-Based Models]]: the next lecture, which learns the score directly. Then, in order: [[Denoising Diffusion Models]] (DDPM, and why it is the same model reached from the VAE side), then [[Flow Matching]] and [[Normalizing Flows]]. Contrastive losses as EBMs are developed in [[Self-Supervised Representation Learning]].
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 
@@ -490,9 +468,6 @@ Follow that idea to its end, with a whole sequence of noise levels that graduall
 [^vincent2011]: Vincent, P. (2011). *A Connection Between Score Matching and Denoising Autoencoders*. Neural Computation, 23(7), 1661–1674. [doi:10.1162/NECO_a_00142](https://doi.org/10.1162/NECO_a_00142)
 [^gutmann2010]: Gutmann, M., & Hyvärinen, A. (2010). *Noise-Contrastive Estimation: A New Estimation Principle for Unnormalized Statistical Models*. AISTATS. [proceedings.mlr.press/v9/gutmann10a](https://proceedings.mlr.press/v9/gutmann10a.html)
 [^oord2018]: van den Oord, A., Li, Y., & Vinyals, O. (2018). *Representation Learning with Contrastive Predictive Coding*. [arXiv:1807.03748](https://arxiv.org/abs/1807.03748)
-[^radford2021]: Radford, A., et al. (2021). *Learning Transferable Visual Models From Natural Language Supervision*. ICML. [arXiv:2103.00020](https://arxiv.org/abs/2103.00020)
-[^chen2020]: Chen, T., Kornblith, S., Norouzi, M., & Hinton, G. (2020). *A Simple Framework for Contrastive Learning of Visual Representations*. ICML. [arXiv:2002.05709](https://arxiv.org/abs/2002.05709)
-[^hadsell2006]: Hadsell, R., Chopra, S., & LeCun, Y. (2006). *Dimensionality Reduction by Learning an Invariant Mapping*. CVPR. [doi:10.1109/CVPR.2006.100](https://doi.org/10.1109/CVPR.2006.100)
 [^grathwohl2020]: Grathwohl, W., Wang, K.-C., Jacobsen, J.-H., Duvenaud, D., Norouzi, M., & Swersky, K. (2020). *Your Classifier is Secretly an Energy Based Model and You Should Treat it Like One*. ICLR. [arXiv:1912.03263](https://arxiv.org/abs/1912.03263)
 [^krotov2016]: Krotov, D., & Hopfield, J. J. (2016). *Dense Associative Memory for Pattern Recognition*. NeurIPS. [arXiv:1606.01164](https://arxiv.org/abs/1606.01164)
 [^demircigil2017]: Demircigil, M., Heusel, J., Löwe, M., Upgang, S., & Vermet, F. (2017). *On a Model of Associative Memory with Huge Storage Capacity*. Journal of Statistical Physics, 168, 288–299. [doi:10.1007/s10955-017-1806-y](https://doi.org/10.1007/s10955-017-1806-y)

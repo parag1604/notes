@@ -460,7 +460,7 @@ The derivative factor conserves probability. Where $g$ **stretches** an interval
 ![[Probability and Linear Algebra/images/random-variables-change-of-variables.svg]]
 *Figure 11. Stretching and squeezing. (a) Evenly spaced values of $\Theta$ (grey ticks) mapped through $\cos$: the images (orange lines) crowd together near $\pm1$, where the curve is flat. (b) The histogram of $Y=\cos\Theta$ for uniform $\Theta$ matches the arcsine density, which is unbounded at $\pm1$.*
 
-In $D$ dimensions the derivative in (7) becomes the absolute determinant of the Jacobian of $g^{-1}$. Normalizing flows (a planned lecture) build flexible densities by composing invertible maps and tracking exactly this factor.
+In $D$ dimensions the derivative in (7) becomes the absolute determinant of the Jacobian of $g^{-1}$. [[Normalizing Flows]] build flexible densities by composing invertible maps and tracking exactly this factor.
 
 ## Sampling from any distribution
 
