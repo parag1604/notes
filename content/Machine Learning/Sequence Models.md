@@ -10,7 +10,7 @@ tags:
 date: 2026-11-13
 draft: false
 prev: "[[Convolutional Neural Networks]]"
-next: "[[Self-Supervised Representation Learning]]"
+next: "[[Graph Neural Networks]]"
 ---
 
 > **Prerequisites:** [[Neural Networks]] (MLPs, backpropagation, normalization layers), [[Linear Models]] (softmax regression and the cross-entropy loss) and [[Convolutional Neural Networks]] (weight sharing, residual connections). The section on editing facts uses [[Multivariable Calculus#Equality constraints|Lagrange multipliers]] and [[Orthogonality and Least Squares|least squares]]; the state space models use the matrix exponential from [[Eigenvalues and Eigenvectors#Differential equations|Eigenvalues and Eigenvectors]].
@@ -896,7 +896,8 @@ Parag's [improved-vision-encoders](https://github.com/paragduttaiisc/improved-vi
 
 ## Where this shows up next
 
-- [[Self-Supervised Representation Learning]], the next lecture: learning representations without labels, for images and text, with the encoders of this lecture and the contrastive loss derived in [[Energy-Based Models]]. CLIP, for instance, trains an image encoder and a text transformer so that matching image–caption pairs have high similarity.[^radford2021]
+- [[Graph Neural Networks]], the next lecture: convolution and attention generalized from grids and chains to arbitrary graphs (a transformer is a GNN on the complete graph).
+- [[Self-Supervised Representation Learning]]: learning representations without labels, for images and text, with the encoders of this lecture and the contrastive loss derived in [[Energy-Based Models]]. CLIP, for instance, trains an image encoder and a text transformer so that matching image–caption pairs have high similarity.[^radford2021]
 - [[Language Representations and Language Models]]: what the embeddings and the next-token objective learn: word-vector geometry, tokenization, masked and next-token prediction, scaling laws and in-context learning. A decoder-only transformer trained to predict the next token, scaled up, is a GPT.[^brown2020] [GPT-from-Scratch](https://github.com/parag1604/GPT-from-Scratch) builds one step by step, in the spirit of Karpathy's nanoGPT, then loads the real pretrained GPT-2 weights into the same code and fine-tunes them with LoRA.
 - [[Non-parametric Models]]: attention with a Gaussian score is Nadaraya–Watson kernel regression; [[Energy-Based Models]]: one attention step is one retrieval step of a modern Hopfield network.
 - **Generative models.** [[Denoising Diffusion Models]] embed the noise level with the sinusoidal encoding of this lecture and condition on text through cross-attention.

@@ -7,7 +7,7 @@ tags:
   - contrastive-learning
 date: 2026-11-13
 draft: false
-prev: "[[Sequence Models]]"
+prev: "[[Graph Neural Networks]]"
 next: "[[Language Representations and Language Models]]"
 ---
 

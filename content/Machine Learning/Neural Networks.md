@@ -7,7 +7,7 @@ tags:
   - deep-learning
   - optimization
 date: 2026-11-12
-prev: "[[Clustering and Expectation Maximization]]"
+prev: "[[Graph Representation Learning]]"
 next: "[[Convolutional Neural Networks]]"
 ---
 
