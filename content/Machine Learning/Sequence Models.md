@@ -53,19 +53,7 @@ We start with the classical pipeline: turn words into vectors, then mix them wit
 
 **One-hot vectors and embeddings.** Token $w$ out of a vocabulary $\mathcal{V}$ of size $|\mathcal{V}|$ can be written as a one-hot vector $\mathbf{e}_w\in\{0,1\}^{|\mathcal{V}|}$. One-hot vectors are huge, and all of them are equally far apart: "cat" is no closer to "kitten" than to "carburettor". An **embedding** maps each token to a dense vector, $\mathbf{x}_w=\mathbf{E}^\top\mathbf{e}_w$, which is simply row $w$ of a learned matrix $\mathbf{E}\in\mathbb{R}^{|\mathcal{V}|\times d}$. In code this is a table lookup (`nn.Embedding`), never an actual matrix product.
 
-**Pretrained embeddings and the distributional hypothesis.** "You shall know a word by the company it keeps": words that occur in similar contexts tend to have similar meanings. Word2vec turns this into a prediction task.[^mikolov2013] The skip-gram model predicts the words around each token $x_t$ within a window of $\pm m$ positions,
-
-$$
-\max\ \sum_{t}\ \sum_{\substack{-m\le j\le m\\ j\ne0}}\log p(x_{t+j}\mid x_t),
-$$
-
-where each word has an input vector $\mathbf{v}_w$ and an output vector $\mathbf{u}_w$, and for a centre word $w$ and context word $c$
-
-$$
-p(c\mid w)=\frac{\exp(\mathbf{u}_c^\top\mathbf{v}_w)}{\sum_{c'}\exp(\mathbf{u}_{c'}^\top\mathbf{v}_w)}.
-$$
-
-The softmax sums over the whole vocabulary, which is expensive; **negative sampling** replaces it by a binary task: tell the true context word apart from a few random ones.[^mikolov2013b] This is a binary contrastive loss, a simplified form of the [[Self-Supervised Representation Learning#NCE and InfoNCE|noise-contrastive estimation]] met later in the series. GloVe fits word vectors to global co-occurrence counts $X_{ij}$ instead, by minimizing a weighted least-squares loss on $\mathbf{v}_i^\top\mathbf{u}_j+b_i+\tilde b_j-\log X_{ij}$.[^pennington2014] fastText represents a word as the sum of its character $n$-gram vectors, so it can build vectors for words it has never seen.[^bojanowski2017] [[Language Representations and Language Models#Static word embeddings|Language Representations and Language Models]] derives these objectives in full (with the same notation), shows what they factorize, and studies the geometry of the vectors they produce.
+**Pretrained embeddings and the distributional hypothesis.** "You shall know a word by the company it keeps": words that occur in similar contexts tend to have similar meanings. Word2vec turns this into a prediction task:[^mikolov2013] its **skip-gram** model predicts the words within a window of $\pm m$ positions around each token, with a softmax over the vocabulary of dot products between a centre-word vector and a context-word vector. **Negative sampling** replaces that expensive softmax by a binary task, telling the true context word apart from a few random ones,[^mikolov2013b] a simplified form of the [[Self-Supervised Representation Learning#NCE and InfoNCE|noise-contrastive estimation]] met later in the series. GloVe fits word vectors to global co-occurrence counts instead,[^pennington2014] and fastText represents a word as the sum of its character $n$-gram vectors, so it can build vectors for words it has never seen.[^bojanowski2017] [[Language Representations and Language Models#Static word embeddings|Language Representations and Language Models]] writes out these objectives, shows what they factorize, and studies the geometry of the vectors they produce.
 
 The resulting spaces have striking geometry. Notebook 1 of Parag's repository loads the fastText vectors and finds that the nearest neighbours of "Bangalore" are other Indian cities (Chennai, Bengaluru, Pune, …), and that $\text{King}-\text{Man}+\text{Woman}$ lands closest to "Queen".
 

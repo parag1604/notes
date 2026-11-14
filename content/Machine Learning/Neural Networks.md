@@ -605,7 +605,7 @@ The companion repositories build everything above from scratch, one idea per fil
 
 [^rosenblatt1958]: Rosenblatt, F. (1958). *The Perceptron: A Probabilistic Model for Information Storage and Organization in the Brain*. Psychological Review, 65(6), 386–408. [doi:10.1037/h0042519](https://doi.org/10.1037/h0042519)
 [^block1962]: Block, H. D. (1962). *The Perceptron: A Model for Brain Functioning. I*. Reviews of Modern Physics, 34(1), 123–135. [doi:10.1103/RevModPhys.34.123](https://doi.org/10.1103/RevModPhys.34.123)
-[^novikoff1962]: Novikoff, A. B. J. (1962). *On Convergence Proofs on Perceptrons*. Proceedings of the Symposium on the Mathematical Theory of Automata, 12, 615–622. Polytechnic Institute of Brooklyn. [pdf](https://cs.uwaterloo.ca/~y328yu/classics/novikoff.pdf)
+[^novikoff1962]: Novikoff, A. B. J. (1962). *On Convergence Proofs on Perceptrons*. Proceedings of the Symposium on the Mathematical Theory of Automata, 12, 615–622. Polytechnic Institute of Brooklyn. Also Stanford Research Institute technical report, [DTIC AD0298258](https://apps.dtic.mil/sti/tr/pdf/AD0298258.pdf)
 [^gallant1990]: Gallant, S. I. (1990). *Perceptron-Based Learning Algorithms*. IEEE Transactions on Neural Networks, 1(2), 179–191. [doi:10.1109/72.80230](https://doi.org/10.1109/72.80230)
 [^freund1999]: Freund, Y., & Schapire, R. E. (1999). *Large Margin Classification Using the Perceptron Algorithm*. Machine Learning, 37, 277–296. [doi:10.1023/A:1007662407062](https://doi.org/10.1023/A:1007662407062)
 [^minsky1969]: Minsky, M., & Papert, S. A. (1969; reissued 2017). *Perceptrons: An Introduction to Computational Geometry*. MIT Press. [doi:10.7551/mitpress/11301.001.0001](https://doi.org/10.7551/mitpress/11301.001.0001)
