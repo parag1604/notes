@@ -16,6 +16,7 @@ next: "[[Neural Networks]]"
 >
 > **TL;DR:**
 > - A graph is not a table, so most of our models cannot use it directly. **Graph representation learning** gives every node (or entity) a vector, so that node classification, link prediction and clustering become linear problems on those vectors.
+> - Classical **centralities** (degree, closeness, betweenness, eigenvector) give each node one hand-designed number saying how important it is; betweenness and the Laplacian's eigenvectors also split the graph into communities, the question learned embeddings answer in more dimensions.
 > - **Shallow embeddings** are a lookup table trained as an **encoder–decoder**: the decoder turns two vectors into a similarity, and the loss asks that similarity to match one read off the graph. Spectral methods factorize a proximity matrix; **DeepWalk**, **node2vec** and **LINE** sample random walks and train skip-gram with negative sampling. These turn out to be the same thing: random-walk methods implicitly factorize a matrix (**NetMF**).
 > - A lookup table is **transductive**: it has no vector for a node it never saw. Inductive methods need node features and a shared function, which is what graph neural networks provide.
 > - **Knowledge graphs** store facts as triples $(h,r,t)$. **TransE** models a relation as a translation $\mathbf{h}+\mathbf{r}\approx\mathbf{t}$; **TransH**, **TransR** and **TransD** fix its trouble with symmetric and one-to-many relations; **DistMult**, **ComplEx** and **RotatE** use products and rotations instead. Which relation patterns a model can express can be proved, and shows up in experiments.
@@ -68,9 +69,82 @@ $$
 
 Finally, a **random walk** moves from a node to a uniformly random neighbour. Its transition matrix is $\mathbf{P}=\operatorname{diag}(\mathbf{d})^{-1}\mathbf{A}$, and $(\mathbf{P}^r)_{uv}$ is the probability of being at $v$ after $r$ steps from $u$. On a connected undirected graph its stationary distribution is $\pi_v=d_v/\operatorname{vol}(G)$, and the chain is reversible: $d_u(\mathbf{P}^r)_{uv}=d_v(\mathbf{P}^r)_{vu}$ (see [[Markov Chains#The stationary distribution]]). Both facts appear in the NetMF derivation below.
 
+## Which nodes matter: centrality
+
+Before learning a vector per node, it helps to see the oldest node-level summary in network science: a single number per node that says how **central** it is. A centrality is a hand-designed, one-dimensional "embedding". Comparing it with the learned ones shows what each kind captures.
+
+Our running example is **Zachary's karate club**: 34 members of a university karate club and the 78 friendships between them, recorded just before the club split in two after a dispute between the instructor, "Mr. Hi" (member 1), and the administrator, the "Officer" (member 34).[^zachary1977] We number the members 1–34 as Zachary did.
+
+### Four ways to be central
+
+**Degree centrality** counts friends: $C_D(v)=d_v$, often divided by $N-1$. It is purely local: a member with many friends in one corner of the club scores as high as one with friends everywhere.
+
+**Closeness centrality** asks how quickly a node reaches everyone else. With $\mathrm{dist}(u,v)$ the length of a shortest path on a connected graph,
+
+$$
+C_C(v)=\frac{N-1}{\sum_{u\ne v}\mathrm{dist}(v,u)},
+$$
+
+the inverse of the average distance to the other nodes.[^freeman1978]
+
+**Betweenness centrality** asks how often a node sits *between* others. If $\sigma_{st}$ is the number of shortest paths from $s$ to $t$ and $\sigma_{st}(v)$ the number that pass through $v$,
+
+$$
+C_B(v)=\sum_{s\ne v\ne t}\frac{\sigma_{st}(v)}{\sigma_{st}},
+$$
+
+usually divided by the number of pairs, $\binom{N-1}{2}$, so that it lies in $[0,1]$.[^freeman1977] A node with high betweenness is a **broker**: remove it and many pairs drift apart. Brandes' algorithm computes it for all nodes in $O(N\lvert\mathcal{E}\rvert)$ time on an unweighted graph.[^brandes2001]
+
+**Eigenvector centrality** makes importance recursive: a node is central if its neighbours are central.[^bonacich1972] Asking each score to be proportional to the sum of the neighbours' scores gives
+
+$$
+\lambda\,c_v=\sum_uA_{vu}\,c_u
+\quad\Longleftrightarrow\quad
+\mathbf{A}\mathbf{c}=\lambda\,\mathbf{c}.
+$$
+
+Which eigenvector? For a connected graph, the **Perron–Frobenius theorem** says the eigenvector of the largest eigenvalue $\lambda_1$ is the only one whose entries can all be chosen positive, so it is the only sensible set of scores. [[Eigenvalues and Eigenvectors#Power iteration and the QR algorithm|Power iteration]] finds it by repeatedly passing scores to neighbours, $\mathbf{c}\leftarrow\mathbf{A}\mathbf{c}/\lVert\mathbf{A}\mathbf{c}\rVert$. On the karate club $\lambda_1=6.73$ and $\lambda_2=4.98$, so the error shrinks by a factor $\lambda_2/\lambda_1=0.74$ per step.
+
+> [!note] Katz centrality and PageRank
+> Eigenvector centrality breaks on directed graphs, where nodes with no incoming edges get score 0 and pass nothing on. **Katz centrality** gives every node a baseline, $\mathbf{c}=\alpha\mathbf{A}\mathbf{c}+\beta\mathbf{1}$ with $\alpha<1/\lambda_1$, which sums walks of every length with weight $\alpha^r$.[^katz1953] **PageRank** also divides each node's vote among its out-neighbours: it is the stationary distribution of a random walk that teleports to a random node with probability $1-\alpha$ (see [[Markov Chains#PageRank: the stationary distribution of the web|PageRank]]). On an undirected graph without teleporting, that stationary distribution is $d_v/\operatorname{vol}(G)$, so PageRank is close to degree: on the karate club their rank correlation is 0.98 ($\alpha=0.85$).
+
+### Centrality on the karate club
+
+![[Machine Learning/images/graph-representation-learning-centrality.svg]]
+*Figure 1: four centralities on the karate club (node area proportional to the score, rescaled within each panel; the three most central members are numbered). Circles joined Mr. Hi, squares the Officer. All four put the two leaders, members 1 and 34, near the top, but they disagree on the rest.*
+
+| Rank | degree | closeness | betweenness | eigenvector | PageRank |
+|---|---|---|---|---|---|
+| 1 | 34 (17) | 1 (0.57) | 1 (0.44) | 34 (1.00) | 34 (0.101) |
+| 2 | 1 (16) | 3 (0.56) | 34 (0.30) | 1 (0.95) | 1 (0.097) |
+| 3 | 33 (12) | 34 (0.55) | 33 (0.15) | 3 (0.85) | 33 (0.072) |
+| 4 | 3 (10) | 32 (0.54) | 3 (0.14) | 33 (0.83) | 3 (0.057) |
+| 5 | 2 (9) | 14 (0.52) | 32 (0.14) | 2 (0.71) | 2 (0.053) |
+
+The leaders top every list, which is reassuring: centrality finds them without being told about the dispute. The details differ, and each difference has a reason.
+
+- The Officer (34) has the most friends, but Mr. Hi (1) has the higher betweenness, 0.44 against 0.30. Six of Mr. Hi's friends (5, 6, 7, 11, 12 and 17) can reach the rest of the club *only* through him: delete member 1 and they are cut off. Deleting member 34 disconnects no one, because 10 of the Officer's 16 other friends are also friends of member 33, which gives paths a second route.
+- Member 3 has only 10 friends but ranks second for closeness. Member 3 has friends in both factions, so everyone is near.
+- The rank correlations between the five measures range from 0.68 (eigenvector vs. PageRank) to 0.98 (degree vs. PageRank). They measure related but different things.
+
+### From who matters to who belongs together
+
+Centrality answers "who matters?". The karate club's real question was "who will go with whom?", which is **graph partitioning**. The two questions use the same tools.
+
+**Betweenness finds the cut.** If two communities are joined by few edges, every shortest path between them must use one of those edges, so the edges *between* communities have high **edge betweenness** (the same formula with $\sigma_{st}(e)$ counting paths through edge $e$). The **Girvan–Newman algorithm** turns this into a divisive clustering method: repeatedly delete the edge of highest betweenness, recomputing betweenness after each deletion, and watch the graph fall apart.[^girvan2002] On the karate club, the graph splits into two pieces (15 and 19 members) after 11 deletions, and the split matches the factions for all members but two, 3 and 9 (Figure 2a).
+
+**The eigenvectors divide the work.** Eigenvector centrality is the *top* eigenvector of $\mathbf{A}$, with all entries positive: it ranks nodes but cannot split them. [[Clustering and Expectation Maximization#Spectral clustering|Spectral clustering]] uses the eigenvector of the *second-smallest* eigenvalue of the Laplacian, the Fiedler vector, which must change sign because it is orthogonal to the constant vector. Its sign gives exactly the same split as Girvan–Newman, with the same two members misplaced. That split cuts 10 friendships, one fewer than the real faction boundary (11), so by the cut criterion it is the better partition; members 3 and 9 chose their side for reasons the friendship graph does not record.
+
+![[Machine Learning/images/graph-representation-learning-girvan-newman.svg]]
+*Figure 2: centrality and partitioning on the karate club. (a) Edge width is the edge betweenness on the full graph; the 11 dashed edges are those Girvan–Newman deletes before the graph splits. Nodes show the real factions; the two ringed members, 3 and 9, are the only ones the split puts on the other side. (b) Each member's Fiedler-vector entry (which side of the spectral cut) against eigenvector centrality (how central), with area proportional to betweenness. The two leaders are on opposite sides and at the top; the extremes of the Fiedler vector are peripheral members far from the other group. Members with entries close to 0 (3, 9, 14, 20) are the ones between the groups.*
+
+Figure 2b puts the two views side by side. The horizontal axis is the simplest community-preserving embedding, one number per node from the Laplacian ([[#Laplacian eigenmaps]] below are a degree-weighted version of the same idea, in more dimensions); the vertical axis is a centrality. They are nearly independent descriptions of the same people: the leaders are the most central and on opposite sides, the brokers are fairly central and in the middle, and the members furthest out on either side are peripheral ones with few friends.
+
+This is the bridge to the rest of the lecture. A centrality is a single hand-picked number per node. A learned embedding replaces it with $D$ numbers chosen by an objective, and that objective decides which of the two views it keeps: neighbourhood-preserving embeddings recover the communities (Figure 2b's horizontal axis), while [[#node2vec: tunable walks|node2vec]] with outward walks can also pick up **structural roles** such as "hub" or "broker". Centralities are also useful *input* features: graph transformers add a learned embedding of each node's degree for this reason (see [[Graph Neural Networks]]).
+
 ## Shallow embeddings as an encoder–decoder
 
-Hamilton, Ying and Leskovec proposed a common frame that fits almost every method in this lecture.[^hamilton2017review] It has four parts (Figure 1).
+Hamilton, Ying and Leskovec proposed a common frame that fits almost every method in this lecture.[^hamilton2017review] It has four parts (Figure 3).
 
 1. **An encoder** maps a node to its vector. For shallow methods it is a **lookup table**: $\operatorname{enc}(v)=\mathbf{z}_v$, row $v$ of a parameter matrix $\mathbf{Z}\in\mathbb{R}^{N\times D}$.
 2. **A similarity** $S_{uv}$ that we read off the graph: adjacency, $k$-step reachability, co-occurrence on random walks, or "shares a community".
@@ -83,7 +157,7 @@ $$
 $$
 
 ![[Machine Learning/images/graph-representation-learning-encoder-decoder.svg]]
-*Figure 1: the encoder–decoder view of shallow node embeddings. The encoder looks up one free vector per node. The decoder scores a pair, here nodes 1 and 5, which are not adjacent but share a neighbour. Training makes the decoded score match a similarity $S_{15}$ read off the graph.*
+*Figure 3: the encoder–decoder view of shallow node embeddings. The encoder looks up one free vector per node. The decoder scores a pair, here nodes 1 and 5, which are not adjacent but share a neighbour. Training makes the decoded score match a similarity $S_{15}$ read off the graph.*
 
 The methods differ in the similarity $S$ and the loss $\ell$; the encoder is the same table. This already tells us what a shallow embedding *is*: a low-dimensional summary of one chosen similarity matrix. Choose $S$ to be adjacency and you get one embedding; choose "co-occurs on short random walks" and you get another, with different downstream behaviour.
 
@@ -167,7 +241,7 @@ $$
 $$
 
 ![[Machine Learning/images/graph-representation-learning-node2vec-bias.svg]]
-*Figure 2: one step of a node2vec walk that has just moved from $s$ to $v$. Going back to $s$ has weight $1/p$, a neighbour that is also adjacent to $s$ has weight $1$, and a node farther from $s$ has weight $1/q$. A large $q$ keeps the walk local (breadth-first-like); a small $q$ pushes it outward (depth-first-like). A large $p$ discourages immediate backtracking.*
+*Figure 4: one step of a node2vec walk that has just moved from $s$ to $v$. Going back to $s$ has weight $1/p$, a neighbour that is also adjacent to $s$ has weight $1$, and a node farther from $s$ has weight $1/q$. A large $q$ keeps the walk local (breadth-first-like); a small $q$ pushes it outward (depth-first-like). A large $p$ discourages immediate backtracking.*
 
 With $p=q=1$, node2vec is DeepWalk. The return parameter $p$ controls backtracking; the in–out parameter $q$ controls whether the walk stays local ($q>1$) or moves outward ($q<1$). Everything after the walks (windows, skip-gram, negative sampling) is unchanged.
 
@@ -244,10 +318,10 @@ What does (4) say? $\sum_r\mathbf{P}^r$ counts how likely a short walk is to con
 - For graphs small enough to form the matrix, **NetMF** computes (4) and takes a truncated SVD of $\log\max(\mathbf{M},1)$ instead of sampling walks. Qiu et al. report that it matches or beats DeepWalk and LINE on their benchmarks.[^qiu2018]
 - Undefined entries ($\log 0$ for pairs further apart than $m$ steps) explain why sampled methods push those pairs to strongly negative inner products.
 
-We can check (4) directly. Figure 3 trains DeepWalk on Zachary's karate club (34 nodes, 78 edges)[^zachary1977] with enough dimensions to fit any matrix, and compares the learned inner products with the right-hand side of (4).
+We can check (4) directly. Figure 5 trains DeepWalk on the karate club (34 nodes, 78 edges) with enough dimensions to fit any matrix, and compares the learned inner products with the right-hand side of (4).
 
 ![[Machine Learning/images/graph-representation-learning-netmf.svg]]
-*Figure 3: DeepWalk implicitly factorizes the NetMF matrix. On the karate club (window $m=3$, $k=5$ negatives from the degree distribution, $D=34$, 3.2 million walk pairs), each dot is a node pair reachable within 3 steps (86% of pairs). Learned $\mathbf{z}_u^\top\mathbf{c}_v$ against $\log M_{uv}$ from (4): correlation 0.996, mean absolute difference 0.085. Pairs that are not reachable within 3 steps, where (4) is $-\infty$, get a mean inner product of $-7.1$.*
+*Figure 5: DeepWalk implicitly factorizes the NetMF matrix. On the karate club (window $m=3$, $k=5$ negatives from the degree distribution, $D=34$, 3.2 million walk pairs), each dot is a node pair reachable within 3 steps (86% of pairs). Learned $\mathbf{z}_u^\top\mathbf{c}_v$ against $\log M_{uv}$ from (4): correlation 0.996, mean absolute difference 0.085. Pairs that are not reachable within 3 steps, where (4) is $-\infty$, get a mean inner product of $-7.1$.*
 
 > [!example]- Code: the NetMF matrix and embedding (tested)
 > ```python
@@ -271,12 +345,12 @@ We can check (4) directly. Figure 3 trains DeepWalk on Zachary's karate club (34
 
 ### On the karate club
 
-Zachary's karate club is the classic test graph: a university club that split into two factions after a dispute between the instructor ("Mr. Hi") and the administrator ("Officer").[^zachary1977] We embed the friendship graph, without the faction labels, and then ask how well a **linear probe** recovers the faction: logistic regression trained on the embeddings of 20% of the members (6 people), tested on the rest, averaged over 200 random splits.
+We return to the karate club from [[#Which nodes matter: centrality|the centrality section]]. We embed the friendship graph, without the faction labels, and then ask how well a **linear probe** recovers the faction: logistic regression trained on the embeddings of 20% of the members (6 people), tested on the rest, averaged over 200 random splits.
 
 ![[Machine Learning/images/graph-representation-learning-karate.svg]]
-*Figure 4: karate-club embeddings coloured by the faction each member joined (labels not used in training). (a) Laplacian eigenmaps in 2-D. (b–d) DeepWalk and node2vec in 16-D, shown by their first two principal components, with $q=2$ (local walks) and $q=0.5$ (outward walks); $p=1$, window 5, 20 walks of length 40 per node. Accuracies are for a linear probe trained on 20% of the nodes (2-D for Laplacian eigenmaps, 16-D for the walk methods; walk methods averaged over 3 seeds). On this homophilous task all methods do well, and the choice of $q$ changes little.*
+*Figure 6: karate-club embeddings coloured by the faction each member joined (labels not used in training). (a) Laplacian eigenmaps in 2-D. (b–d) DeepWalk and node2vec in 16-D, shown by their first two principal components, with $q=2$ (local walks) and $q=0.5$ (outward walks); $p=1$, window 5, 20 walks of length 40 per node. Accuracies are for a linear probe trained on 20% of the nodes (2-D for Laplacian eigenmaps, 16-D for the walk methods; walk methods averaged over 3 seeds). On this homophilous task all methods do well, and the choice of $q$ changes little.*
 
-Some honest observations, all from the script that made Figure 4:
+Some honest observations, all from the script that made Figure 6:
 
 - Every method separates the factions: probe accuracy is 0.94 for 2-D Laplacian eigenmaps and 0.94–0.96 for the walk methods in 16-D. The karate split follows the community structure, so any homophily-preserving embedding works.
 - Laplacian eigenmaps get **worse** with more dimensions: 0.61 in 16-D. The extra eigenvectors are high-frequency functions with the same scale as the useful ones, and a probe trained on six people overfits them. The walk methods weight directions by how much co-occurrence they explain, so they do not suffer from this.
@@ -291,10 +365,10 @@ Every method so far learns a **free vector per node**. That makes them **transdu
 - The number of parameters is $N\times D$: it grows with the graph, and no parameter is shared between nodes. Nodes with few edges get few gradient updates and poor vectors.
 - Node **features** (a user's profile, a paper's text, an atom's type) are ignored entirely.
 
-An **inductive** method instead learns a *function* $\mathbf{z}_v=f_\theta(\mathbf{x}_v,\ \text{neighbourhood of }v)$, with features $\mathbf{x}_v$ and parameters $\theta$ shared by all nodes (Figure 5). It applies unchanged to a new node or a new graph, its parameter count does not depend on $N$, and it uses the features. GraphSAGE is the standard example: it computes $\mathbf{z}_v$ by aggregating the features of sampled neighbours with a learned function, and can be trained with the same random-walk co-occurrence loss as DeepWalk.[^hamilton2017sage] Such functions are neural networks over graphs: the subject of [[Graph Neural Networks]].
+An **inductive** method instead learns a *function* $\mathbf{z}_v=f_\theta(\mathbf{x}_v,\ \text{neighbourhood of }v)$, with features $\mathbf{x}_v$ and parameters $\theta$ shared by all nodes (Figure 7). It applies unchanged to a new node or a new graph, its parameter count does not depend on $N$, and it uses the features. GraphSAGE is the standard example: it computes $\mathbf{z}_v$ by aggregating the features of sampled neighbours with a learned function, and can be trained with the same random-walk co-occurrence loss as DeepWalk.[^hamilton2017sage] Such functions are neural networks over graphs: the subject of [[Graph Neural Networks]].
 
 ![[Machine Learning/images/graph-representation-learning-transductive-inductive.svg]]
-*Figure 5: a new node 6 arrives with edges to nodes 3 and 5. (a) A transductive lookup table has no row for it. (b) An inductive encoder is a shared function of a node's features and neighbours, so it embeds node 6 the moment its features and edges are known.*
+*Figure 7: a new node 6 arrives with edges to nodes 3 and 5. (a) A transductive lookup table has no row for it. (b) An inductive encoder is a shared function of a node's features and neighbours, so it embeds node 6 the moment its features and edges are known.*
 
 > [!tip] When is transductive fine?
 > When the graph is fixed and every node of interest is in it: one big product graph to be embedded nightly, a knowledge graph to be completed, a citation graph to be visualized. Large recommender and knowledge-graph systems have used shallow embeddings at the scale of billions of edges for exactly this reason (see the scaling section).
@@ -307,7 +381,7 @@ A **knowledge graph** (KG) stores facts as triples $(h,r,t)$: a **head** entity,
 
 A KG embedding gives each entity a vector $\mathbf{e}$ (we write $\mathbf{h}$, $\mathbf{t}$ for the head's and tail's vectors) and each relation some parameters, and defines a **score** $f_r(h,t)$ that is high for true triples. The encoder is still a lookup table; what is new is that the decoder depends on the relation.
 
-Relations have patterns, and a good model should be able to express them. Our toy KG (Figure 6) has one of each.
+Relations have patterns, and a good model should be able to express them. Our toy KG (Figure 8) has one of each.
 
 - **Symmetric:** $(h,r,t)\Rightarrow(t,r,h)$. spouse_of, sibling_of.
 - **Antisymmetric:** $(h,r,t)\Rightarrow\neg(t,r,h)$. father_of.
@@ -316,7 +390,7 @@ Relations have patterns, and a good model should be able to express them. Our to
 - **Mapping cardinality:** a relation is **1-to-N** if a head has many tails (father_of), **N-to-1** if many heads share a tail (lives_in), and **N-to-N** if both (sibling_of).
 
 ![[Machine Learning/images/graph-representation-learning-toy-kg.svg]]
-*Figure 6: one family of our toy knowledge graph, which has 60 such families (1 to 4 children each), 15 cities and 5 countries, and 9 relations: spouse_of, father_of, mother_of, child_of, sibling_of, lives_in, city_in, citizen_of and has_gender. Each relation pattern appears at least once, so we can test which models learn which patterns.*
+*Figure 8: one family of our toy knowledge graph, which has 60 such families (1 to 4 children each), 15 cities and 5 countries, and 9 relations: spouse_of, father_of, mother_of, child_of, sibling_of, lives_in, city_in, citizen_of and has_gender. Each relation pattern appears at least once, so we can test which models learn which patterns.*
 
 ### TransE: relations as translations
 
@@ -380,10 +454,10 @@ A translation has a direction and moves every point by the same amount. Both pro
 >
 > With a loss rather than exact equations these become "approximately equal" rather than "equal", but the pull is the same.
 
-The fixes all give each relation a way to treat entities *differently*, so that the parts of the vectors that must coincide for one relation are free for the others (Figure 7).
+The fixes all give each relation a way to treat entities *differently*, so that the parts of the vectors that must coincide for one relation are free for the others (Figure 9).
 
 ![[Machine Learning/images/graph-representation-learning-translation-models.svg]]
-*Figure 7: the translation family. (a) TransE translates in the entity space. (b) TransH projects both entities onto a relation-specific hyperplane, then translates within it. (c) TransR maps entities into a relation-specific space with a matrix $\mathbf{M}_r$, then translates. (d) TransD builds the map from two vectors, one belonging to the relation and one to the entity, so head and tail get different maps.*
+*Figure 9: the translation family. (a) TransE translates in the entity space. (b) TransH projects both entities onto a relation-specific hyperplane, then translates within it. (c) TransR maps entities into a relation-specific space with a matrix $\mathbf{M}_r$, then translates. (d) TransD builds the map from two vectors, one belonging to the relation and one to the entity, so head and tail get different maps.*
 
 **TransH** gives each relation a hyperplane with unit normal $\mathbf{w}_r$ and a translation $\mathbf{d}_r$ lying in it.[^wang2014] Entities are projected onto the hyperplane before translating:
 
@@ -441,10 +515,10 @@ $$
 \mathbf{t}\approx\mathbf{h}\circ\mathbf{r},\qquad f_r(h,t)=-\lVert\mathbf{h}\circ\mathbf{r}-\mathbf{t}\rVert ,
 $$
 
-where $\circ$ is the element-wise product: coordinate $i$ of $\mathbf{h}$ is rotated by the angle $\theta_{r,i}$ in its own complex plane (Figure 8). Rotations compose by adding angles, invert by negating them, and a rotation by $\pi$ is its own inverse: exactly the algebra of composition, inversion and symmetry.
+where $\circ$ is the element-wise product: coordinate $i$ of $\mathbf{h}$ is rotated by the angle $\theta_{r,i}$ in its own complex plane (Figure 10). Rotations compose by adding angles, invert by negating them, and a rotation by $\pi$ is its own inverse: exactly the algebra of composition, inversion and symmetry.
 
 ![[Machine Learning/images/graph-representation-learning-rotate.svg]]
-*Figure 8: RotatE in one complex coordinate. (a) The relation rotates the head's coordinate by $\theta_{r,i}$ to reach the tail's. (b) A rotation by $\pi$ maps $h_i$ to $t_i=-h_i$ and $t_i$ back to $h_i$, so the relation is symmetric without forcing $h_i=t_i$, unlike TransE's zero translation.*
+*Figure 10: RotatE in one complex coordinate. (a) The relation rotates the head's coordinate by $\theta_{r,i}$ to reach the tail's. (b) A rotation by $\pi$ maps $h_i$ to $t_i=-h_i$ and $t_i$ back to $h_i$, so the relation is symmetric without forcing $h_i=t_i$, unlike TransE's zero translation.*
 
 ### Which model can express which pattern
 
@@ -469,10 +543,10 @@ The first four pattern columns follow the analysis of Sun et al.;[^sun2019] "✗
 
 ### The patterns in an experiment
 
-Figure 9 trains all seven models on the toy KG. For each of 3 random seeds we regenerate the KG and hold out about 15% of the triples of six relations; every held-out fact can be inferred from a training fact through one of the patterns (the reverse of a symmetric fact, the inverse of a parent fact, a composition through the city). All models use 32 real numbers per entity (16 complex numbers for ComplEx and RotatE), 10 corruptions per triple and the logistic loss above, trained for 300 epochs with Adam.
+Figure 11 trains all seven models on the toy KG. For each of 3 random seeds we regenerate the KG and hold out about 15% of the triples of six relations; every held-out fact can be inferred from a training fact through one of the patterns (the reverse of a symmetric fact, the inverse of a parent fact, a composition through the city). All models use 32 real numbers per entity (16 complex numbers for ComplEx and RotatE), 10 corruptions per triple and the logistic loss above, trained for 300 epochs with Adam.
 
 ![[Machine Learning/images/graph-representation-learning-kg-results.svg]]
-*Figure 9: filtered MRR on held-out facts of the toy knowledge graph, per relation, averaged over 3 seeds (overall MRR in brackets). About 285 entities, 1,700–1,850 triples and 175–190 test facts per seed. The four translation models score about 0.5 on the symmetric relations, DistMult and ComplEx fail on the composed relation citizen_of, and RotatE is the most even, with its weakest column on sibling_of, a relation that is both symmetric and N-to-N.*
+*Figure 11: filtered MRR on held-out facts of the toy knowledge graph, per relation, averaged over 3 seeds (overall MRR in brackets). About 285 entities, 1,700–1,850 triples and 175–190 test facts per seed. The four translation models score about 0.5 on the symmetric relations, DistMult and ComplEx fail on the composed relation citizen_of, and RotatE is the most even, with its weakest column on sibling_of, a relation that is both symmetric and N-to-N.*
 
 What the numbers say, relation by relation:
 
@@ -482,7 +556,7 @@ What the numbers say, relation by relation:
 - **RotatE** has the best overall MRR (0.89 against 0.84 for TransE and TransH). Its weakest column, sibling_of (0.71), is the one where its 1-to-N limitation bites: in a family of three children, each child must be a rotation of each sibling by the *same* $\mathbf{r}$, which forces two of them to coincide.
 
 > [!warning] Tuning matters as much as the model
-> On real benchmarks, the gaps between these models shrink, and sometimes reverse, once each is given the same careful training (loss, negatives, regularization, embedding size). Kadlec et al. showed that a well-tuned DistMult beat many newer models of its time.[^kadlec2017] The pattern table says what a model *can* express; whether it does depends on optimization. Our toy runs were just as sensitive: on a smaller version of the toy graph, RotatE trained with the hinge loss (5) and a margin of 1 reached an overall MRR of only 0.34, against 0.71 with a margin of 6; the logistic loss with a margin of 6 is what Figure 9 uses.
+> On real benchmarks, the gaps between these models shrink, and sometimes reverse, once each is given the same careful training (loss, negatives, regularization, embedding size). Kadlec et al. showed that a well-tuned DistMult beat many newer models of its time.[^kadlec2017] The pattern table says what a model *can* express; whether it does depends on optimization. Our toy runs were just as sensitive: on a smaller version of the toy graph, RotatE trained with the hinge loss (5) and a margin of 1 reached an overall MRR of only 0.34, against 0.71 with a margin of 6; the logistic loss with a margin of 6 is what Figure 11 uses.
 
 ## Evaluating link prediction
 
@@ -534,7 +608,7 @@ Link prediction on an ordinary graph has its own traps. The usual protocol hides
 2. **Easy negatives.** Random node pairs in a sparse graph are almost always far apart, so separating them from true edges is easy. Negatives at distance 2 (non-adjacent nodes with a common neighbour) are what a real recommender must reject, and they are much harder. Li et al. document both problems in published GNN link-prediction benchmarks.[^li2023]
 
 ![[Machine Learning/images/graph-representation-learning-linkpred-pitfalls.svg]]
-*Figure 10: link prediction on a 400-node clustered power-law graph (Holme–Kim model, about 1,970 edges), with 10% of edges held out; mean and standard deviation over 3 graphs. Common neighbours is the classic heuristic.[^libennowell2007] DeepWalk (32-D, cosine score) trained correctly reaches 0.79 AUC against random negatives but 0.65 against 2-hop negatives. Trained on the full graph, it scores 0.98 and 0.95: leakage turns a mediocre model into an apparently excellent one.*
+*Figure 12: link prediction on a 400-node clustered power-law graph (Holme–Kim model, about 1,970 edges), with 10% of edges held out; mean and standard deviation over 3 graphs. Common neighbours is the classic heuristic.[^libennowell2007] DeepWalk (32-D, cosine score) trained correctly reaches 0.79 AUC against random negatives but 0.65 against 2-hop negatives. Trained on the full graph, it scores 0.98 and 0.95: leakage turns a mediocre model into an apparently excellent one.*
 
 Two further lessons. The crude common-neighbours count beats our DeepWalk on random negatives (0.83 against 0.79), so a learned embedding must always be compared with such heuristics. And both methods lose most of their edge on 2-hop negatives, which is the regime that matters in practice.
 
@@ -559,6 +633,7 @@ The parameter count is still linear in $N$, which is one more argument for induc
 
 ## Key takeaways
 
+- **Centralities** (degree, closeness, betweenness, eigenvector, PageRank) are hand-designed one-number summaries of how important a node is. Betweenness also finds cuts (**Girvan–Newman**), and eigenvector centrality is the *top* eigenvector of $\mathbf{A}$ while partitioning uses the Laplacian's *second*: on the karate club, Girvan–Newman and the Fiedler vector give the same split, wrong only for members 3 and 9.
 - A shallow node embedding is a lookup table trained as an **encoder–decoder**: choose a similarity $S$ on the graph, a decoder ($\mathbf{z}_u^\top\mathbf{z}_v$ or a distance) and a loss. The choice of $S$ decides what "similar nodes" means.
 - **Laplacian eigenmaps** minimize $\operatorname{tr}(\mathbf{Z}^\top\mathbf{L}\mathbf{Z})$: neighbours close, first-order proximity only. **Factorization** methods (graph factorization, GraRep, HOPE) take a low-rank approximation of a proximity matrix.
 - **DeepWalk** trains skip-gram with negative sampling on random walks; **node2vec** biases the walks with $p$ (return) and $q$ (in–out); **LINE** models first- and second-order proximity on edges.
@@ -610,3 +685,9 @@ The parameter count is still linear in $N$, which is one more argument for induc
 [^shervashidze2011]: Shervashidze, N., Schweitzer, P., van Leeuwen, E. J., Mehlhorn, K., & Borgwardt, K. M. (2011). *Weisfeiler-Lehman Graph Kernels*. Journal of Machine Learning Research, 12, 2539–2561. [link](https://www.jmlr.org/papers/v12/shervashidze11a.html)
 [^dong2017]: Dong, Y., Chawla, N. V., & Swami, A. (2017). *metapath2vec: Scalable Representation Learning for Heterogeneous Networks*. KDD. [doi:10.1145/3097983.3098036](https://doi.org/10.1145/3097983.3098036)
 [^edge2024]: Edge, D., Trinh, H., Cheng, N., Bradley, J., Chao, A., Mody, A., Truitt, S., & Larson, J. (2024). *From Local to Global: A Graph RAG Approach to Query-Focused Summarization*. [arXiv:2404.16130](https://arxiv.org/abs/2404.16130)
+[^freeman1977]: Freeman, L. C. (1977). *A set of measures of centrality based on betweenness*. Sociometry, 40(1), 35–41. [doi](https://doi.org/10.2307/3033543)
+[^freeman1978]: Freeman, L. C. (1978). *Centrality in social networks: conceptual clarification*. Social Networks, 1(3), 215–239. [doi](https://doi.org/10.1016/0378-8733(78)90021-7)
+[^brandes2001]: Brandes, U. (2001). *A faster algorithm for betweenness centrality*. Journal of Mathematical Sociology, 25(2), 163–177. [doi](https://doi.org/10.1080/0022250X.2001.9990249)
+[^bonacich1972]: Bonacich, P. (1972). *Factoring and weighting approaches to status scores and clique identification*. Journal of Mathematical Sociology, 2(1), 113–120. [doi](https://doi.org/10.1080/0022250X.1972.9989806)
+[^katz1953]: Katz, L. (1953). *A new status index derived from sociometric analysis*. Psychometrika, 18(1), 39–43. [doi](https://doi.org/10.1007/BF02289026)
+[^girvan2002]: Girvan, M., Newman, M. E. J. (2002). *Community structure in social and biological networks*. PNAS, 99(12), 7821–7826. [doi](https://doi.org/10.1073/pnas.122653799)
