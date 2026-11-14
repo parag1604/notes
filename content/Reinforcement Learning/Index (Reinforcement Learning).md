@@ -28,7 +28,3 @@ The series has two halves. The first is practical: after bandits and the MDP fra
 
 - A fuller treatment of deep Q-networks (they are introduced in [[Q-Learning and SARSA#Beyond tables|Q-Learning and SARSA]]), and trust-region and proximal policy optimization (TRPO/PPO).
 - Exploration beyond bandits, offline RL and multi-agent RL.
-
----
-
-*Acknowledgements:* the structure of these notes follows CS 285 (Deep Reinforcement Learning) at UC Berkeley by Prof. Sergey Levine.

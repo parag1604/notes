@@ -24,7 +24,7 @@ next: "[[Neural Networks]]"
 >
 > **Notation:** a graph $G=(\mathcal{V},\mathcal{E})$ with $N=|\mathcal{V}|$ nodes, adjacency matrix $\mathbf{A}$, degrees $d_v$, degree matrix $\operatorname{diag}(\mathbf{d})$, Laplacian $\mathbf{L}=\operatorname{diag}(\mathbf{d})-\mathbf{A}$ and volume $\operatorname{vol}(G)=\sum_vd_v=2|\mathcal{E}|$, as in [[Clustering and Expectation Maximization]]. Node $v$ gets an embedding $\mathbf{z}_v\in\mathbb{R}^{D}$, stacked as the rows of $\mathbf{Z}\in\mathbb{R}^{N\times D}$. In walk methods, $m$ is the window size and $k$ the number of negative samples, as in [[Language Representations and Language Models]].
 >
-> **Code:** [Graph-Representation-Learning](https://github.com/parag1604/Graph-Representation-Learning): from-scratch tutorial; versions v0–v2 (Laplacian eigenmaps, DeepWalk with a NetMF check, node2vec) and v7–v8 (TransE/H/R/D, DistMult/ComplEx/RotatE with filtered MRR) go with this lecture.
+> **Code:** [Graph-Representation-Learning](https://github.com/parag1604/Graph-Representation-Learning): from-scratch tutorial; versions v0–v3 (centrality and Girvan–Newman, Laplacian eigenmaps, DeepWalk with a NetMF check, node2vec) and v8–v9 (TransE/H/R/D, DistMult/ComplEx/RotatE with filtered MRR) go with this lecture.
 
 ## Motivation
 

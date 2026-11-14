@@ -826,7 +826,7 @@ Parag's [Image-Captioning](https://github.com/parag1604/Image-Captioning) reposi
 1. a plain **LSTM**;
 2. an LSTM with **dot-product attention** over the 196 patch vectors, its state initialized from the [CLS] vector;
 3. an LSTM with **Bahdanau** (additive) attention;
-4. a three-layer **transformer decoder** with causal self-attention and cross-attention to the patches.
+4. a four-layer **transformer decoder** with learned positional embeddings, causal self-attention and cross-attention to the patches.
 
 ![[Machine Learning/images/applications-of-neural-networks-captioning-attention.png]]
 *Figure 10: attention weights of the dot-product attention LSTM (decoder 2) over the ViT patch grid, one panel per generated word, on a Flickr8k validation image. Some words attend where one would expect (the final "dog" on the white dog's body); others spread their attention over the background. Attention maps are a useful but loose explanation of what the model uses. Result from Parag's Image-Captioning repository.*
@@ -872,7 +872,7 @@ $$
 The brevity penalty BP punishes captions that are too short to be judged by precision alone. BLEU is cheap and correlates with human judgement over a whole test set, but it rewards word overlap, not meaning: a correct caption phrased differently from all references scores poorly.
 
 ![[Machine Learning/images/applications-of-neural-networks-captioning-bleu.png]]
-*Figure 11: validation BLEU of the four decoders on Flickr8k during training (5-epoch moving average). The Bahdanau-attention LSTM and the transformer decoder score highest; the plain LSTM is lowest for most of training. Result from Parag's Image-Captioning repository.*
+*Figure 11: validation BLEU of the four decoders on Flickr8k during training (5-epoch moving average). The Bahdanau-attention LSTM and the transformer decoder score highest; the plain LSTM is lowest for most of training. Result from Parag's Image-Captioning repository; the transformer curve was trained before its decoder had positional embeddings.*
 
 ## The Vision Transformer
 

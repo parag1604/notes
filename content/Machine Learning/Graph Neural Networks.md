@@ -20,7 +20,7 @@ next: "[[Self-Supervised Representation Learning]]"
 > - Message-passing GNNs are at most as powerful as the **1-Weisfeiler–Lehman** test; **GIN**'s injective sum aggregation reaches that bound. Depth brings **over-smoothing** (repeated averaging converges to a random walk's stationary distribution) and **over-squashing**; **heterophily** breaks the "neighbours are alike" assumption.
 > - The same encoders classify nodes, predict links and classify whole graphs, scale with sampling, and extend to **graph transformers**, **self-supervised** objectives and **knowledge graphs**.
 >
-> **Code:** [Graph-Representation-Learning](https://github.com/parag1604/Graph-Representation-Learning): from-scratch tutorial; versions v3–v6 (GCN vs MLP on karate, inductive GraphSAGE and GAT, WL and GIN expressiveness, over-smoothing with residual GCN and APPNP) go with this lecture.
+> **Code:** [Graph-Representation-Learning](https://github.com/parag1604/Graph-Representation-Learning): from-scratch tutorial; versions v4–v7 (GCN vs MLP on karate, inductive GraphSAGE and GAT, WL and GIN expressiveness, over-smoothing with residual GCN, GCNII and APPNP) go with this lecture.
 
 > [!note] Local notation
 > A graph is $\mathcal{G}=(\mathcal{V},\mathcal{E})$ with $N=\lvert\mathcal{V}\rvert$ nodes (in this lecture $N$ counts **nodes**, not samples) and adjacency matrix $\mathbf{A}\in\{0,1\}^{N\times N}$. $\mathcal{N}(v)$ is the set of neighbours of node $v$ and $d_v=\lvert\mathcal{N}(v)\rvert$ its degree. Because $D$ would clash with the degree matrix, node features have dimension $F$: $\mathbf{X}\in\mathbb{R}^{N\times F}$, with row $\mathbf{x}_v$. As in [[Clustering and Expectation Maximization#From data to a graph|spectral clustering]], $\mathbf{D}=\operatorname{diag}(\mathbf{d})$ is the degree matrix. Layer $\ell$ holds node states $\mathbf{H}^{(\ell)}$ with rows $\mathbf{h}_v^{(\ell)}$, and $\mathbf{H}^{(0)}=\mathbf{X}$. Graphs are undirected unless stated otherwise.
@@ -505,9 +505,20 @@ This is **over-smoothing**:[^li2018] node representations become indistinguishab
 
 Remedies keep some of each node's own signal from being averaged away:
 
-- **Residual connections**, $\mathbf{H}^{(\ell+1)}=\mathbf{H}^{(\ell)}+\sigma(\hat{\mathbf{A}}\mathbf{H}^{(\ell)}\mathbf{W}^{(\ell)})$, as in ResNets. **GCNII** adds an *initial* residual to $\mathbf{H}^{(0)}$ and keeps each weight matrix close to the identity, and trains 64-layer GCNs.[^chen2020gcnii] **Jumping knowledge** networks combine the outputs of all layers, so each node can use the depth that suits it.[^xu2018jk]
+- **Residual connections**, $\mathbf{H}^{(\ell+1)}=\mathbf{H}^{(\ell)}+\sigma(\hat{\mathbf{A}}\mathbf{H}^{(\ell)}\mathbf{W}^{(\ell)})$, as in ResNets. **GCNII** adds an *initial* residual to $\mathbf{H}^{(0)}$ and keeps each weight matrix close to the identity, $\mathbf{H}^{(\ell+1)}=\sigma\big(\mathbf{S}^{(\ell)}((1-\eta_\ell)\mathbf{I}+\eta_\ell\mathbf{W}^{(\ell)})\big)$ with $\mathbf{S}^{(\ell)}=(1-\beta)\hat{\mathbf{A}}\mathbf{H}^{(\ell)}+\beta\mathbf{H}^{(0)}$ and $\eta_\ell=\log(\tfrac{1}{2\ell}+1)$, so it trains 64-layer GCNs.[^chen2020gcnii] The restart $\beta$ is the same as APPNP's below; the shrinking $\eta_\ell$ makes deep layers nearly the identity. In Figure 5 it is the one trained-weight model that still works at 64 layers. **Jumping knowledge** networks combine the outputs of all layers, so each node can use the depth that suits it.[^xu2018jk]
 - **Normalization.** PairNorm rescales the features after every layer so that the total pairwise distance between nodes stays constant.[^zhao2020]
 - **Decoupling propagation from transformation** (APPNP), described next.
+
+> [!example]- Code: a GCNII stack (initial residual and identity mapping)
+> ```python
+> # assumes: A_hat (N x N, sparse), H0 = relu(lin_in(X)) of shape (N, h), Ws = [nn.Linear(h, h, bias=False)] * L
+> H = H0
+> for l, W in enumerate(Ws, start=1):
+>     eta = math.log(1 / (2 * l) + 1)                          # η_ℓ shrinks with depth
+>     S = (1 - beta) * torch.sparse.mm(A_hat, H) + beta * H0   # initial residual (restart β)
+>     H = torch.relu((1 - eta) * S + eta * W(S))               # identity mapping
+> ```
+> Compared with the residual GCN, the skip goes to $\mathbf{H}^{(0)}$ rather than to the previous layer, and each layer is close to the identity map, so the signal neither collapses to the stationary subspace nor grows with depth.
 
 **APPNP.** Compute $\mathbf{H}=\mathrm{MLP}(\mathbf{X})$, then propagate with a restart:[^gasteiger2019]
 
@@ -523,7 +534,7 @@ $$
 
 This is **personalized PageRank**: a random walker that at every step [[Markov Chains#PageRank: the stationary distribution of the web|teleports]] back to its start node with probability $\beta$. The weights $\beta(1-\beta)^k$ on $k$-hop information decay geometrically, and the node's own features always keep weight $\beta$, so infinitely many propagation steps are safe. Only the MLP has parameters, so the depth of propagation costs no parameters at all.
 
-> [!example]- Code: APPNP propagation (after `appnp_propagate` in version 6 of the repository)
+> [!example]- Code: APPNP propagation (after `appnp_propagate` in version 7 of the repository)
 > ```python
 > import torch
 >
@@ -538,8 +549,8 @@ This is **personalized PageRank**: a random walker that at every step [[Markov C
 > ```
 > After $K$ steps the distance to the closed form $\beta(\mathbf{I}-(1-\beta)\hat{\mathbf{A}})^{-1}\mathbf{H}$ has shrunk by at least the factor $(1-\beta)^K$, which is $0.35$ for $\beta=0.1$ and $K=10$, typical settings. In practice it shrinks much faster: the components that converge slowest, those along eigenvalues of $\hat{\mathbf{A}}$ near 1, start almost at their limit. On the karate club with random features the remaining error after 10 steps is about 1% of the initial one.
 
-![Left: test accuracy against depth from 1 to 64 for GCN, GCN with residual connections and APPNP on a stochastic block model, with an MLP baseline line. GCN peaks at 2 layers and is at chance from 8 layers on; the residual GCN stays above 80 percent up to 32 layers and collapses at 64; APPNP stays near 76 percent at every depth. Right: without training, the mean cosine similarity between node feature vectors rises towards 1 as the raw features are propagated by the GCN operator, and a linear probe's accuracy rises then falls; under APPNP propagation the similarity levels off and the accuracy stays high.](Machine%20Learning/images/graph-neural-networks-oversmoothing.svg)
-*Figure 5: over-smoothing on a 4-block stochastic block model (400 nodes, mean degree 8, edge homophily 0.63, noisy 16-D Gaussian features, 20 labelled nodes per class). Left: test accuracy against depth, mean ± sd over 5 seeds. Plain GCN peaks at 2 layers ($83.1\pm3.6\%$) and is at chance (25%) from 8 layers on. With residual connections, accuracy stays at 80–85% up to 32 layers, but this simple, unnormalized version fails to train at 64 ($25.2\pm0.9\%$). APPNP, whose propagation has no parameters, settles at $75.6\pm1.4\%$ for any depth. An MLP that ignores the graph gets $49.7\pm3.3\%$. Right: no training, just repeated propagation of the raw features. With $\hat{\mathbf{A}}^k\mathbf{X}$ (solid orange), the mean cosine similarity between nodes rises from 0 to 0.96 after 16 steps and to 1.00 after 32. A logistic-regression probe (dashed) peaks at 83% after 4 steps and falls to chance (24%) by 64. Under APPNP propagation with $\beta=0.1$ (green), the similarity stays near 0 and the probe stays at 75%.*
+![Left: test accuracy against depth from 1 to 64 for GCN, GCN with residual connections and APPNP on a stochastic block model, with an MLP baseline line. GCN peaks at 2 layers and is at chance from 8 layers on; the residual GCN stays above 80 percent up to 32 layers and collapses at 64; GCNII peaks at 86 percent and still reaches 72 percent at 64 layers; APPNP stays near 76 percent at every depth. Right: without training, the mean cosine similarity between node feature vectors rises towards 1 as the raw features are propagated by the GCN operator, and a linear probe's accuracy rises then falls; under APPNP propagation the similarity levels off and the accuracy stays high.](Machine%20Learning/images/graph-neural-networks-oversmoothing.svg)
+*Figure 5: over-smoothing on a 4-block stochastic block model (400 nodes, mean degree 8, edge homophily 0.63, noisy 16-D Gaussian features, 20 labelled nodes per class). Left: test accuracy against depth, mean ± sd over 5 seeds. Plain GCN peaks at 2 layers ($83.1\pm3.6\%$) and is at chance (25%) from 8 layers on. With residual connections, accuracy stays at 80–85% up to 32 layers, but this simple, unnormalized version fails to train at 64 ($25.2\pm0.9\%$). GCNII (light blue, dashed) peaks at $86.0\pm1.6\%$ with 2 layers and degrades slowly, to $71.8\pm2.4\%$ at 64 layers: its initial residual and near-identity weights keep a deep stack trainable. APPNP, whose propagation has no parameters, settles at $75.6\pm1.4\%$ for any depth. An MLP that ignores the graph gets $49.7\pm3.3\%$. Right: no training, just repeated propagation of the raw features. With $\hat{\mathbf{A}}^k\mathbf{X}$ (solid orange), the mean cosine similarity between nodes rises from 0 to 0.96 after 16 steps and to 1.00 after 32. A logistic-regression probe (dashed) peaks at 83% after 4 steps and falls to chance (24%) by 64. Under APPNP propagation with $\beta=0.1$ (green), the similarity stays near 0 and the probe stays at 75%.*
 
 The stochastic block model used here is the standard synthetic graph with communities: nodes in the same block are connected with probability $p_{\text{in}}$ and nodes in different blocks with $p_{\text{out}}<p_{\text{in}}$.[^holland1983]
 
@@ -632,7 +643,7 @@ Pool the node states into one vector with a **readout** and put an MLP on top. T
 - **mean** keeps proportions and is robust to graph size;
 - **max** detects the presence of a feature anywhere (does any node look like a toxic group?).
 
-> [!example]- Code: batching many graphs and the readout (after version 5 of the repository)
+> [!example]- Code: batching many graphs and the readout (after version 6 of the repository)
 > ```python
 > import torch
 >
