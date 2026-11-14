@@ -280,7 +280,7 @@ Small weights are set *exactly* to zero, and large ones are shrunk by $\lambda$.
 
 ### From scores to probabilities
 
-Logistic regression is a classical statistical model.[^cox1958] For **classification** with two classes $y\in\{0,1\}$ we still compute a linear score $z=\mathbf{w}^\top\mathbf{x}$, called the **logit**. Then we squash it into a probability with the **sigmoid** (logistic) function:
+Logistic regression is a classical statistical model.[^cox1958] For **classification** with two classes $y\in\{0,1\}$ we still compute a linear score $z=\mathbf{w}^\top\mathbf{x}$, called the **logit**. Then we squash it into a probability with the **sigmoid** (logistic) function $\sigma(\cdot)$. The sigmoid always appears with its argument, as $\sigma(z)$; a bare $\sigma$ or $\sigma^2$ in this lecture is the noise level of the regression model.
 
 $$
 \begin{aligned}

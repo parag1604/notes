@@ -388,7 +388,7 @@ Repeating Steps 5–6 for each value of $y$ gives $D^*(\mathbf{x},y)=\frac{p(\ma
 
 ### AC-GAN: an auxiliary classifier
 
-In the **auxiliary-classifier GAN** (Odena et al.) the generator still receives $y$, but the discriminator sees only the image.[^odena2017] It has two heads: real versus fake, and a classifier over the $K$ classes. The classification log-likelihood is added to *both* players' objectives, on real images (with their labels) and on fakes (with the labels they were generated from), so the generator is rewarded for samples that are classified as their intended class. A known side effect is that the generator is also rewarded for samples that are merely *easy* to classify, which can reduce the diversity within a class.
+In the **auxiliary-classifier GAN** (Odena et al.) the generator still receives $y$, but the discriminator sees only the image.[^odena2017] It has two heads: real versus fake, and a classifier over the $K$ classes. The classification log-likelihood is added to *both* players' objectives, on real images (with their labels) and on fakes (with the labels they were generated from), so the generator is rewarded for samples that are classified as their intended class. A known side effect is that the generator is also rewarded for samples that are merely *easy* to classify, which can reduce the diversity within a class.[^gong2019]
 
 ### InfoGAN: discover the codes without labels
 
@@ -579,6 +579,8 @@ Sample quality is usually judged by the Inception Score[^salimans2016] or the Fr
 [^mirza2014]: Mirza, M., & Osindero, S. (2014). *Conditional Generative Adversarial Nets*. arXiv. [arXiv:1411.1784](https://arxiv.org/abs/1411.1784)
 [^miyato2018proj]: Miyato, T., & Koyama, M. (2018). *cGANs with Projection Discriminator*. ICLR. [arXiv:1802.05637](https://arxiv.org/abs/1802.05637)
 [^odena2017]: Odena, A., Olah, C., & Shlens, J. (2017). *Conditional Image Synthesis With Auxiliary Classifier GANs*. ICML. [arXiv:1610.09585](https://arxiv.org/abs/1610.09585)
+
+[^gong2019]: Gong, M., Xu, Y., Li, C., Zhang, K., & Batmanghelich, K. (2019). *Twin Auxiliary Classifiers GAN*. NeurIPS. [arXiv:1907.02690](https://arxiv.org/abs/1907.02690)
 [^chen2016]: Chen, X., Duan, Y., Houthooft, R., Schulman, J., Sutskever, I., & Abbeel, P. (2016). *InfoGAN: Interpretable Representation Learning by Information Maximizing Generative Adversarial Nets*. NeurIPS. [arXiv:1606.03657](https://arxiv.org/abs/1606.03657)
 [^isola2017]: Isola, P., Zhu, J.-Y., Zhou, T., & Efros, A. A. (2017). *Image-to-Image Translation with Conditional Adversarial Networks*. CVPR. [arXiv:1611.07004](https://arxiv.org/abs/1611.07004)
 [^zhu2017]: Zhu, J.-Y., Park, T., Isola, P., & Efros, A. A. (2017). *Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks*. ICCV. [arXiv:1703.10593](https://arxiv.org/abs/1703.10593)

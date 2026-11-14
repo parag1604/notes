@@ -618,7 +618,7 @@ At $q_T(y=1)=0.9$ the source-only model makes 0.1% target errors. With alignment
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 
 [^kouw2019]: Kouw, W. M., & Loog, M. (2018). *An Introduction to Domain Adaptation and Transfer Learning*. [arXiv:1812.11806](https://arxiv.org/abs/1812.11806)
-[^wilson2020]: Wilson, G., & Cook, D. J. (2018). *A Survey of Unsupervised Deep Domain Adaptation*. ACM Transactions on Intelligent Systems and Technology (2020). [arXiv:1812.02849](https://arxiv.org/abs/1812.02849)
+[^wilson2020]: Wilson, G., & Cook, D. J. (2020). *A Survey of Unsupervised Deep Domain Adaptation*. ACM Transactions on Intelligent Systems and Technology, 11(5). [doi:10.1145/3400066](https://doi.org/10.1145/3400066)
 [^morenotorres2012]: Moreno-Torres, J. G., Raeder, T., Alaiz-Rodríguez, R., Chawla, N. V., & Herrera, F. (2012). *A Unifying View on Dataset Shift in Classification*. Pattern Recognition, 45(1), 521–530. [doi:10.1016/j.patcog.2011.06.019](https://doi.org/10.1016/j.patcog.2011.06.019)
 [^shimodaira2000]: Shimodaira, H. (2000). *Improving Predictive Inference under Covariate Shift by Weighting the Log-Likelihood Function*. Journal of Statistical Planning and Inference, 90(2), 227–244. [doi:10.1016/S0378-3758(00)00115-4](https://doi.org/10.1016/S0378-3758(00)00115-4)
 [^bickel2009]: Bickel, S., Brückner, M., & Scheffer, T. (2009). *Discriminative Learning Under Covariate Shift*. JMLR, 10, 2137–2155. [jmlr.org](https://jmlr.org/papers/v10/bickel09a.html)
