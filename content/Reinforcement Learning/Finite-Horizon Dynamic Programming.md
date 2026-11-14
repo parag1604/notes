@@ -110,6 +110,20 @@ The principle is a statement about optimal policies, not yet an algorithm. Read 
 >     - set $V_t(s)=\max_{a\in\mathcal{A}(s)}Q_t(s,a)$ and $\mu^*_t(s)\in\arg\max_{a\in\mathcal{A}(s)}Q_t(s,a)$.
 > 3. **Return** $V_0$ and the policy $\pi^*=(\mu^*_0,\dots,\mu^*_{T-1})$.
 
+> [!example]- Code: backward induction (NumPy)
+> ```python
+> # assumes: P[a, s, s'] = p(s'|s,a); R[t] of shape (A, S, S) = r_t(s, a, s'); terminal reward r_T (S,);
+> # horizon T. If only some actions are feasible in s, set Q[a, s] = -np.inf for the others before the max.
+> V = r_T.copy()                                     # V_T
+> mu = np.zeros((T, len(r_T)), dtype=int)
+> for t in reversed(range(T)):                       # t = T-1, ..., 0
+>     Q = (P * (R[t] + V[None, None, :])).sum(-1)    # Q_t(a, s) = sum_s' p(s'|s,a) [r_t(s,a,s') + V_{t+1}(s')]
+>     mu[t] = Q.argmax(0)                            # decision rule mu*_t(s)
+>     V = Q.max(0)                                   # V_t(s)
+> # now V = V_0, and mu[t] is the decision rule for stage t
+> ```
+> Each pass of the loop costs $O(|\mathcal{S}|^2|\mathcal{A}|)$, which is the operation count below. For the chess match, the state is the net score, the two actions are timid and bold, and every stage reward is 0.
+
 In one line, the recursion is
 
 $$

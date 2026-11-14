@@ -211,6 +211,16 @@ $$
 
 As with MLE, it can also be found iteratively with mini-batch SGD. In practice, the bias weight is usually left unregularized. MAP keeps only the peak of the posterior. Keeping the whole posterior, which is again Gaussian, gives **Bayesian linear regression**, with error bars on every prediction.[^bishop2006] Note also the two conventions for the prior: written with variance $\tau^2$ as here, or with precision $1/\tau^2$; only the ratio $\lambda=\sigma^2/\tau^2$ matters.
 
+> [!example]- Code: least squares and ridge regression in NumPy
+> ```python
+> import numpy as np
+> # assumes: X (N, D) design matrix, y (N,) targets, lam > 0
+> w_ols = np.linalg.solve(X.T @ X, X.T @ y)                       # normal equations (full column rank)
+> w_lstsq = np.linalg.lstsq(X, y, rcond=None)[0]                  # SVD-based; minimum-norm if rank-deficient
+> w_ridge = np.linalg.solve(X.T @ X + lam * np.eye(X.shape[1]), X.T @ y)
+> ```
+> Solve the linear system rather than forming $(\mathbf{X}^\top\mathbf{X})^{-1}$ with `np.linalg.inv`, which is slower and less accurate. `lstsq` also covers the singular case, returning the pseudo-inverse solution.
+
 **Why regularize?** Regularization constrains the parameters, trading a little bias for a large reduction in variance. It matters most for over-parameterized models ($D$ large relative to $N$) and correlated features. Figure 4 shows the problem with polynomial basis functions. A degree-11 polynomial through 12 noisy points fits the training data exactly, but swings wildly between them, and its validation error explodes. Adding a tiny ridge penalty to the same degree-11 model tames it, bringing the validation error back to the level of the best small model.
 
 ![[Machine Learning/images/linear-models-overfitting.svg]]
@@ -246,6 +256,23 @@ w_j^{\text{lasso}}=\operatorname{sign}\big(\hat w_j\big)\,\max\big(\lvert\hat w_
 $$
 
 Small weights are set *exactly* to zero, and large ones are shrunk by $\lambda$. Coordinate descent and proximal-gradient methods apply this step repeatedly and return exact zeros. Plain (sub)gradient descent only gets close (values like $10^{-10}$), which is why such tiny weights are pruned in practice. Dropping zero-weight features shrinks the model and speeds up inference.
+
+> [!example]- Code: the lasso by proximal gradient descent (ISTA)
+> ```python
+> import numpy as np
+>
+> def soft_threshold(v, t):
+>     return np.sign(v) * np.maximum(np.abs(v) - t, 0.0)
+>
+> def lasso_ista(X, y, lam, n_iter=5000):
+>     step = 1.0 / np.linalg.norm(X, 2) ** 2                 # 1 / Lipschitz constant of the gradient
+>     w = np.zeros(X.shape[1])
+>     for _ in range(n_iter):
+>         grad = X.T @ (X @ w - y)                           # gradient of the squared-error part
+>         w = soft_threshold(w - step * grad, step * lam)    # then soft-threshold: exact zeros
+>     return w
+> ```
+> Each iteration is a gradient step on $\frac12\lVert\mathbf{y}-\mathbf{X}\mathbf{w}\rVert_2^2$ followed by the soft-thresholding above. With orthonormal features the step is 1, and the first iteration from $\mathbf{w}=\mathbf{0}$ already returns the closed form.
 
 ---
 
@@ -311,6 +338,26 @@ where $\boldsymbol{\sigma}=\sigma(\mathbf{X}\mathbf{w})$ elementwise and $\mathb
 > [!tip] Newton's method is iteratively reweighted least squares
 > A Newton step is $\mathbf{w}\leftarrow\mathbf{w}-(\mathbf{X}^\top\mathbf{S}\mathbf{X})^{-1}\mathbf{X}^\top(\boldsymbol{\sigma}-\mathbf{y})$. It can be rewritten as $\mathbf{w}\leftarrow(\mathbf{X}^\top\mathbf{S}\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{S}\,\mathbf{z}$ with "working targets" $\mathbf{z}=\mathbf{X}\mathbf{w}-\mathbf{S}^{-1}(\boldsymbol{\sigma}-\mathbf{y})$. That is a [[#Weighted linear regression|weighted least-squares]] problem with weights $\sigma_i(1-\sigma_i)$, re-solved at every step. Hence the name **IRLS**.
 
+> [!example]- Code: logistic regression by Newton's method (IRLS)
+> ```python
+> import numpy as np
+>
+> def sigmoid(z):
+>     return 1 / (1 + np.exp(-z))
+>
+> def logistic_newton(X, y, lam=1e-6, n_iter=25):
+>     """X: (N, D), with a column of ones for the bias; y: (N,) in {0, 1}.
+>     The tiny ridge lam keeps X^T S X invertible."""
+>     w = np.zeros(X.shape[1])
+>     for _ in range(n_iter):
+>         s = sigmoid(X @ w)
+>         grad = X.T @ (s - y) + lam * w                                 # X^T (sigma - y)
+>         H = X.T @ (X * (s * (1 - s))[:, None]) + lam * np.eye(len(w))  # X^T S X
+>         w -= np.linalg.solve(H, grad)                                  # Newton step
+>     return w
+> ```
+> Near the optimum Newton's method converges quadratically, so a handful of iterations is usually enough, where gradient descent needs many more. On separable data the weights grow without bound, as the warning below explains; a larger `lam` then gives the regularized solution.
+
 > [!warning] Separable data breaks maximum likelihood
 > If some hyperplane separates the two classes perfectly, scaling its $\mathbf{w}$ up pushes every probability towards $0$ or $1$ and the loss towards $0$. The likelihood keeps increasing, so the MLE does not exist: $\lVert\mathbf{w}\rVert\to\infty$. Regularization fixes this. [[Support Vector Machines]] take a different route and pick the separating hyperplane with the largest margin.
 
@@ -343,6 +390,19 @@ $$
 
 > [!tip] Numerical stability
 > Compute $\log\sum_k e^{z_k}$ as $m+\log\sum_k e^{z_k-m}$ with $m=\max_k z_k$ (the **log-sum-exp** trick). Otherwise large logits overflow.
+
+> [!example]- Code: softmax cross-entropy with the log-sum-exp trick
+> ```python
+> import numpy as np
+>
+> def softmax_nll(W, X, y):
+>     """W: (D, K), X: (N, D), y: (N,) integer labels. Returns -sum_i log mu_{i, y_i} and its gradient."""
+>     Z = X @ W                                                   # logits, (N, K)
+>     m = Z.max(axis=1, keepdims=True)
+>     log_mu = Z - m - np.log(np.exp(Z - m).sum(axis=1, keepdims=True))   # stable log-softmax
+>     Y = np.eye(W.shape[1])[y]                                   # one-hot labels
+>     return -(log_mu * Y).sum(), X.T @ (np.exp(log_mu) - Y)      # gradient X^T (M - Y)
+> ```
 
 > [!note] One-vs-all: a different model
 > An alternative is to train $K$ *independent* binary logistic regressions, "class $j$ vs. the rest", relabelling $y'_i=\mathbb{1}\{y_i=j\}$. At test time, predict the class whose model scores highest. This **one-vs-all** (one-vs-rest) scheme is simple and parallel, but it is *not* the maximum-likelihood softmax model. Its $K$ probabilities need not sum to one, and normalizing them with a softmax afterwards does not turn it into one.

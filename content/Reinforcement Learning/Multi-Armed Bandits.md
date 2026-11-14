@@ -141,6 +141,22 @@ $$
 
 $\varepsilon=0$ is greedy and $\varepsilon=1$ is uniformly random. Because every arm keeps being sampled, all estimates converge, and eventually the greedy choice is $a^*$.
 
+> [!example]- Code: $\varepsilon$-greedy with incremental estimates (NumPy)
+> ```python
+> # assumes: K arms, pull(a) -> one reward, horizon T, rng = np.random.default_rng()
+> q = np.zeros(K)          # estimates q_t(a)
+> n = np.zeros(K)          # pull counts N_t(a)
+> for t in range(T):
+>     if rng.random() < eps:
+>         a = rng.integers(K)                      # explore: a uniformly random arm
+>     else:
+>         a = rng.choice(np.flatnonzero(q == q.max()))   # exploit, breaking ties at random
+>     r = pull(a)
+>     n[a] += 1
+>     q[a] += (r - q[a]) / n[a]                    # step size 1/n: the sample average
+> ```
+> A constant `alpha` in place of `1 / n[a]` gives the recency-weighted average for non-stationary arms, and `q = np.full(K, 5.0)` gives optimistic initial values.
+
 **Regret of fixed $\varepsilon$ is linear.** Even once the estimates are perfect, each step explores with probability $\varepsilon$, and a random arm costs $\frac1K\sum_a\Delta_a$ on average. So for large $t$ the per-step regret is about $\frac{\varepsilon}{K}\sum_a\Delta_a$, and
 
 $$
@@ -168,6 +184,16 @@ Here $c>0$ controls the amount of exploration. Two observations:
 2. **The bonus fades, but never vanishes.** For an arm that keeps being pulled, $N_t(a)$ grows roughly linearly in $t$ while $\ln t$ grows only logarithmically. So $\ln t/N_t(a)\to0$, and the choice is increasingly decided by $q_t(a)$. An arm that is *not* pulled sees its bonus slowly grow (through $\ln t$) until it is tried again. UCB therefore keeps exploring forever, but at a **logarithmic** rate: every sub-optimal arm is pulled about $\log T$ times.
 
 Where does the bonus come from? It is the half-width of a confidence interval, as the next aside shows. UCB acts as if each arm is as good as it *plausibly* could be: **optimism in the face of uncertainty**. If the optimism was wrong, pulling the arm shrinks its interval and fixes the mistake. If it was right, we found a better arm.
+
+> [!example]- Code: the UCB action choice (NumPy)
+> ```python
+> # assumes: estimates q (K,), pull counts n (K,), time t >= 1, exploration constant c (sqrt(2) for UCB1)
+> if (n == 0).any():
+>     a = int(np.argmax(n == 0))                     # untried arms first (infinite bonus)
+> else:
+>     a = int(np.argmax(q + c * np.sqrt(np.log(t) / n)))
+> ```
+> The rest of the loop, pulling the arm and the incremental update of `q[a]`, is the same as for $\varepsilon$-greedy.
 
 ![[Reinforcement Learning/images/multi-armed-bandits-ucb-snapshot.svg]]
 *Figure 2: UCB1 on a 5-armed Bernoulli bandit after 150 pulls. Each bar runs from the estimate $q_t(a)$ to its upper confidence bound. The bounds of all arms are nearly level. Poor arms are pulled just often enough to keep their upper bound competitive, while the best arm (arm 3) gets the most pulls. The arm with the highest bound is pulled next.*
@@ -318,6 +344,21 @@ Replacing the expectation by the single sample we observe gives a stochastic gra
 > 2. Update **every** arm's preference: $\;h_{t+1}(a)=h_t(a)+\alpha\,(r_t-\bar r_t)\big(\mathbb{1}\{a=a_t\}-\pi_t(a)\big)$. The chosen arm moves by $+\alpha(r_t-\bar r_t)(1-\pi_t(a_t))$, and every other arm by $-\alpha(r_t-\bar r_t)\pi_t(a)$.
 > 3. Update the baseline with the new reward: $\bar r_{t+1}=\bar r_t+\frac1t(r_t-\bar r_t)$.
 
+> [!example]- Code: the gradient bandit (NumPy)
+> ```python
+> # assumes: K arms, pull(a) -> one reward, step size alpha, horizon T, rng
+> h = np.zeros(K)                          # preferences h_t(a)
+> r_bar = 0.0                              # baseline: average of PAST rewards
+> for t in range(1, T + 1):
+>     pi = np.exp(h - h.max()); pi /= pi.sum()       # softmax (shifted for stability)
+>     a = rng.choice(K, p=pi)
+>     r = pull(a)
+>     onehot = np.eye(K)[a]
+>     h += alpha * (r - r_bar) * (onehot - pi)       # step 2: every arm moves
+>     r_bar += (r - r_bar) / t                       # step 3: only now include r_t
+> ```
+> The bracket `onehot - pi` is $\nabla_h\log\pi_h(a_t)$, so `alpha * (r - r_bar) * (onehot - pi)` is one REINFORCE step with a baseline; autograd on `torch.log_softmax(h, 0)[a]` gives the same vector.
+
 If a reward is better than the baseline, the chosen arm becomes more likely and the others less likely; if it is worse, the reverse. Without a baseline, if all rewards are positive (say around $4$), *every* pulled arm gets reinforced, and learning becomes much slower and noisier.
 
 **The stochastic-approximation view.** Write $J(h)=\sum_x\pi_h(x)\,q_*(x)$ for the expected reward. Given the past, the expected update is exactly $\alpha\,\nabla_hJ(h_t)$, because the baseline uses past rewards only. So the update is $h_{t+1}=h_t+\alpha\big[\nabla J(h_t)+M_{t+1}\big]$ with martingale-difference noise $M_{t+1}$, and with decreasing step sizes it follows the gradient-flow ODE $\dot h=\nabla J(h)$. Along this flow $\frac{d}{dt}J=\lVert\nabla J\rVert^2\ge0$, so the expected reward never decreases. Its stationary points are not where one might expect: $\frac{\partial J}{\partial h(a)}=\pi_h(a)\big(q_*(a)-J(h)\big)$ vanishes for every $a$ only if all arms have the same mean. When one arm is strictly best there is **no finite equilibrium**: the preferences drift off to infinity and $\pi_h$ approaches a one-hot policy. For the exact gradient flow it is the optimal arm.[^mei2020] Two caveats. The boundedness assumption of the standard convergence theorem fails here, so it does not apply directly. And with a *constant* $\alpha$, as in the algorithm box, the iterates only track the ODE approximately (see [[Stochastic Approximation]]).
@@ -339,6 +380,18 @@ A Bayesian alternative: keep a posterior over each arm's mean, **sample** one pl
 > 1. For each arm, sample $\tilde q_a\sim\mathrm{Beta}(S_a,F_a)$.
 > 2. Pull $a_t=\arg\max_a\tilde q_a$ and observe $r_t\in\{0,1\}$.
 > 3. Update the posterior: $S_{a_t}\leftarrow S_{a_t}+r_t$ and $F_{a_t}\leftarrow F_{a_t}+(1-r_t)$.
+
+> [!example]- Code: Thompson sampling for Bernoulli arms (NumPy)
+> ```python
+> # assumes: K arms, pull(a) -> reward in {0, 1}, horizon T, rng
+> S = np.ones(K)                           # 1 + number of successes
+> F = np.ones(K)                           # 1 + number of failures
+> for t in range(T):
+>     a = int(np.argmax(rng.beta(S, F)))   # one plausible mean per arm, act greedily on the samples
+>     r = pull(a)
+>     S[a] += r
+>     F[a] += 1 - r
+> ```
 
 Thompson sampling also achieves $O(\log T)$ regret.[^agrawalgoyal2012] For Bernoulli arms it even matches the Lai–Robbins lower-bound constant,[^kaufmann2012] and it is often the best performer in practice.[^russo2018]
 

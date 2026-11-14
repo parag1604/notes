@@ -59,6 +59,32 @@ Starting from $\mathbf{w}=\mathbf{0}$, every iterate is a sum of terms $2\alpha 
 >
 > Predict with $\hat y(\mathbf{u})=\operatorname{sign}(\mathbf{w}^\top\mathbf{u}+b)$.
 
+> [!example]- Code: the perceptron rule and the mistake bound (numpy)
+> ```python
+> import numpy as np
+>
+> def perceptron(X, y, max_epochs=100, seed=0):
+>     """X: (N, D) inputs, y: (N,) labels in {-1, +1}. Returns w, b, #mistakes."""
+>     rng = np.random.default_rng(seed)
+>     w, b, mistakes = np.zeros(X.shape[1]), 0.0, 0
+>     for epoch in range(max_epochs):
+>         clean = True
+>         for i in rng.permutation(len(y)):           # one random point at a time
+>             if y[i] * (X[i] @ w + b) <= 0:          # a mistake (or on the boundary)
+>                 w, b = w + y[i] * X[i], b + y[i]    # w <- w + y_i x_i,  b <- b + y_i
+>                 mistakes, clean = mistakes + 1, False
+>         if clean:                                   # a full epoch without mistakes
+>             break
+>     return w, b, mistakes
+>
+> def mistake_bound(w, b, X, y):
+>     """(R/gamma)^2 with u = the separator found (valid for any separating u)."""
+>     Xt, wt = np.hstack([X, np.ones((len(X), 1))]), np.append(w, b)   # bias trick
+>     gamma = np.min(y * (Xt @ wt)) / np.linalg.norm(wt)
+>     return (np.linalg.norm(Xt, axis=1).max() / gamma) ** 2
+> ```
+> On separable data the returned `mistakes` never exceeds `mistake_bound(w, b, X, y)`, the Block–Novikoff bound below, usually by orders of magnitude.
+
 Why does the update help? After an update on $(\mathbf{x}_i,y_i)$, the score of that point becomes
 
 $$
@@ -325,6 +351,48 @@ Visit the nodes in reverse topological order, starting from the loss, and every 
 ![[Machine Learning/images/neural-networks-graph.svg]]
 *Figure 4: a computational graph for $L=\frac12(\sigma(wx+b)-y)^2$ at $x=1.5$, $w=0.8$, $b=-0.2$, $y=1$. The forward pass (blue, above each node) computes $u=1.2$, $z=1.0$, $a=0.7311$, $L=0.0362$. The backward pass (vermilion, below) starts from $\bar L=1$: $\bar a=a-y=-0.2689$, $\bar z=\bar a\,a(1-a)=-0.0529$, which passes unchanged through the sum to $\bar u$ and $\bar b$, and then $\bar w=\bar u\,x=-0.0793$ and $\bar x=\bar u\,w=-0.0423$.*
 
+> [!example]- Code: a scalar reverse-mode autodiff engine (after Scalar-Autograd)
+> ```python
+> import math
+>
+> class Value:
+>     """A scalar node: its value .data and its adjoint .grad = dL/d(node)."""
+>     def __init__(self, data, parents=(), local_grads=()):
+>         self.data, self.grad = data, 0.0
+>         self.parents, self.local_grads = parents, local_grads  # d(node)/d(parent)
+>
+>     def __add__(self, o):
+>         o = o if isinstance(o, Value) else Value(o)
+>         return Value(self.data + o.data, (self, o), (1.0, 1.0))
+>     def __mul__(self, o):
+>         o = o if isinstance(o, Value) else Value(o)
+>         return Value(self.data * o.data, (self, o), (o.data, self.data))
+>     def sigmoid(self):
+>         s = 1 / (1 + math.exp(-self.data))
+>         return Value(s, (self,), (s * (1 - s),))
+>
+>     def backward(self):
+>         order, seen = [], set()
+>         def visit(v):                       # topological order: inputs first
+>             if v not in seen:
+>                 seen.add(v)
+>                 for p in v.parents: visit(p)
+>                 order.append(v)
+>         visit(self)
+>         self.grad = 1.0                     # the adjoint of the loss itself
+>         for v in reversed(order):           # reverse topological order
+>             for p, g in zip(v.parents, v.local_grads):
+>                 p.grad += g * v.grad        # accumulate: sum over the children of p
+>
+> # Figure 4: L = (sigma(w x + b) - y)^2 / 2
+> x, w, b, y = Value(1.5), Value(0.8), Value(-0.2), 1.0
+> e = (w * x + b).sigmoid() + (-y)
+> L = e * e * 0.5                             # e feeds the product twice
+> L.backward()
+> print(round(L.data, 4), round(w.grad, 4), round(x.grad, 4))   # 0.0362 -0.0793 -0.0423
+> ```
+> Each node stores its local derivatives on the forward pass, and `backward` applies the adjoint equation above in reverse topological order. Writing $e^2$ as `e * e` makes `e` a parent twice, so its adjoint is a sum of two contributions; with `=` instead of `+=` the gradients would be half as large. The repository's engine stores a `_backward` closure per node instead of the local derivatives, which is equivalent.
+
 Two details matter in practice:
 
 - **Accumulate, don't overwrite.** If a node feeds several others (a weight shared across time steps, or simply $y=x+x$), its adjoint is a *sum*. Autodiff engines therefore add into `.grad` (`+=`), and you must zero the gradients before each new backward pass; this is why PyTorch training loops call `zero_grad()`.
@@ -472,6 +540,35 @@ $$
 where $\mu_j$ and $v_j$ are the mean and variance of unit $j$ over the batch. At test time, running averages of $\mu_j$ and $v_j$ collected during training replace the batch statistics, so a prediction does not depend on the other examples. Batch norm allows larger learning rates and makes training much less sensitive to initialization. It was introduced to reduce "internal covariate shift", but later work suggests the main benefit is a smoother loss landscape.[^santurkar2018] In [Basic-Image-Classification](https://github.com/parag1604/Basic-Image-Classification) (version 7) adding batch norm is what lets a CIFAR-10 network that would not train start fitting the data.
 
 **Layer normalization** computes the same statistics across the units of a single example instead of across the batch.[^ba2016] It behaves identically at training and test time, works with batch size 1 and with variable-length sequences, and is the standard choice in recurrent networks and transformers.
+
+> [!example]- Code: inverted dropout and batch normalization, training versus test (numpy)
+> ```python
+> import numpy as np
+>
+> def dropout(h, rho, train, rng):
+>     """Inverted dropout with keep probability rho, so that E[output] = h."""
+>     if not train:
+>         return h                                  # test time: all units, no rescaling
+>     m = rng.random(h.shape) < rho                 # m_j ~ Bernoulli(rho)
+>     return h * m / rho
+>
+> class BatchNorm:
+>     def __init__(self, n, momentum=0.1, eps=1e-5):
+>         self.s, self.t = np.ones(n), np.zeros(n)              # learned scale and shift
+>         self.mu_run, self.v_run = np.zeros(n), np.ones(n)     # running statistics
+>         self.m, self.eps = momentum, eps
+>
+>     def __call__(self, Z, train):                             # Z: (B, n)
+>         if train:
+>             mu, v = Z.mean(0), Z.var(0)                       # statistics over the batch
+>             B = len(Z)
+>             self.mu_run = (1 - self.m) * self.mu_run + self.m * mu
+>             self.v_run = (1 - self.m) * self.v_run + self.m * v * B / (B - 1)
+>         else:
+>             mu, v = self.mu_run, self.v_run                   # independent of the batch
+>         return self.s * (Z - mu) / np.sqrt(v + self.eps) + self.t
+> ```
+> Layer normalization is the same formula with the mean and variance taken over `axis=1` (the units of one example) and no running statistics, so training and test behave alike. The running variance uses the unbiased batch variance, matching PyTorch's `BatchNorm1d`.
 
 ## Code
 

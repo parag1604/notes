@@ -274,6 +274,25 @@ $$
 
 Its nullspace is again the constant vector, since $N(\mathbf{A}^\top\mathbf{A})=N(\mathbf{A})$ (proved in [[Orthogonality and Least Squares#The normal equations|the next lecture]]). The Laplacian is the matrix behind [[Clustering and Expectation Maximization#Spectral clustering|spectral clustering]].
 
+> [!example]- Code: the incidence matrix and its four subspaces
+> ```python
+> import numpy as np
+> from scipy.linalg import null_space
+>
+> edges = [(1, 2), (1, 3), (2, 3), (2, 4), (3, 4)]     # e_k: tail -> head, as in Figure 5
+> A = np.zeros((len(edges), 4))
+> for k, (tail, head) in enumerate(edges):
+>     A[k, tail - 1], A[k, head - 1] = -1, 1
+>
+> print(np.linalg.matrix_rank(A))                   # r = 3
+> print(null_space(A).ravel().round(3))             # +-(0.5, 0.5, 0.5, 0.5): constant potentials
+> loops = np.array([[1, -1, 1, 0, 0], [0, 0, 1, -1, 1]])
+> print(loops @ A)                                  # zeros: y^T A = 0 (current law)
+> b = A @ np.array([0, 3, 5, 6])                    # potential differences (3, 5, 2, 3, 1)
+> print(loops @ b)                                  # [0. 0.]: voltage law around both loops
+> print(A.T @ A)                                    # the graph Laplacian above
+> ```
+
 ### The data matrix
 
 For a design matrix $\mathbf{X}\in\mathbb{R}^{N\times D}$ in [[Linear Models]], the four subspaces answer modelling questions.

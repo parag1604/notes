@@ -139,6 +139,20 @@ The idea that defines temporal-difference learning is to **bootstrap**: use the 
 
 With one-hot features, $\Phi=I$, this is exactly tabular TD(0) from [[Monte Carlo and Temporal-Difference Learning]]: $V(s_t)\leftarrow V(s_t)+\alpha_t\big[r_t+\gamma V(s_{t+1})-V(s_t)\big]$. The name comes from $\delta_t$, the difference between a one-step look-ahead estimate of $V^\pi(s_t)$ and the current estimate.
 
+> [!example]- Code: one step of linear TD(0), by hand and with autograd
+> ```python
+> # assumes: features x = phi(s_t), x_next = phi(s_{t+1}) and weights w (NumPy arrays of shape (d,)), reward r
+> delta = r + gamma * x_next @ w - x @ w        # step 2: TD error
+> w_new = w + alpha * delta * x                 # step 3: only the prediction x @ w is differentiated
+>
+> # the same step with autograd: the bootstrapped target must be detached
+> w_t = torch.tensor(w, requires_grad=True)
+> target = (r + gamma * torch.tensor(x_next) @ w_t).detach()    # a fixed label
+> loss = 0.5 * (target - torch.tensor(x) @ w_t) ** 2
+> loss.backward()                                                # w_t.grad = -delta * x
+> ```
+> Without `.detach()` the gradient would be $-\delta_t\big(\boldsymbol\phi(s_t)-\gamma\boldsymbol\phi(s_{t+1})\big)$: a true gradient, of the squared TD error, which is a different algorithm (residual gradient) with a different limit.
+
 > [!warning] TD(0) is a semi-gradient method, not SGD
 > The bootstrapped target depends on $\mathbf{w}_t$, but the update differentiates only the prediction $\boldsymbol\phi(s_t)^\top\mathbf{w}$ and treats the target as a constant. The result is **not** the stochastic gradient of $\overline{\mathrm{VE}}$, or of any other function. We will see below that its average update is $\mathbf{b}-A\mathbf{w}$. If this were $-\nabla J(\mathbf{w})$ for some $J$, the Hessian of $J$ would be $A$, which would have to be symmetric. But $A$ is not symmetric in general: in the three-state example of Figure 1, $A=\begin{pmatrix}0.300&-0.205\\0.033&0.308\end{pmatrix}$. So TD(0) cannot be descending any objective, and we have no reason to expect it to reach the minimizer of $\overline{\mathrm{VE}}$. It does not, as we will show.
 
@@ -325,6 +339,23 @@ To see all of this in action, take a **20-state random walk**. From every state 
 
 The numbers: the best fit has root-mean-squared error $\lVert\Pi V^\pi-V^\pi\rVert_D=1.04$ and the TD fixed point $1.48$, a ratio of $1.42$. That is well inside the guarantee $1/\sqrt{1-0.95^2}=3.2$, and far inside $1/(1-\gamma)=20$. Figure 3 repeats the comparison over $\gamma$. The ratio grows from exactly 1 at $\gamma=0$ to $1.14$ at $\gamma=0.9$ and $2.6$ at $\gamma=0.99$.
 
+> [!example]- Code: the TD fixed point and the best fit, computed from the model (NumPy)
+> ```python
+> # assumes: P (n, n) = P^pi, r (n,) = r_pi, features Phi (n, d), discount gamma
+> n = len(r)
+> evals, evecs = np.linalg.eig(P.T)
+> d_pi = np.real(evecs[:, np.argmin(np.abs(evals - 1))])
+> d_pi /= d_pi.sum()                                            # stationary distribution
+> D = np.diag(d_pi)
+> V = np.linalg.solve(np.eye(n) - gamma * P, r)                 # V^pi
+> A = Phi.T @ D @ (np.eye(n) - gamma * P) @ Phi                 # eq. (2)
+> b = Phi.T @ D @ r
+> w_td = np.linalg.solve(A, b)                                  # where TD(0) converges
+> w_mse = np.linalg.solve(Phi.T @ D @ Phi, Phi.T @ D @ V)       # eq. (1): the best fit
+> err = lambda w: np.sqrt((Phi @ w - V) @ D @ (Phi @ w - V))    # the D-norm error
+> ```
+> On the 20-state walk with four aggregated groups and $\gamma=0.95$, `err(w_mse)` is 1.04 and `err(w_td)` is 1.48.
+
 ![[Reinforcement Learning/images/linear-function-approximation-gamma.svg]]
 *Figure 3: error of the TD($\lambda$) fixed point relative to the best possible error, on the 20-state walk, as a function of $\gamma$ (exact, computed from the model). TD(0) degrades as $\gamma\to1$ but stays far below both worst-case bounds. Larger $\lambda$ closes the gap; $\lambda=1$ is the best fit itself.*
 
@@ -372,6 +403,15 @@ $$
 $$
 
 By the ergodic theorem $\hat A_T\to A$ and $\hat{\mathbf{b}}_T\to\mathbf{b}$ almost surely, so $\hat{\mathbf{w}}_T\to\mathbf{w}_{\mathrm{TD}}$. LSTD has the **same fixed point** as TD(0); it reaches it differently.
+
+> [!example]- Code: LSTD from one trajectory (NumPy)
+> ```python
+> # assumes: feats (T+1, d) = phi(s_0), ..., phi(s_T) along one trajectory, rewards (T,), small ridge eps
+> X, X_next = feats[:-1], feats[1:]
+> A_hat = X.T @ (X - gamma * X_next) / len(rewards)
+> b_hat = X.T @ rewards / len(rewards)
+> w_lstd = np.linalg.solve(A_hat + eps * np.eye(X.shape[1]), b_hat)
+> ```
 
 - **Pros.** There is no step size to tune. It uses every sample fully, which is usually far more data-efficient (Figure 2, right).
 - **Cons.** It needs $O(d^2)$ memory, and $O(d^2)$ time per step when $\hat A_T^{-1}$ is updated recursively with the Sherman–Morrison formula (or $O(d^3)$ for a batch solve), against $O(d)$ for TD. A small ridge term $\epsilon I$ is commonly added to $\hat A_T$ early on, before it becomes invertible.

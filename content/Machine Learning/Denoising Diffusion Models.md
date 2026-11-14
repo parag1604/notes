@@ -554,6 +554,22 @@ $$
 
 with $\beta_t=1-\bar\alpha_t/\bar\alpha_{t-1}$ clipped at $0.999$ to avoid a singular last step. It decreases $\bar\alpha_t$ roughly linearly in the middle and slowly at both ends (Figure 6).
 
+> [!example]- Code: the cosine schedule
+> A drop-in replacement for the linear `beta` of the DDPM code above.
+> ```python
+> import math, torch
+> def cosine_schedule(T=1000, s=0.008):
+>     t = torch.arange(T + 1, dtype=torch.float64) / T
+>     f = torch.cos((t + s) / (1 + s) * math.pi / 2) ** 2
+>     abar = f / f[0]                                         # \bar alpha_t, t = 0..T
+>     beta = (1 - abar[1:] / abar[:-1]).clamp(max=0.999)      # beta_t, t = 1..T, clipped
+>     return beta.float()
+>
+> beta = cosine_schedule()
+> alpha = 1 - beta
+> abar = torch.cumprod(alpha, 0)                              # recomputed after clipping
+> ```
+
 The **signal-to-noise ratio** $\mathrm{SNR}(t)=\bar\alpha_t/(1-\bar\alpha_t)$ is the cleanest way to compare schedules. It must start high (almost clean data) and end near zero, so that $q(\mathbf{x}_T\mid\mathbf{x}_0)$ is close to the prior and the prior matching term is negligible. For the linear schedule, $\bar\alpha_T\approx4.0\times10^{-5}$; for the cosine schedule, $\bar\alpha_T\approx2.4\times10^{-9}$. In between, the linear schedule has already reached $\mathrm{SNR}<10^{-2}$ for 33% of its steps, the cosine schedule for only 6%. In continuous time, the variational diffusion model analysis shows that the ELBO depends on the schedule only through the SNR at the two endpoints; the schedule in between only changes the variance of the Monte Carlo estimate, and, for the simple loss, the weighting.[^kingma2021]
 
 ![[Machine Learning/images/denoising-diffusion-models-schedules.svg]]
@@ -583,6 +599,19 @@ $$
 $$
 
 which replaces $\boldsymbol\epsilon_\theta$ in the sampling update. The **guidance scale** $\gamma\ge0$ was introduced by Dhariwal and Nichol: $\gamma=1$ is the conditional score, and $\gamma>1$ samples from a sharpened distribution proportional to $q_t(\mathbf{x}_t)\,p_\phi(y\mid\mathbf{x}_t)^\gamma$. Larger $\gamma$ gives samples that are more clearly of class $y$, and less diverse.
+
+> [!example]- Code: classifier guidance
+> ```python
+> # assumes: model(x, t) -> eps_theta; classifier(x, t) -> (B, K) logits of p_phi(y | x_t, t);
+> #          abar from the DDPM code above; t (B,) integer times; y (B,) target labels
+> def guided_eps(x, t, y, gamma):
+>     with torch.enable_grad():                        # the samplers run under no_grad
+>         x_in = x.detach().requires_grad_(True)
+>         logp = torch.log_softmax(classifier(x_in, t), -1)[torch.arange(len(y)), y]
+>         grad, = torch.autograd.grad(logp.sum(), x_in)   # grad_x log p_phi(y | x_t, t)
+>     return model(x, t) - gamma * (1 - abar[t - 1, None]).sqrt() * grad
+> ```
+> Use `guided_eps` in place of `model(x, t)` in `sample_ddpm` (or `sample_ddim` below). The gradient is taken with respect to the input only; neither network is updated.
 
 Three points about this recipe:
 - **Guidance happens only at sampling time.** The diffusion model is trained as before, unconditionally, and the classifier is trained on its own. Nothing is backpropagated into $\theta$; the gradient is with respect to the **input** $\mathbf{x}_t$.
@@ -617,6 +646,21 @@ $$
 - **Guidance means $\lambda>1$.** $\lambda=1$ ($w=0$) is plain conditional sampling and $\lambda=0$ is unconditional; guidance **extrapolates** past the conditional prediction, away from the unconditional one. Text-to-image systems typically use $\lambda$ between about 3 and 10.
 - **Each sampling step costs two forward passes**, conditional and unconditional, combined by (20) before the denoising step.
 - **The samples are no longer from $p(\mathbf{x}_0\mid y)$.** They are sharper, more typical of $y$, and less diverse: guidance trades diversity for fidelity. Figure 7 shows this on the running example.
+
+> [!example]- Code: classifier-free guidance (training and sampling changes)
+> ```python
+> # assumes: model(x, t, y) -> eps_theta, with label NULL meaning "no condition";
+> #          x0, y (B,), t, eps and xt as in the DDPM training loop; p_uncond = 0.1-0.2
+> drop = torch.rand(len(y)) < p_uncond                    # training: drop some labels
+> y_in = torch.where(drop, torch.full_like(y, NULL), y)
+> loss = ((model(xt, t, y_in) - eps) ** 2).mean()         # L_simple, otherwise unchanged
+>
+> def cfg_eps(x, t, y, w):                                # sampling: two passes, then (20)
+>     eps_c = model(x, t, y)
+>     eps_u = model(x, t, torch.full_like(y, NULL))
+>     return (1 + w) * eps_c - w * eps_u
+> ```
+> Against classifier guidance: no classifier and no input gradient, but two forward passes per step. `NULL` is one extra label value (an extra row of the label embedding).
 
 ![[Machine Learning/images/denoising-diffusion-models-cfg.svg]]
 *Figure 7. Classifier-free guidance on the two moons, with one network trained with 20% label dropout, sampling the upper moon (100 ancestral steps, 3000 samples; grey: data). All samples land on the right moon at every $w$; what changes is where on it. The data are uniform along the arc, and with $w=0$ the samples are too: 25% fall in the quarter of the arc nearest the other moon (the right end). Guidance pushes samples away from what the other class looks like: that quarter holds 12% of the samples at $w=1$ and 3% at $w=4$, while the far quarter grows from 25% to 31% and 39%. The samples become more typical of their class and less diverse.*

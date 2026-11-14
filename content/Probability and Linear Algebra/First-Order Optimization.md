@@ -173,6 +173,26 @@ Instead of fixing $\alpha$, we can choose it afresh at every step by (approximat
 >
 > For an L-smooth $f$ and $c\le\frac12$, the loop stops once $\alpha\le1/L$, by (3), so it ends after a bounded number of halvings.
 
+> [!example]- Code: backtracking line search in NumPy
+> ```python
+> import numpy as np
+>
+> def backtracking_step(f, grad, w, alpha_init=1.0, rho=0.5, c=1e-4):
+>     """One gradient step whose size is chosen by the Armijo rule above."""
+>     g = grad(w); fw = f(w); alpha = alpha_init
+>     while f(w - alpha * g) > fw - c * alpha * g @ g:     # not enough decrease:
+>         alpha *= rho                                     # shrink the step
+>     return w - alpha * g, alpha
+>
+> lam = np.array([1.0, 4.0])                    # f(w) = 1/2 (w1^2 + 4 w2^2), so mu = 1, L = 4
+> f = lambda w: 0.5 * w @ (lam * w); grad = lambda w: lam * w
+> w = np.array([4.0, 1.0]); steps = []
+> for _ in range(30):
+>     w, alpha = backtracking_step(f, grad, w); steps.append(alpha)
+> print(steps[:10], f(w))     # [0.5]*7, 0.25, 1.0, 1.0 ... and f = 0.0
+> ```
+> Nobody told it $L$. It first accepts $\alpha=0.5$, which makes progress along $w_1$ while $w_2$ just flips sign; when that stops paying, it falls back to $\alpha=0.25=1/L$, which removes $w_2$ in one step, and then $\alpha=1=1/\mu$ removes $w_1$. The step adapts to the curvature that currently matters.
+
 Line search needs exact function values, which stochastic methods do not have. In deep learning the step size is therefore set by hand or by a **schedule** ([[#Learning-rate schedules]]).
 
 ## Gradient descent on a quadratic
@@ -648,6 +668,34 @@ Both match the lower bounds in [[#Is gradient descent optimal?]] up to constants
 
 ![[Probability and Linear Algebra/images/first-order-optimization-momentum.svg]]
 *Figure 5. GD, heavy ball and Nesterov on $\frac12(w_1^2+100w_2^2)$ ($\kappa=100$) from $(8,0.3)$, each with the parameters from the text. (a) The first 30 steps. GD bounces between the walls and has barely moved along the valley. Heavy ball overshoots in the steep direction but travels the valley quickly. Nesterov with $\alpha=1/L$ removes the steep component in one step and then accelerates along the valley. (b) Relative error over 120 steps, with the predicted rates dotted: $0.980^t$ for GD (error $9\times10^{-2}$ at the end), $0.818^t$ for heavy ball ($8\times10^{-10}$; the gap to the dotted line is the factor $t$), $0.9^t$ for Nesterov ($4\times10^{-5}$).*
+
+> [!example]- Code: heavy ball and Nesterov side by side
+> ```python
+> import numpy as np
+>
+> def heavy_ball(grad, w0, alpha, beta, T):
+>     w_prev = w = np.array(w0, dtype=float)
+>     for _ in range(T):
+>         w, w_prev = w - alpha * grad(w) + beta * (w - w_prev), w
+>     return w
+>
+> def nesterov(grad, w0, alpha, beta, T):
+>     w_prev = w = np.array(w0, dtype=float)
+>     for _ in range(T):
+>         y = w + beta * (w - w_prev)               # look ahead along the momentum
+>         w, w_prev = y - alpha * grad(y), w        # gradient at y, not at w
+>     return w
+>
+> grad = lambda w: np.array([1.0, 100.0]) * w       # f = 1/2 (w1^2 + 100 w2^2), kappa = 100
+> L, mu = 100.0, 1.0
+> q = (np.sqrt(L / mu) - 1) / (np.sqrt(L / mu) + 1) # (sqrt(kappa) - 1) / (sqrt(kappa) + 1) = 9/11
+> w0 = np.array([8.0, 0.3])
+> hb = heavy_ball(grad, w0, 4 / (np.sqrt(L) + np.sqrt(mu))**2, q**2, 120)
+> nag = nesterov(grad, w0, 1 / L, q, 120)
+> print(np.linalg.norm(hb) / np.linalg.norm(w0))    # 8.4e-10
+> print(np.linalg.norm(nag) / np.linalg.norm(w0))   # 4.2e-05
+> ```
+> The two loops differ in one line: where the gradient is evaluated. The printed errors are the end points of Figure 5(b).
 
 ### AdaGrad
 

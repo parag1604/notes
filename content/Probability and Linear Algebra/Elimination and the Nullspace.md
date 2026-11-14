@@ -93,6 +93,34 @@ With $\mathbf{b}=(1,3,6)$, forward substitution gives $c_1=1$, then $2c_1+c_2=3$
 
 Forward substitution is just elimination applied to $\mathbf{b}$: it performs on the right-hand side the same row operations that turned $\mathbf{A}$ into $\mathbf{U}$.
 
+> [!example]- Code: A = LU by elimination, then two triangular solves
+> ```python
+> import numpy as np
+>
+> def lu_nopivot(A):
+>     """A = L U by elimination, assuming every pivot is non-zero (no row exchanges)."""
+>     U = A.astype(float).copy(); n = len(U); L = np.eye(n)
+>     for j in range(n - 1):                       # pivot U[j, j]
+>         for i in range(j + 1, n):
+>             L[i, j] = U[i, j] / U[j, j]          # multiplier l_ij
+>             U[i] -= L[i, j] * U[j]               # row i minus l_ij times the pivot row
+>     return L, U
+>
+> def solve_lu(L, U, b):
+>     n = len(b); c = np.zeros(n); x = np.zeros(n)
+>     for i in range(n):                           # forward substitution: L c = b
+>         c[i] = b[i] - L[i, :i] @ c[:i]
+>     for i in reversed(range(n)):                 # back substitution: U x = c
+>         x[i] = (c[i] - U[i, i+1:] @ x[i+1:]) / U[i, i]
+>     return x
+>
+> A = np.array([[2, 1, 0], [4, 5, 2], [-2, 2, 5]])
+> L, U = lu_nopivot(A)
+> print(L, U, sep="\n")      # L = [[1,0,0],[2,1,0],[-1,1,1]], U = [[2,1,0],[0,3,2],[0,0,3]]
+> print(solve_lu(L, U, np.array([1.0, 3, 6])))     # [ 1. -1.  2.]
+> ```
+> The update `U[i] -= ...` inside the double loop is the $n^3/3$ multiply–subtract count of [[#What it costs]]. In practice use `scipy.linalg.lu_factor` and `lu_solve`, which also exchange rows (next subsection).
+
 ### Row exchanges: PA = LU
 
 Elimination needs a non-zero pivot. Sometimes a zero appears in the pivot position:

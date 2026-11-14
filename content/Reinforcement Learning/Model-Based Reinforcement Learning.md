@@ -43,6 +43,19 @@ $$
 
 Each row $\hat p(\cdot\mid s,a)$ is the empirical distribution of a categorical sample, and $\hat r(s,a)$ is a sample mean, exactly the estimator of an arm's value in [[Multi-Armed Bandits]]. The **certainty-equivalence** (CE) recipe then pretends the estimate is the truth: solve $\hat M=(\mathcal{S},\mathcal{A},\hat p,\hat r,\gamma)$ with [[Dynamic Programming#Value iteration|value iteration]] or [[Dynamic Programming#Policy iteration|policy iteration]], and act greedily with respect to its optimal value $\hat V^*$.
 
+> [!example]- Code: the certainty-equivalence model from counts (NumPy)
+> ```python
+> # assumes: m observed transitions as integer arrays S, A, S_next and a float array Rw (all of length m)
+> N_sas = np.zeros((n_states, n_actions, n_states))
+> np.add.at(N_sas, (S, A, S_next), 1)                     # N(s, a, s'); add.at counts repeated indices
+> N_sa = N_sas.sum(-1)                                    # N(s, a)
+> p_hat = N_sas / np.maximum(N_sa, 1)[..., None]          # rows of unvisited pairs stay all-zero
+> r_hat = np.zeros((n_states, n_actions))
+> np.add.at(r_hat, (S, A), Rw)
+> r_hat /= np.maximum(N_sa, 1)
+> # certainty equivalence: hand p_hat, r_hat to value or policy iteration as if they were the truth
+> ```
+
 > [!note] Where the name comes from
 > "Certainty equivalence" comes from control theory. For linear dynamics with additive noise and a quadratic objective, the optimal controller is the same as for the noise-free system: you may act as if the uncertain quantity were certain and equal to its mean.[^simon1956] In RL the phrase is used more loosely: act as if the *estimated* model were the true one. In general this is not optimal, because it ignores how uncertain the estimate is, and that is exactly where the exploration problem below comes from.
 
@@ -195,6 +208,19 @@ The planning updates are the same update rule applied to imagined data. So plann
 > 6. **Planning:** repeat $n$ times: pick a previously observed pair $(\tilde s,\tilde a)$ uniformly at random, read $(\tilde r,\tilde s')=\mathrm{Model}(\tilde s,\tilde a)$, and apply the update of step 4 to $(\tilde s,\tilde a,\tilde r,\tilde s')$.
 > 7. Set $s\leftarrow s'$ (or reset if the episode ended) and go to 3.
 
+> [!example]- Code: steps 5 and 6 of Dyna-Q (Python)
+> ```python
+> # assumes: a table Q (n_states, n_actions), model = {} (a dict), a real transition (s, a, r, s_next, terminal)
+> # that has just been used for the direct-RL update of step 4; n planning steps, alpha, gamma
+> model[(s, a)] = (r, s_next, terminal)                         # 5. model learning (deterministic world)
+> seen = list(model)
+> for _ in range(n):                                            # 6. planning on simulated transitions
+>     ps, pa = seen[np.random.randint(len(seen))]
+>     pr, ps_next, pterm = model[(ps, pa)]
+>     target = pr + (0.0 if pterm else gamma * Q[ps_next].max())
+>     Q[ps, pa] += alpha * (target - Q[ps, pa])                # the Q-learning update, on imagined data
+> ```
+
 For a stochastic environment, the model stores counts instead of a single outcome, and step 6 samples $\tilde s'\sim\hat p(\cdot\mid\tilde s,\tilde a)$ (or uses the full expected update $\sum_{s'}\hat p(s'\mid\tilde s,\tilde a)[\dots]$).
 
 ![[Reinforcement Learning/images/model-based-rl-dyna-maze.svg]]
@@ -251,6 +277,18 @@ $$
 > 4. Keep the $E$ sequences with the largest $\hat J^{(j)}$ (the *elites*) and set $\mathbf{m},\boldsymbol\sigma$ to their mean and standard deviation.
 > 5. Repeat steps 2–4 for a few iterations.
 > 6. Execute the first action of $\mathbf{m}$, observe the new state, and go to 1.
+
+> [!example]- Code: one CEM planning call (NumPy)
+> ```python
+> # assumes: predicted_return(acts) -> (K,) returns of K action sequences acts (K, H, d_a), rolled out in the
+> # learned model from the current state; initial mean m and std sigma of shape (H, d_a); bounds a_low, a_high
+> for _ in range(n_iters):
+>     acts = np.clip(m + sigma * rng.standard_normal((K, *m.shape)), a_low, a_high)   # step 2
+>     J = predicted_return(acts)                                                     # step 3
+>     elites = acts[np.argsort(J)[-E:]]                                              # step 4: the E best
+>     m, sigma = elites.mean(0), elites.std(0) + 1e-6
+> action = m[0]                      # step 6: execute only the first action, then replan from the new state
+> ```
 
 Both planners are derivative-free and embarrassingly parallel, but they scale poorly with $H\cdot d_a$, the dimension of the search space. Gradient-based trajectory optimisation (iLQR above) or, for discrete actions, Monte Carlo tree search (as in MuZero[^muzero]) take over when that becomes the bottleneck.
 

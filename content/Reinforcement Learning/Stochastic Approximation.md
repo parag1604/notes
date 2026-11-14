@@ -97,6 +97,17 @@ $$
 
 and $\alpha_n=\frac{b}{a+n}$ with $a,b>0$. The last two on the first display are borderline cases: $\sum\frac{\log n}{n}$ and $\sum\frac{1}{n\log n}$ both diverge (compare with $\int\frac{dx}{x\log x}=\log\log x$), while the sums of their squares converge. In RL, $\alpha$ often depends on how many times a state (or state-action pair) has been visited, $\alpha=1/N(s,a)$; this is a per-component version of the same idea.
 
+> [!example]- Code: a Robbins–Monro iteration with $\alpha_n=(n+1)^{-\kappa}$ (NumPy)
+> ```python
+> # assumes: h_sample(x, rng) returns one noisy evaluation h(x) + M of the mean field, a start x0,
+> # an exponent kappa and a number of steps n_steps, e.g. h_sample = lambda x, rng: mu + rng.normal() - x
+> x = x0
+> for n in range(n_steps):
+>     alpha = 1.0 / (n + 1) ** kappa         # kappa = 1: the running mean; 1/2 < kappa <= 1 satisfies (2)
+>     x = x + alpha * h_sample(x, rng)       # eq. (1): x_{n+1} = x_n + alpha_n [h(x_n) + M_{n+1}]
+> ```
+> Figure 1 is this loop, run 2000 times for each $\kappa$. With `kappa = 1.5` the steps are summable and `x` freezes short of the target.
+
 ![[Reinforcement Learning/images/stochastic-approximation-exponents.svg]]
 *Figure 1: estimating a mean ($\sigma=1$, $x_0=5$) with $\alpha_n=(n+1)^{-\kappa}$, RMS error over 2000 runs on log–log axes. $\kappa=1$ is the sample mean and follows $1/\sqrt n$ (error $0.0098$ at $n\approx10^4$). For $\kappa<1$ the error behaves like $\sqrt{\alpha_n/2}$: $0.045$ for $\kappa=0.6$ and $0.018$ for $\kappa=0.8$. $\kappa=1.5$ has $\sum\alpha_n<\infty$ and freezes at an error of about $0.24$. A constant $\alpha=0.05$ plateaus at $\sqrt{\alpha/(2-\alpha)}\approx0.16$. Note that $\kappa=0.3$ also converges here (error $0.19$ and still falling), although $\sum\alpha_n^2=\infty$.*
 
@@ -427,6 +438,18 @@ $$
 $$
 
 A large $\alpha$ follows the target closely but passes on much of the observation noise. A small $\alpha$ averages the noise but lags behind the drift. The two terms balance at $\alpha^\star\approx\delta/\sigma$.
+
+> [!example]- Code: tracking a random-walk mean with a constant step size (NumPy)
+> ```python
+> # assumes: rng, observation noise sigma, drift delta, constant step size alpha, number of steps n_steps
+> mu, x, sq_err = 0.0, 0.0, []
+> for n in range(n_steps):
+>     r = mu + sigma * rng.standard_normal()    # observe r_{n+1} = mu_n + noise
+>     x += alpha * (r - x)                      # constant step size: never converges, keeps adapting
+>     mu += delta * rng.standard_normal()       # the target drifts: mu_{n+1} = mu_n + Delta_{n+1}
+>     sq_err.append((x - mu) ** 2)              # e_{n+1}^2
+> # long-run mean of sq_err ~ (alpha^2 sigma^2 + delta^2) / (alpha (2 - alpha))
+> ```
 
 ![[Reinforcement Learning/images/stochastic-approximation-tracking.svg]]
 *Figure 5: tracking a random-walk mean ($\sigma=1$, $\delta=0.05$). Top: $\alpha=0.005$ lags behind the drift, $\alpha=0.3$ is dominated by observation noise, and the best constant step size $\alpha\approx0.049$ (close to $\delta/\sigma=0.05$) follows the mean. Bottom: steady-state mean-squared error against $\alpha$. The simulation (dots, 400 runs) matches the formula; the minimum is about $0.051$, compared with $0.25$ at $\alpha=0.005$ and $0.18$ at $\alpha=0.3$.*

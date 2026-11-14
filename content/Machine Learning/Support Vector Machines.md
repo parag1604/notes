@@ -170,6 +170,24 @@ with $\phi(\mathbf{x})=(x_1^2,\sqrt2\,x_1x_2,x_2^2)$. Evaluating $K$ costs $O(D)
 
 New kernels can be built from old ones: sums, positive scalings, products, and $f(\mathbf{x})K(\mathbf{x},\mathbf{x}')f(\mathbf{x}')$ all preserve validity. The kernel trick applies to *any* algorithm that touches data only through dot products. That includes Parzen windows in [[Non-parametric Models]], kernel $k$-means, kernel PCA, kernel ridge regression and Gaussian processes. This section is their common reference point.
 
+> [!example]- Code: Gram matrices for the common kernels
+> ```python
+> import numpy as np
+>
+> def gram(X1, X2, kind="rbf", ell=1.0, c=1.0, d=2):
+>     """K[i, j] = K(x_i, x'_j) for the rows of X1 (N1, D) and X2 (N2, D)."""
+>     if kind == "linear":
+>         return X1 @ X2.T
+>     if kind == "poly":
+>         return (X1 @ X2.T + c) ** d
+>     sq = (X1 ** 2).sum(1)[:, None] + (X2 ** 2).sum(1)[None, :] - 2 * X1 @ X2.T   # ||x - x'||^2
+>     return np.exp(-np.maximum(sq, 0) / (2 * ell ** 2))          # RBF; clip round-off negatives
+>
+> # a valid kernel gives a symmetric PSD Gram matrix:
+> # np.linalg.eigvalsh(gram(X, X)).min() >= -1e-10
+> ```
+> The RBF kernel with length scale $\ell$ is scikit-learn's `rbf_kernel` with `gamma` $=1/(2\ell^2)$.
+
 ---
 
 ## Soft-margin SVM
@@ -226,6 +244,25 @@ Compare this with $L_2$-regularized [[Linear Models#Logistic Regression|logistic
 
 ![[Machine Learning/images/support-vector-machines-losses.svg]]
 *Figure 4: losses as a function of the margin $m=yf(\mathbf{x})$. Both the hinge and the logistic loss are convex upper bounds on the 0–1 loss. The hinge is exactly zero once $m\ge1$: confidently correct points cost nothing, which is why SVM solutions are sparse. The logistic loss never reaches zero, so every point keeps a small influence, but in exchange it yields calibrated probabilities.*
+
+> [!example]- Code: the hinge-loss objective by stochastic subgradient descent (Pegasos)
+> ```python
+> import numpy as np
+>
+> def pegasos(X, y, lam, n_iter=200_000, rng=None):
+>     """Minimizes lam/2 ||w||^2 + (1/N) sum_i max(0, 1 - y_i w^T x_i), with y in {-1, +1}."""
+>     rng = np.random.default_rng(rng)
+>     w = np.zeros(X.shape[1])
+>     for t in range(1, n_iter + 1):
+>         i = rng.integers(len(y))                     # one random example per step
+>         eta = 1.0 / (lam * t)                        # Pegasos step size
+>         active = y[i] * (w @ X[i]) < 1               # hinge active before the step?
+>         w *= 1 - eta * lam                           # gradient of the regularizer
+>         if active:
+>             w += eta * y[i] * X[i]                   # subgradient of the hinge: -y_i x_i
+>     return w
+> ```
+> Dividing the hinge-loss objective above by $N$ shows that this is the same problem with $\lambda=1/(CN)$, except for the bias: append a constant feature to learn one, and Pegasos then regularizes it along with $\mathbf{w}$.
 
 ---
 

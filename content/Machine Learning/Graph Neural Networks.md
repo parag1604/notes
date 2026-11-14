@@ -523,6 +523,21 @@ $$
 
 This is **personalized PageRank**: a random walker that at every step [[Markov Chains#PageRank: the stationary distribution of the web|teleports]] back to its start node with probability $\alpha$. The weights $\alpha(1-\alpha)^k$ on $k$-hop information decay geometrically, and the node's own features always keep weight $\alpha$, so infinitely many propagation steps are safe. Only the MLP has parameters, so the depth of propagation costs no parameters at all.
 
+> [!example]- Code: APPNP propagation (after `appnp_propagate` in version 6 of the repository)
+> ```python
+> import torch
+>
+> def appnp_propagate(H, A_hat, K=10, alpha=0.1):
+>     """Z <- (1 - alpha) A_hat Z + alpha H, K times. H = MLP(X); A_hat from gcn_norm."""
+>     Z = H
+>     for _ in range(K):
+>         Z = (1 - alpha) * torch.sparse.mm(A_hat, Z) + alpha * H   # restart to H with prob. alpha
+>     return Z
+>
+> # the model: logits = appnp_propagate(mlp(X), A_hat); only the MLP has parameters
+> ```
+> After $K$ steps the distance to the closed form $\alpha(\mathbf{I}-(1-\alpha)\hat{\mathbf{A}})^{-1}\mathbf{H}$ has shrunk by at least the factor $(1-\alpha)^K$, which is $0.35$ for $\alpha=0.1$ and $K=10$, typical settings. In practice it shrinks much faster: the components that converge slowest, those along eigenvalues of $\hat{\mathbf{A}}$ near 1, start almost at their limit. On the karate club with random features the remaining error after 10 steps is about 1% of the initial one.
+
 ![Left: test accuracy against depth from 1 to 64 for GCN, GCN with residual connections and APPNP on a stochastic block model, with an MLP baseline line. GCN peaks at 2 layers and is at chance from 8 layers on; the residual GCN stays above 80 percent up to 32 layers and collapses at 64; APPNP stays near 76 percent at every depth. Right: without training, the mean cosine similarity between node feature vectors rises towards 1 as the raw features are propagated by the GCN operator, and a linear probe's accuracy rises then falls; under APPNP propagation the similarity levels off and the accuracy stays high.](Machine%20Learning/images/graph-neural-networks-oversmoothing.svg)
 *Figure 5: over-smoothing on a 4-block stochastic block model (400 nodes, mean degree 8, edge homophily 0.63, noisy 16-D Gaussian features, 20 labelled nodes per class). Left: test accuracy against depth, mean ± sd over 5 seeds. Plain GCN peaks at 2 layers ($83.1\pm3.6\%$) and is at chance (25%) from 8 layers on. With residual connections, accuracy stays at 80–85% up to 32 layers, but this simple, unnormalized version fails to train at 64 ($25.2\pm0.9\%$). APPNP, whose propagation has no parameters, settles at $75.6\pm1.4\%$ for any depth. An MLP that ignores the graph gets $49.7\pm3.3\%$. Right: no training, just repeated propagation of the raw features. With $\hat{\mathbf{A}}^k\mathbf{X}$ (solid orange), the mean cosine similarity between nodes rises from 0 to 0.96 after 16 steps and to 1.00 after 32. A logistic-regression probe (dashed) peaks at 83% after 4 steps and falls to chance (24%) by 64. Under APPNP propagation with $\alpha=0.1$ (green), the similarity stays near 0 and the probe stays at 75%.*
 
@@ -581,6 +596,23 @@ Encode with a GNN, then apply a softmax head per node and the cross-entropy over
 
 Encode the nodes, then score a candidate pair with a **decoder**, for example $s(u,v)=\sigma(\mathbf{z}_u^\top\mathbf{z}_v)$ or an MLP on $\mathbf{z}_u\odot\mathbf{z}_v$. Train with binary cross-entropy on observed edges against **negative samples** (random non-edges), as in the shallow embeddings of [[Graph Representation Learning]].
 
+> [!example]- Code: an inner-product decoder trained against negative samples (PyTorch)
+> ```python
+> import torch
+> import torch.nn.functional as F
+>
+> def link_loss(Z, pos_edges, k=1):
+>     """Z: (N, d) GNN node embeddings; pos_edges: (2, E) training edges. k negatives per positive."""
+>     u, v = pos_edges
+>     neg_v = torch.randint(0, Z.shape[0], (k * u.numel(),))   # random targets: (almost always) non-edges
+>     pos = (Z[u] * Z[v]).sum(-1)                               # logit of s(u, v) = sigma(z_u^T z_v)
+>     neg = (Z[u.repeat(k)] * Z[neg_v]).sum(-1)
+>     logits = torch.cat([pos, neg])
+>     labels = torch.cat([torch.ones_like(pos), torch.zeros_like(neg)])
+>     return F.binary_cross_entropy_with_logits(logits, labels)
+> ```
+> `Z` must come from a GNN run on the graph *without* the validation and test edges (see the warning below), and the same negatives' distribution should be used when reporting AUC or MRR.
+
 The **graph autoencoder** (GAE) reconstructs the whole adjacency matrix as $\sigma(\mathbf{Z}\mathbf{Z}^\top)$ from a GCN encoder. Its probabilistic version, the **variational graph autoencoder** (VGAE), has a GCN output a Gaussian $q(\mathbf{z}_v\mid\mathbf{X},\mathbf{A})=\mathcal{N}(\boldsymbol\mu_v,\operatorname{diag}\boldsymbol\sigma_v^2)$ per node and maximizes the evidence lower bound
 
 $$
@@ -599,6 +631,23 @@ Pool the node states into one vector with a **readout** and put an MLP on top. T
 - **sum** keeps counts (how many carbon atoms) and is the most expressive;
 - **mean** keeps proportions and is robust to graph size;
 - **max** detects the presence of a feature anywhere (does any node look like a toxic group?).
+
+> [!example]- Code: batching many graphs and the readout (after version 5 of the repository)
+> ```python
+> import torch
+>
+> def collate(graphs):
+>     """graphs: list of (X (n_i, F), edge_index (2, E_i)). One big disconnected graph plus batch ids."""
+>     Xs, eis, batch, offset = [], [], [], 0
+>     for i, (X, ei) in enumerate(graphs):
+>         Xs.append(X); eis.append(ei + offset)                 # renumber the nodes of graph i
+>         batch.append(torch.full((len(X),), i)); offset += len(X)
+>     return torch.cat(Xs), torch.cat(eis, 1), torch.cat(batch)
+>
+> # message passing runs on the big graph unchanged (no edges cross graphs); then, per graph:
+> # h_G = aggregate(H, batch, num_graphs, how="sum")   # the same aggregate as for neighbours
+> ```
+> Pooling a graph is aggregation with the graph id as the "target": `aggregate` from the message-passing snippet does sum, mean and max readouts as is.
 
 Images are pooled hierarchically (pixels, then parts, then objects), and graphs can be too:
 

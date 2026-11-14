@@ -127,6 +127,18 @@ The [[Introduction to Reinforcement Learning#Matrix form and closed-form policy 
 
 This is $V_{k+1}=\mathcal{T}^\pi V_k$, so by the contraction argument $V_k\to V^\pi$ for **every** $s$, with $\lVert V_k-V^\pi\rVert_\infty\le\gamma^k\lVert V_0-V^\pi\rVert_\infty$. Each sweep costs $O(n^2|\mathcal{A}|)$, or much less when transitions are sparse. Each sweep is a "one-step look-ahead" that pushes information about rewards one step further back through the state space.
 
+> [!example]- Code: iterative policy evaluation (NumPy)
+> ```python
+> # assumes: P[s, a, s'] = p(s'|s,a), R[s, a] = r(s,a) (expected reward), pi[s, a] = pi(a|s), gamma, tol
+> V = np.zeros(P.shape[0])
+> while True:
+>     V_new = (pi * (R + gamma * P @ V)).sum(1)      # (T^pi V)(s); P @ V has shape (S, A)
+>     if np.max(np.abs(V_new - V)) < tol:
+>         break
+>     V = V_new
+> ```
+> This is the synchronous version. `evaluate_policy` in `01_policy_iteration.py` of the RL-Basics repository is the in-place one, with explicit loops over states.
+
 ![[Reinforcement Learning/images/dynamic-programming-policy-evaluation.svg]]
 *Figure 1: iterative policy evaluation of the uniform random policy, starting from $V_0=0$. After one sweep only the cells next to G and X know about them. Each further sweep propagates value one more step outwards; by 10 sweeps $V_k$ is close to the exact $V^\pi$, and after about 30 it agrees to two decimals. Under a random policy the pit's pull dominates, so most of the grid has negative value.*
 
@@ -180,6 +192,21 @@ $$
 > 2. **Improve:** for every $s$, set $\pi_{i+1}(s)\leftarrow\arg\max_a\sum_{s',r}p(s',r\mid s,a)\big[r+\gamma V^{\pi_i}(s')\big]$. Break ties in favour of $\pi_i(s)$.
 > 3. If $\pi_{i+1}=\pi_i$, **stop** and return $\pi_i$ and $V^{\pi_i}$.
 
+> [!example]- Code: policy iteration with exact evaluation (NumPy)
+> ```python
+> # assumes: P[s, a, s'], R[s, a], gamma
+> S = np.arange(P.shape[0])
+> pi = np.zeros(len(S), dtype=int)                                # any deterministic policy
+> while True:
+>     V = np.linalg.solve(np.eye(len(S)) - gamma * P[S, pi], R[S, pi])   # evaluate: (I - gamma P^pi) V = r_pi
+>     Q = R + gamma * P @ V                                       # Q^pi(s, a)
+>     keep = np.isclose(Q[S, pi], Q.max(1))                       # tie-breaking: keep pi(s) if still best
+>     new_pi = np.where(keep, pi, Q.argmax(1))                    # improve: greedy
+>     if np.array_equal(new_pi, pi):
+>         break
+>     pi = new_pi
+> ```
+
 **Policy iteration terminates with an optimal policy.** Each improvement step either strictly increases the value in some state or stops at an optimal policy. A strictly improving sequence never repeats a policy, and there are only $|\mathcal{A}|^{n}$ deterministic policies, so the loop ends after finitely many iterations at $\pi^*$. In practice it needs **very few** iterations, often a handful even for large problems. This argument also proves that an optimal *deterministic* policy exists.
 
 > [!warning] Two details that matter
@@ -206,6 +233,19 @@ $$
 > 2. Stop when $\lVert V_{k+1}-V_k\rVert_\infty<\varepsilon\,\frac{1-\gamma}{2\gamma}$.
 >
 > **Return** the greedy policy $\pi(s)=\arg\max_a\sum_{s',r}p(s',r\mid s,a)\big[r+\gamma V_{k+1}(s')\big]$.
+
+> [!example]- Code: value iteration with the stopping rule (NumPy)
+> ```python
+> # assumes: P[s, a, s'], R[s, a], gamma, tolerance eps
+> V = np.zeros(P.shape[0])
+> while True:
+>     V_new = (R + gamma * P @ V).max(1)                          # V_{k+1} = T* V_k
+>     done = np.max(np.abs(V_new - V)) < eps * (1 - gamma) / (2 * gamma)
+>     V = V_new
+>     if done:
+>         break
+> pi = (R + gamma * P @ V).argmax(1)                              # greedy policy
+> ```
 
 **Convergence.** $\mathcal{T}^*$ is a $\gamma$-contraction, so $V_k\to V^*$ from any $V_0$, with $\lVert V_k-V^*\rVert_\infty\le\gamma^k\lVert V_0-V^*\rVert_\infty$. Note that the intermediate $V_k$ need not be the value of *any* policy. Value iteration works in "value space", not "policy space".
 
@@ -262,6 +302,14 @@ So one application of $\mathcal{T}^\mu$ brackets $V^\mu$ from both sides. The sa
 > $$
 
 These are the MacQueen–Porteus bounds.[^macqueen1966]<sup>,</sup>[^porteus1971] They come for free from the last two iterates.
+
+> [!example]- Code: two-sided bounds from the last two iterates (NumPy)
+> ```python
+> # assumes: two successive value-iteration iterates V_prev = V_{k-1} and V = V_k, discount gamma
+> diff = V - V_prev
+> lower = V + gamma / (1 - gamma) * diff.min()    # V_k + c_low
+> upper = V + gamma / (1 - gamma) * diff.max()    # V_k + c_up; lower <= V* <= upper in every state
+> ```
 
 > [!proof]- Proof
 > Write $V=V_{k-1}$, $d=\mathcal{T}^*V-V$ and $\overline d=\max_sd(s)$, so $\overline c_k=\gamma\overline d/(1-\gamma)$.

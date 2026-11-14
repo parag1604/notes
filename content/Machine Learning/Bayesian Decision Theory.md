@@ -139,10 +139,10 @@ $$
 
 This is a **likelihood ratio test**. The data enter only through the likelihood ratio $\psi(\mathbf{x})$, while the costs and the priors are folded into a threshold $\theta$ that does not depend on $\mathbf{x}$. Changing the costs or the priors does not change the classifier's "shape", only where we cut.
 
-Figure 3 shows this for the fish. With 0-1 loss, $\theta=\pi_2/\pi_1=2$ and the boundary is at 5.05, as before. Suppose instead that wrongly calling a salmon "sea bass" costs 5 (salmon are expensive), while the opposite mistake costs 1. Then $\theta=\frac{1}{5}\cdot2=0.4$, and the boundary moves to 5.80. More fish are called salmon, because missing one is now expensive.
+Figure 3 shows this for the fish. With 0-1 loss, $\theta=\pi_2/\pi_1=2$ and the boundary is at 5.05, as before. Suppose instead that wrongly calling a salmon "sea bass" costs 5 (salmon are expensive), while the opposite mistake costs 1. Then $\theta=\frac{1}{5}\cdot2=0.4$, and the boundary moves to 5.81. More fish are called salmon, because missing one is now expensive.
 
 ![[Machine Learning/images/bayesian-decision-theory-likelihood-ratio.svg]]
-*Figure 3. The likelihood ratio $\psi(x)$ on a log scale, with two thresholds. With 0-1 loss we decide salmon wherever $\psi(x)>2$, that is for $x<5.05$. If missing a salmon costs five times as much, the threshold drops to 0.4 and the boundary moves to $x=5.80$.*
+*Figure 3. The likelihood ratio $\psi(x)$ on a log scale, with two thresholds. With 0-1 loss we decide salmon wherever $\psi(x)>2$, that is for $x<5.05$. If missing a salmon costs five times as much, the threshold drops to 0.4 and the boundary moves to $x=5.81$.*
 
 > [!note] Decision regions need not be connected
 > Because the sea bass density is wider, it dominates again in the far left tail. The likelihood ratio drops below 2 again for $x<-1.85$, off the plot, so the exact Bayes region for salmon is the interval $(-1.85,\,5.05)$. Lightness cannot be negative, so this does not matter here. In general, though, unequal spreads make decision regions curved, or even split into pieces. We will see the same thing in two dimensions [[#Gaussian class-conditionals|below]].
@@ -162,6 +162,32 @@ The cheaper rejection is, the more cases are rejected and the lower the error on
 
 ![[Machine Learning/images/bayesian-decision-theory-reject.svg]]
 *Figure 4. A reject option with cost $c=0.2$. Where neither posterior reaches $1-c=0.8$ (the shaded band, $4.23<x<5.71$), rejecting is cheaper than the expected cost of a mistake.*
+
+> [!example]- Code: the Bayes rule with a loss matrix and a reject option
+> ```python
+> import numpy as np
+> from scipy import stats
+>
+> def bayes_action(post, loss=None, reject_cost=None):
+>     """post: (N, K) posteriors P(k|x); loss[i, k] = cost of deciding i when the class is k.
+>     Returns the risk-minimizing action per row; action K means "reject"."""
+>     K = post.shape[1]
+>     loss = 1 - np.eye(K) if loss is None else loss            # 0-1 loss by default
+>     risk = post @ loss.T                                       # R(a_i|x) = sum_k loss[i, k] P(k|x)
+>     if reject_cost is not None:
+>         risk = np.column_stack([risk, np.full(len(post), reject_cost)])
+>     return risk.argmin(axis=1)
+>
+> # the fish: salmon N(4, 1), sea bass N(7, 1.5^2), priors 1/3 and 2/3
+> x = np.linspace(0, 10, 100_001)
+> joint = np.column_stack([stats.norm(4, 1).pdf(x) / 3, 2 * stats.norm(7, 1.5).pdf(x) / 3])
+> post = joint / joint.sum(axis=1, keepdims=True)
+> a = bayes_action(post, reject_cost=0.2)
+> print(x[a == 2].min(), x[a == 2].max())                        # reject band: about 4.23 to 5.71
+> L = np.array([[0, 1], [5, 0]])                                 # calling a salmon "sea bass" costs 5
+> print(x[np.argmax(bayes_action(post, L) == 1)])                # boundary moves right, to about 5.81
+> ```
+> The risk is one matrix product: row $i$ of `loss` holds the $\lambda_{ik}$ of the conditional risk. Rejecting wins exactly when $c$ is below $1-\max_k\mathbb{P}(k\mid\mathbf{x})$, the rule above.
 
 ## The minimax rule: when the priors are unknown
 
@@ -346,6 +372,24 @@ $$
 where $c_{kj}$ counts word $j$ in class $k$, $V$ is the vocabulary size, and $\alpha=1$ is the usual default. This is the posterior mean under a symmetric Dirichlet prior: pseudo-counts, exactly as in the [[Linear Models#Warm-up: maximum likelihood and MAP for a coin|coin example]]. The Gaussian version of the same problem is a feature with zero variance in some class (a pixel that is always black for the digit 1), which makes the density infinite or zero. Practical implementations add a small constant to every variance ("variance smoothing").
 
 The second practical rule is to **work in log space**. A product of hundreds of densities underflows or overflows floating point, and comparing sums of logs is both stable and faster.
+
+> [!example]- Code: multinomial naive Bayes with add-α smoothing
+> ```python
+> import numpy as np
+>
+> def fit_mnb(X, y, alpha=1.0):
+>     """X: (N, V) word counts, y: (N,) labels. Returns log priors and log phi_kj."""
+>     classes = np.unique(y)
+>     log_prior = np.log(np.array([np.mean(y == k) for k in classes]))
+>     counts = np.array([X[y == k].sum(axis=0) for k in classes])          # c_kj
+>     log_phi = np.log(counts + alpha) - np.log(counts.sum(axis=1, keepdims=True) + alpha * X.shape[1])
+>     return classes, log_prior, log_phi
+>
+> def predict_mnb(model, X):
+>     classes, log_prior, log_phi = model
+>     return classes[np.argmax(X @ log_phi.T + log_prior, axis=1)]        # log pi_k + sum_j n_j log phi_kj
+> ```
+> With `alpha=0`, a word never seen in class $k$ gets $\log\hat\phi_{kj}=-\infty$ and vetoes that class whatever the other words say. With `alpha=1` the estimates and predictions agree with scikit-learn's `MultinomialNB`.
 
 > [!example]- Code: Gaussian naive Bayes in log space
 > ```python

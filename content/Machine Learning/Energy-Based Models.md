@@ -185,6 +185,25 @@ Each stored pattern contributes minus its **squared overlap** with the current s
 ![[Machine Learning/images/energy-based-models-hopfield-recall.svg]]
 *Figure 3. A 144-unit Hopfield network storing four $12\times12$ glyphs (X, O, T, L) with Hebb's rule. Starting from the "O" with 30% of its pixels flipped, asynchronous updates restore it exactly. The energy (bottom) decreases monotonically and stops at the energy of the stored pattern.*
 
+> [!example]- Code: Hebbian storage and asynchronous recall (NumPy)
+> ```python
+> # assumes: xi (M, D) stored patterns in {-1, +1}; s (D,) a noisy cue in {-1, +1}
+> import numpy as np
+> D = xi.shape[1]
+> W = xi.T @ xi / D                          # Hebb's rule (5)
+> np.fill_diagonal(W, 0)                     # no self-connections
+> energy = lambda s: -0.5 * s @ W @ s        # (3) with b = 0
+> for sweep in range(20):
+>     changed = False
+>     for i in np.random.permutation(D):     # one unit at a time, (4)
+>         new = 1 if W[i] @ s >= 0 else -1
+>         changed |= new != s[i]
+>         s[i] = new
+>     if not changed:                        # a fixed point: a local minimum of E
+>         break
+> ```
+> Every flip lowers `energy(s)` (the proof above), so the loop stops after finitely many sweeps.
+
 ### Capacity and spurious memories
 
 Why does a stored pattern stay put? At $\mathbf{s}=\boldsymbol\xi^{(1)}$ the local field splits into a signal term and a **crosstalk** term from the other memories:
@@ -288,6 +307,25 @@ Running the chain to equilibrium for every gradient step is too slow. Hinton's *
 
 This is (7) with the model expectation replaced by a short chain started at the data. Using the probabilities $p(\mathbf{h}\mid\cdot)$ instead of binary samples in step 3 reduces variance. Even $k=1$ works well in practice. CD is not, however, the gradient of the likelihood: it is biased, and it can leave spurious low-energy regions far from the data, which a short chain never visits.[^carreira2005] **Persistent CD** keeps the chains running across updates instead of restarting them at the data, and approximates the true gradient better.[^tieleman2008]
 
+> [!example]- Code: one CD-k update of a binary RBM (PyTorch)
+> ```python
+> # assumes: v0 (B, D) a binary data batch; RBM parameters W (D, H), a (D,), b (H,); k; lr
+> import torch
+> h_given_v = lambda v: torch.sigmoid(b + v @ W)       # p(h_j = 1 | v)
+> v_given_h = lambda h: torch.sigmoid(a + h @ W.T)     # p(v_i = 1 | h)
+>
+> ph0 = h_given_v(v0)                                  # step 1: positive (wake) phase
+> h = torch.bernoulli(ph0)
+> for _ in range(k):                                   # step 2: k steps of block Gibbs
+>     v = torch.bernoulli(v_given_h(h))
+>     ph = h_given_v(v)
+>     h = torch.bernoulli(ph)
+> W += lr * (v0.T @ ph0 - v.T @ ph) / len(v0)          # step 3: <v h>_data - <v h>_model, (7)
+> a += lr * (v0 - v).mean(0)
+> b += lr * (ph0 - ph).mean(0)
+> ```
+> The update is exactly $\nabla_\theta\big[F(\mathbf{v}^{(k)})-F(\mathbf{v}^{(0)})\big]$, averaged over the batch, with the free energy $F$ above and $\mathbf{v}^{(k)}$ held fixed: (9) with a $k$-step chain in place of model samples. For **persistent CD**, keep `h` (or `v`) from the previous update instead of restarting the chain at `v0`.
+
 Stacks of RBMs, trained greedily one layer at a time, became **deep belief networks**.[^hinton2006] In 2006 these were among the first deep networks that could be trained, and they helped start the deep-learning revival. Hopfield and Hinton shared the 2024 Nobel Prize in Physics for this line of work.
 
 ## Deep EBMs: learning any energy
@@ -348,6 +386,25 @@ Notice what (10) uses: $\nabla_{\mathbf{x}}E_\theta(\mathbf{x})=-\nabla_{\mathbf
 
 Figure 6a shows the main practical difficulty: **mixing**. A chain rarely crosses a high-energy barrier, so with few steps the samples reflect where the chains started rather than the true weights of the modes. Practical deep EBMs therefore use short chains, initialize them from a **replay buffer** of earlier samples, and regularize the energy magnitudes to keep training stable.[^du2019] Song and Kingma's tutorial surveys these techniques.[^song2021]
 
+> [!example]- Code: Langevin sampling and the maximum-likelihood loss (PyTorch)
+> ```python
+> # assumes: energy(x) -> (B,) the energies E_theta(x); x_real (B, D) a data batch; K, eta, alpha
+> import torch
+> def langevin(energy, x, K, eta):
+>     """K steps of (10): x <- x - (eta/2) grad_x E(x) + sqrt(eta) eps."""
+>     for _ in range(K):
+>         x = x.detach().requires_grad_(True)
+>         grad, = torch.autograd.grad(energy(x).sum(), x)    # gradient w.r.t. x only
+>         x = x - 0.5 * eta * grad + eta ** 0.5 * torch.randn_like(x)
+>     return x.detach()                                      # samples are constants for theta
+>
+> x_fake = langevin(energy, 8 * torch.rand_like(x_real) - 4, K, eta)   # short-run chains from noise
+> e_real, e_fake = energy(x_real), energy(x_fake)
+> loss = e_real.mean() - e_fake.mean() + alpha * (e_real ** 2 + e_fake ** 2).mean()
+> loss.backward()               # E_data[grad E] - E_model[grad E], (9), plus a regularizer
+> ```
+> The first two terms of `loss` have gradient (9): energy down on data, up on samples. The small `alpha` term keeps the energies near zero so that both terms cannot drift off to infinity together; the companion repository uses the same loss. A replay buffer would replace the uniform noise by stored end points of earlier chains.
+
 ### Avoiding sampling altogether
 
 Two classic alternatives train an EBM without any MCMC:
@@ -403,6 +460,18 @@ Then (12) is exactly the [[Sequence Models#Attention as a soft dictionary lookup
 
 ![[Machine Learning/images/energy-based-models-modern-hopfield.svg]]
 *Figure 7. One retrieval step (12) of a modern Hopfield network storing the four glyphs from Figure 3 as continuous vectors. The query is the "T" with its lower half masked (set to 0). Top: the retrieved state; bottom: the softmax weights over the stored patterns. At $\beta=0.002$ the weights are nearly uniform and the output is a blur of all four glyphs; at $\beta=0.03$ the "T" dominates; at $\beta=0.5$ the full "T" is retrieved in one step.*
+
+> [!example]- Code: one retrieval step is one attention call (PyTorch)
+> ```python
+> # assumes: X (D, M) stored patterns as columns; xi (D,) the query state; beta
+> import torch, torch.nn.functional as F
+> xi_new = X @ torch.softmax(beta * X.T @ xi, dim=0)          # (12)
+>
+> # the same step as transformer attention: query xi, keys = values = stored patterns
+> q, K = xi[None, None, None, :], X.T[None, None]              # shapes (1,1,1,D), (1,1,M,D)
+> attn = F.scaled_dot_product_attention(q, K, K, scale=beta)[0, 0, 0]
+> ```
+> `attn` equals `xi_new`. With separate learned projections for queries, keys and values, this is a transformer's attention layer.
 
 ## EBMs among the generative models
 

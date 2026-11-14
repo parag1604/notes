@@ -292,6 +292,23 @@ Sampling is numerical integration of (1), and the cost is counted in **network e
 - **Heun** (the trapezoidal rule as predictor–corrector): an Euler step predicts $\tilde{\mathbf{x}}=\mathbf{x}_t+h\,\mathbf{v}(\mathbf{x}_t,t)$, and the update averages the two slopes, $\mathbf{x}_{t+h}=\mathbf{x}_t+\tfrac h2\big[\mathbf{v}(\mathbf{x}_t,t)+\mathbf{v}(\tilde{\mathbf{x}},t+h)\big]$. Two evaluations per step, global error $O(h^2)$. Karras et al. popularized it for diffusion sampling.[^karras2022]
 - **Adaptive solvers** (e.g. Dormand–Prince RK45) pick the step size from an error estimate. They are accurate but spend many evaluations where the field is stiff.
 
+> [!example]- Code: Euler, midpoint and Heun steps
+> ```python
+> # assumes: model(x, t) -> v_theta(x, t), as above; x (n, D); t (n,) the current time; h the step
+> def euler_step(model, x, t, h):
+>     return x + h * model(x, t)
+>
+> def midpoint_step(model, x, t, h):
+>     x_half = x + 0.5 * h * model(x, t)                  # half an Euler step
+>     return x + h * model(x_half, t + 0.5 * h)           # full step with the midpoint slope
+>
+> def heun_step(model, x, t, h):
+>     v0 = model(x, t)
+>     x_pred = x + h * v0                                 # Euler predictor
+>     return x + 0.5 * h * (v0 + model(x_pred, t + h))    # average the two slopes
+> ```
+> Replace the update line of `sample` with any of these. On a test ODE with a known solution, halving $h$ halves the Euler error and quarters the midpoint and Heun errors.
+
 ![[Machine Learning/images/flow-matching-solvers.svg]]
 *Figure 2. Sample quality against cost for the flow trained on the eight Gaussians with independent pairs, measured by the sliced Wasserstein distance (SWD) between 10 000 samples and 10 000 data points; the grey band is the range of SWD between two independent data samples, so differences inside it are noise. With 2 evaluations, two Euler steps (0.55) beat one midpoint step (1.20) or one Heun step (1.65). From 8 evaluations on, all three solvers are within the noise band.*
 
@@ -353,6 +370,24 @@ $$
 which is zero exactly when every trajectory is a straight line at constant speed, and they show that repeated reflow drives it to zero, at a rate of order $1/k$ for the best of the first $k$ flows. A coupling whose straight lines never cross is a fixed point: its interpolation already has non-crossing straight paths, so its rectified flow follows them exactly.
 
 Three caveats. Each reflow needs a full pass of ODE solves to generate training pairs, and fits a new network. The pairs carry the previous model's errors, so sample quality can degrade slightly with each round. And a straight coupling is not necessarily the optimal transport coupling; it is merely one with no crossings.[^liu2022]
+
+> [!example]- Code: one round of reflow
+> ```python
+> # assumes: model, a trained rectified flow v(x, t), and the Velocity class from above
+> @torch.no_grad()
+> def reflow_pairs(model, n, steps=100, d=2):
+>     z0 = torch.randn(n, d)                              # noise
+>     z1 = z0.clone()
+>     for i in range(steps):                              # push it through the flow (9)
+>         z1 = z1 + model(z1, torch.full((n,), i / steps)) / steps
+>     return z0, z1                                       # a deterministic coupling
+>
+> def reflow_loss(model2, z0, z1):                        # cfm_loss, with the pairs held fixed
+>     t = torch.rand(len(z0))
+>     zt = (1 - t[:, None]) * z0 + t[:, None] * z1
+>     return ((model2(zt, t) - (z1 - z0)) ** 2).sum(1).mean()
+> ```
+> Generate the pairs once, then train a fresh `Velocity()` on minibatches of them with `reflow_loss`. The only change from `cfm_loss` is where the pairs come from.
 
 ### Distillation to one step
 

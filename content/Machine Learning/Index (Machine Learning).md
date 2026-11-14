@@ -12,10 +12,10 @@ Sorting a list is not a learning problem: a fixed recipe works on every input, a
 | Setting | What the learner gets | Example | Where in these notes |
 |---|---|---|---|
 | Supervised | inputs with labels | spam filtering, house prices | lectures 1–5 and 9–12 below |
-| Unsupervised | inputs only | communities in a social network, compression | lectures 6–8 and 13–21 below |
+| Unsupervised | inputs only | communities in a social network, compression | lectures 6–8 and 13–22 below |
 | Semi-supervised | a few labelled and many unlabelled inputs | labelling a fraction of medical scans | builds on both |
 | Active | inputs, and the right to ask for chosen labels | asking an expert only about confusing cases | — |
-| Transfer, domain adaptation | data from a related task or distribution | a model trained on photos applied to sketches | — |
+| Transfer, domain adaptation | data from a related task or distribution | a model trained on photos applied to sketches | [[Unsupervised Domain Adaptation]] |
 | Few-shot, zero-shot | a handful of labelled examples, or none, for a new class | recognizing a new product from one picture | [[Self-Supervised Representation Learning]] helps |
 | Interactive | rewards for actions the learner chooses | adaptive clinical trials, game playing | [[Multi-Armed Bandits]], [[Introduction to Reinforcement Learning]] |
 
@@ -51,7 +51,7 @@ Typical proportions are 60/20/20 or 80/10/10. When data are scarce, **$k$-fold c
 
 **Unsupervised learning.** Learning structure from data without labels: compact representations, clusters, and generative models that can produce new data. Matrix factorization gives linear representations; EM fits latent-variable models; VAEs and GANs make those models deep; energy-based and score-based models lead to diffusion models.
 
-The lectures are meant to be read in this order. Lectures 1–5 are classical supervised learning. Lectures 6–8 learn structure without labels with classical tools (matrix factorization, clustering, and graphs), which leads into representation learning. Lectures 9–12 are neural networks for vectors, images, sequences and graphs; lectures 13–14 learn representations from unlabelled data and use them for supervised tasks; lectures 15–21 are deep generative models.
+The lectures are meant to be read in this order. Lectures 1–5 are classical supervised learning. Lectures 6–8 learn structure without labels with classical tools (matrix factorization, clustering, and graphs), which leads into representation learning. Lectures 9–12 are neural networks for vectors, images, sequences and graphs; lectures 13–14 learn representations from unlabelled data and use them for supervised tasks; lectures 15–21 are deep generative models; lecture 22 closes with domain adaptation, which reuses the representation-learning and adversarial ideas to make a classifier work on a new, unlabelled domain.
 
 1. [[Bayesian Decision Theory]]: the optimal classifier when the distributions are known: posterior decisions and the Bayes error, losses and risk, the likelihood ratio test, the reject option, the minimax rule, and Gaussian discriminants (linear and quadratic boundaries).
 2. [[Linear Models]]: least squares (geometry, normal equations, MLE), gradient descent, ridge and lasso as MAP estimation, and logistic/softmax regression with cross-entropy.
@@ -74,3 +74,4 @@ The lectures are meant to be read in this order. Lectures 1–5 are classical su
 19. [[Denoising Diffusion Models]]: the DDPM as a hierarchical VAE, its ELBO (reconstruction, prior matching, denoising matching), predicting the clean data, the noise or the score, noise schedules, classifier and classifier-free guidance, latent diffusion, DDIM (fast deterministic sampling and inversion), and the SDE/ODE view.
 20. [[Flow Matching]]: generative models that learn a velocity field transporting noise to data along simple paths, trained by regression.
 21. [[Normalizing Flows]]: invertible networks with tractable Jacobian determinants, trained by exact maximum likelihood with the change-of-variables formula.
+22. [[Unsupervised Domain Adaptation]]: a labelled source and an unlabelled target from a shifted distribution: kinds of shift, importance weighting and label-shift estimation, the Ben-David bound, discrepancy (MMD, CORAL) and adversarial alignment (DANN with the gradient reversal layer, ADDA, CDAN, MCD), classifying the target directly (self-training, the contradistinguisher CUDA), test-time and source-free adaptation, and the limits of invariance.

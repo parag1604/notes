@@ -300,6 +300,31 @@ $$
 
 Why not simply let the query encoder produce the keys? Because the queue holds keys computed at many different steps. If the encoder changed quickly, the keys in the queue would come from many different encoders, and the anchor would be contrasted against a set of mutually inconsistent points: the model could tell old keys from new ones by their "age" instead of their content. He et al. found that copying the query encoder ($m=0$) made training fail, while $m=0.999$ worked best. A slowly moving key encoder makes all keys in the queue nearly comparable.
 
+> [!example]- Code: the MoCo loss with a queue and a momentum encoder (after `version3.py`)
+> ```python
+> import torch
+> import torch.nn.functional as F
+>
+> def moco_loss(encoder_q, encoder_k, x_q, x_k, queue, tau=0.07):
+>     """queue: (H, d) normalized keys of earlier batches, used as the negatives."""
+>     q = F.normalize(encoder_q(x_q), dim=1)                  # queries: the trained encoder
+>     with torch.no_grad():
+>         k = F.normalize(encoder_k(x_k), dim=1)              # keys: momentum encoder, no gradient
+>     logits = torch.cat([(q * k).sum(1, keepdim=True),       # column 0: the positive key
+>                         q @ queue.T], dim=1) / tau          # H negatives from the queue
+>     target = torch.zeros(len(q), dtype=torch.long)
+>     return F.cross_entropy(logits, target), k
+>
+> @torch.no_grad()
+> def momentum_update(encoder_k, encoder_q, m=0.999):          # xi <- m xi + (1 - m) theta
+>     for pk, pq in zip(encoder_k.parameters(), encoder_q.parameters()):
+>         pk.mul_(m).add_(pq, alpha=1 - m)
+>
+> # each step: loss, k = moco_loss(...); loss.backward(); opt.step(); momentum_update(...)
+> #            queue = torch.cat([k, queue])[:H]               # enqueue the newest keys, drop the oldest
+> ```
+> Compared with SimCLR's `info_nce`, the negatives come from `queue` instead of the other views in the batch, so their number $H$ no longer depends on the batch size. The new keys are enqueued only after the loss is computed, so a key is never its own negative.
+
 MoCo v2 added SimCLR's projection head and stronger augmentations, and then outperformed SimCLR with a batch of only 256.[^chen2020mocov2] The `version3.py` script of the code repository implements MoCo on MNIST, and `version4.py` fine-tunes the MoCo encoder with only 1000 labels, reaching about 95% test accuracy against about 93% from a random initialization.
 
 ### Hard negatives and false negatives
@@ -331,6 +356,20 @@ $$
 $$
 
 and found that across many trained encoders, lower values of both predict better downstream accuracy. Optimizing the two directly works as well as InfoNCE.
+
+> [!example]- Code: the alignment and uniformity losses
+> ```python
+> import torch
+>
+> def align_loss(z, z_pos):
+>     """E ||z - z+||^2 over positive pairs; rows are L2-normalized embeddings."""
+>     return (z - z_pos).pow(2).sum(1).mean()
+>
+> def uniform_loss(z, t=2.0):
+>     """log E exp(-t ||z - z'||^2) over distinct pairs in the batch."""
+>     return torch.pdist(z).pow(2).mul(-t).exp().mean().log()
+> ```
+> Both are cheap enough to log during training. For points spread evenly on the unit circle, `uniform_loss` approaches $\log I_0(4)-4\approx-1.575$, the floor quoted in Figure 5; a collapsed embedding gives 0.
 
 This picture also explains collapse. Alignment alone is solved perfectly by mapping every input to the same point: $\mathcal{L}_{\mathrm{align}}=0$, with no information left. Uniformity alone is solved by scattering inputs at random. It is the tension between the two that produces a useful representation: spread out as much as possible, *except* along the directions the augmentations say do not matter.
 
@@ -417,6 +456,32 @@ $$
 
 Unlike Barlow Twins, the variance and covariance terms are applied to each branch separately, so the two branches need not share weights or even modalities. Both methods are close relatives of [[Matrix Factorization and Dimensionality Reduction|PCA]]: they ask for decorrelated coordinates, and the redundancy-reduction terms are a soft form of whitening.
 
+> [!example]- Code: the Barlow Twins and VICReg losses
+> ```python
+> import torch
+> import torch.nn.functional as F
+>
+> def barlow_twins(z1, z2, lam=5e-3):
+>     """z1, z2: (B, d) embeddings of two views of the same B images."""
+>     z1 = (z1 - z1.mean(0)) / z1.std(0, correction=0)       # standardize each coordinate over the batch
+>     z2 = (z2 - z2.mean(0)) / z2.std(0, correction=0)
+>     C = z1.T @ z2 / len(z1)                                 # (d, d) cross-correlation matrix
+>     on = ((1 - C.diagonal()) ** 2).sum()                    # invariance
+>     off = (C ** 2).sum() - (C.diagonal() ** 2).sum()        # redundancy reduction
+>     return on + lam * off
+>
+> def vicreg(z1, z2, lam=25.0, mu=25.0, nu=1.0, eps=1e-4):
+>     d = z1.shape[1]
+>     def var_cov(z):                                         # applied to each branch separately
+>         z = z - z.mean(0)
+>         var = F.relu(1 - torch.sqrt(z.var(0) + eps)).mean() # hinge: every std >= 1
+>         cov = z.T @ z / (len(z) - 1)
+>         return var, ((cov ** 2).sum() - (cov.diagonal() ** 2).sum()) / d
+>     (v1, c1), (v2, c2) = var_cov(z1), var_cov(z2)
+>     return lam * F.mse_loss(z1, z2) + mu * (v1 + v2) / 2 + nu * (c1 + c2)
+> ```
+> The weights are the papers' defaults. A collapsed embedding makes the Barlow Twins diagonal term and the VICReg variance hinge large, and copies of one direction make the off-diagonal terms large; nothing in either loss needs a negative pair.
+
 ![Left: per-coordinate standard deviation of normalized embeddings during training for four variants; SimSiam and VICReg stay away from zero, while no-stop-gradient and no-predictor fall towards zero. Right: singular value spectra of the final embeddings, on a log scale.](Machine%20Learning/images/self-supervised-representation-learning-collapse.svg)
 
 *Figure 6. A tiny SimSiam on synthetic data (32-dimensional inputs, 16-dimensional embeddings). The left panel tracks the average standard deviation of the normalized embeddings, scaled so that 1 means spread evenly over the sphere and 0 means complete collapse. Without the stop-gradient (0.011) or without the predictor (0.018), the embeddings collapse within the first hundred steps. SimSiam (0.42) and VICReg (0.89) do not. The right panel shows the singular values of the final normalized, centred embeddings. Both collapsed variants sit around $10^{-2}$ or below in every direction. SimSiam avoids complete collapse but shows **dimensional** collapse: one direction dominates (singular values 0.47, 0.08, 0.03, …). VICReg keeps nine roughly equal directions. 10-NN accuracy on the 10 classes: VICReg 99.3%, SimSiam 62.9%, no predictor 76.3%, no stop-gradient 41.1%. (Cosine 10-NN can still rank neighbours in a nearly collapsed embedding, but the tiny remaining variation is fragile.) One seed each and no batch normalization: the real methods behave better than this toy SimSiam, but the qualitative picture matches the ablations of Chen and He.*
@@ -466,6 +531,30 @@ The batch size was 32768, so each image is contrasted with 32767 wrong captions.
 
 The softmax in CLIP's loss normalizes over the whole batch, which couples all devices in a distributed run. **SigLIP**[^zhai2023] replaces it with an independent **sigmoid** (binary) loss on every image–text pair, positive on the diagonal and negative elsewhere, which is the NCE-style binary view of the same problem. It works as well or better, especially at smaller batch sizes.
 
+> [!example]- Code: CLIP's symmetric InfoNCE, and SigLIP's sigmoid version
+> ```python
+> import torch
+> import torch.nn.functional as F
+>
+> def clip_loss(img, txt, log_scale):
+>     """img, txt: (B, d); row i of each is one image-caption pair. log_scale = log(1/tau), learned."""
+>     I, T = F.normalize(img, dim=1), F.normalize(txt, dim=1)
+>     logits = log_scale.exp() * I @ T.T                     # (B, B) scaled cosine similarities
+>     target = torch.arange(len(I))                           # true pairs on the diagonal
+>     return (F.cross_entropy(logits, target)                 # each image: find its caption (rows)
+>             + F.cross_entropy(logits.T, target)) / 2        # each caption: find its image (columns)
+>
+> def siglip_loss(img, txt, log_scale, bias):
+>     """An independent binary classification for each of the B*B pairs: no softmax over the batch."""
+>     I, T = F.normalize(img, dim=1), F.normalize(txt, dim=1)
+>     logits = log_scale.exp() * I @ T.T + bias
+>     labels = 2 * torch.eye(len(I)) - 1                      # +1 on the diagonal, -1 elsewhere
+>     return -F.logsigmoid(labels * logits).sum() / len(I)
+>
+> # zero-shot: class_txt = text_encoder(["a photo of a {c}." for c in classes])
+> # pred = (F.normalize(img, dim=1) @ F.normalize(class_txt, dim=1).T).argmax(1)
+> ```
+
 ## Evaluation and practice
 
 **Evaluation protocols.**
@@ -495,6 +584,7 @@ Balestriero et al.'s *Cookbook of Self-Supervised Learning* collects these recip
 
 ## Where this shows up next
 
+- [[Unsupervised Domain Adaptation]]: representations that must work on a new, unlabelled domain. Its contradistinguisher (CUDA) normalizes predictions over a batch of target points, as InfoNCE normalizes over candidates.
 - [[Language Representations and Language Models]]: the same ideas on text. Word2Vec's negative sampling is a binary contrastive loss over words and contexts; masked language modelling is MAE for words; next-token prediction is the self-supervised task behind GPT.
 - [[Energy-Based Models]]: the full energy-based picture behind (1), including how to train when the normalizer is a sum over all inputs and no candidate set is available.
 - [[Score-Based Models]]: noise-contrastive estimation and denoising as two more ways to learn without a normalizer.

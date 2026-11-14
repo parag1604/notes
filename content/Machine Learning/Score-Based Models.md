@@ -116,6 +116,18 @@ $$
 
 The term $\mathbf{v}^\top\nabla_{\mathbf{x}}\mathbf{s}_\theta\,\mathbf{v}$ is the derivative of the scalar $\mathbf{v}^\top\mathbf{s}_\theta$ in the direction $\mathbf{v}$: one Jacobian-vector product, one extra backward pass, whatever the dimension. Geometrically, we match the scores' one-dimensional projections along random directions, the "slices".
 
+> [!example]- Code: the sliced score matching loss (PyTorch)
+> ```python
+> # assumes: score(x) -> (B, D) the network s_theta(x); x (B, D) a data batch
+> import torch
+> x = x.detach().requires_grad_(True)
+> s = score(x)
+> v = torch.randn_like(x)                                    # one random slice per example
+> jv, = torch.autograd.grad((v * s).sum(), x, create_graph=True)   # (grad_x s)^T v
+> loss = ((jv * v).sum(1) + 0.5 * (s ** 2).sum(1)).mean()   # v^T (grad_x s) v + |s|^2 / 2
+> ```
+> One extra backward pass replaces the $D$ passes of the exact trace; `create_graph=True` lets `loss.backward()` differentiate through it.
+
 ### Denoising score matching
 
 The third method, due to Vincent, changes the target distribution instead.[^vincent2011] Perturb each data point with Gaussian noise of scale $\sigma$:
@@ -262,6 +274,18 @@ $$
 
 Each term is again "predict the noise", now with the noise level given. In practice we sample one random level per data point instead of summing over all $L$.
 
+> [!example]- Code: the noise-conditional denoising score matching loss (6) (PyTorch)
+> ```python
+> # assumes: score(x, sigma) -> (B, D) the NCSN s_theta(x, sigma); x (B, D) a data batch;
+> #          sigmas (L,) geometric noise levels, largest first
+> import torch
+> sigma = sigmas[torch.randint(len(sigmas), (len(x),))][:, None]   # one random level each
+> eps = torch.randn_like(x)
+> x_noisy = x + sigma * eps                                        # x~ = x + sigma eps
+> loss = 0.5 * ((sigma * score(x_noisy, sigma) + eps) ** 2).sum(1).mean()   # lambda = sigma^2
+> ```
+> With a single fixed $\sigma$ and the factor $1/\sigma^2$ restored, this is plain denoising score matching (4). Writing the network as `-eps_net(x_noisy, sigma) / sigma` turns the last line into "predict the noise", $\tfrac12\lVert\boldsymbol\epsilon_\theta-\boldsymbol\epsilon\rVert^2$.
+
 ### Annealed Langevin dynamics
 
 Sampling runs Langevin dynamics at each noise level in turn, from the noisiest to the cleanest, starting each level where the previous one ended:
@@ -274,6 +298,21 @@ Sampling runs Langevin dynamics at each noise level in turn, from the noisiest t
 > 5. Return $\mathbf{x}$.
 
 The step size shrinks with $\sigma_i^2$ for a reason. The score has magnitude about $1/\sigma_i$, so the drift $\tfrac{\eta_i}{2}\mathbf{s}_\theta$ is about $\eta_i/\sigma_i$ while the noise is about $\sqrt{\eta_i}$. With $\eta_i\propto\sigma_i^2$, their ratio, the **signal-to-noise ratio** of a step, is the same at every level. Each level is then "the same amount of work", just at a different scale.
+
+> [!example]- Code: annealed Langevin dynamics (PyTorch)
+> ```python
+> # assumes: score(x, sigma) -> (n, D) a trained NCSN; sigmas (L,) largest first; eta; K
+> import torch
+> @torch.no_grad()
+> def annealed_langevin(score, n, D, sigmas, eta, K):
+>     x = sigmas[0] * torch.randn(n, D)                     # step 1
+>     for sigma in sigmas:                                  # step 2: noisiest level first
+>         eta_i = eta * sigma ** 2 / sigmas[-1] ** 2        # same signal-to-noise ratio per level
+>         for _ in range(K):                                # step 3
+>             x = x + 0.5 * eta_i * score(x, sigma) + eta_i ** 0.5 * torch.randn_like(x)
+>     return x + sigmas[-1] ** 2 * score(x, sigmas[-1])     # step 4: Tweedie denoising (5)
+> ```
+> With a single level, `sigmas = [sigma]`, and without the final denoising step, this is plain Langevin dynamics (1) on $q_\sigma$.
 
 Figures 5 and 6 show annealed Langevin on two toy problems with exact (analytic) noisy scores. With the clean score, Langevin gets the mode weights badly wrong. Annealing gets them nearly right, and it covers all eight modes of a ring evenly.
 

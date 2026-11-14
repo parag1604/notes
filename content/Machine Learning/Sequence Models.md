@@ -341,6 +341,27 @@ $$
 
 A $-\infty$ score becomes a weight of exactly 0. A **padding mask** works the same way, with $-\infty$ in the columns of padding tokens. Because of the causal mask, a decoder can be trained on all positions of a sequence **in parallel**, feeding in the true previous tokens; an RNN must step through them one by one.
 
+> [!example]- Code: causal and padding masks, and masked mean pooling (PyTorch)
+> ```python
+> import torch
+>
+> def attention_mask(pad, causal):
+>     """pad: (batch, n) bool, True at padding tokens. Returns the additive mask M, (batch, 1, n, n)."""
+>     n = pad.shape[1]
+>     M = torch.zeros(pad.shape[0], 1, n, n)
+>     M = M.masked_fill(pad[:, None, None, :], float("-inf"))     # no query attends to padding keys
+>     if causal:
+>         future = torch.triu(torch.ones(n, n, dtype=torch.bool), diagonal=1)   # entries j > i
+>         M = M.masked_fill(future, float("-inf"))
+>     return M                     # used as softmax(Q K^T / sqrt(d_k) + M), broadcast over heads
+>
+> def masked_mean(h, pad):
+>     """Mean pooling over real tokens only: sum_t m_t h_t / sum_t m_t, with h of shape (batch, n, d)."""
+>     m = (~pad).float().unsqueeze(-1)
+>     return (h * m).sum(1) / m.sum(1)
+> ```
+> With a causal mask and padding at the *front*, a padding query can have every key masked, and its softmax row becomes NaN. Those rows are never used, but they must not reach the loss: pad at the end for decoders, or overwrite the masked rows.
+
 **Cost.** Self-attention over $n$ tokens computes an $n\times n$ score matrix: $O(n^2d)$ time and $O(n^2)$ memory per head, against $O(nd^2)$ for an RNN layer. The payoff is that any two tokens are one step apart (an RNN needs $n$ steps) and that all positions are processed at once on parallel hardware. The quadratic cost is why long inputs are expensive and why many efficient variants, and alternative sequence models such as state space models, exist ([[Sequence Models#Beyond quadratic attention|below]]).
 
 ### The modern decoder block
@@ -816,6 +837,28 @@ At test time we want a likely caption, but searching over all sentences is impos
 
 - **Greedy decoding** takes the most probable word at each step. It is fast but can paint itself into a corner: a good first word may lead to poor continuations. Parag's code decodes greedily.
 - **Beam search** keeps the $B$ most probable partial captions (by summed log-probability) at each step, extends each by every word, and again keeps the best $B$. A small beam ($B$ of 3 to 5) usually gives better captions than greedy decoding. Since every extra word adds a negative log-probability, scores are often length-normalized so that beam search does not favour short captions.
+
+> [!example]- Code: beam search (greedy decoding is $B=1$)
+> ```python
+> def beam_search(step_logprobs, bos, eos, B=3, max_len=20, alpha=0.0):
+>     """step_logprobs(prefix) -> tensor (V,) of log p(w | prefix, I). Returns the best token list."""
+>     beams, done = [([bos], 0.0)], []                    # (tokens, summed log-probability)
+>     for _ in range(max_len):
+>         cand = []
+>         for toks, score in beams:
+>             lp = step_logprobs(toks)
+>             top = lp.topk(min(B, lp.numel()))           # only the B best extensions can survive
+>             cand += [(toks + [w], score + l) for l, w in zip(top.values.tolist(), top.indices.tolist())]
+>         cand.sort(key=lambda c: c[1], reverse=True)
+>         beams = []
+>         for toks, score in cand[:B]:                    # keep the B best partial captions
+>             (done if toks[-1] == eos else beams).append((toks, score))
+>         if not beams:
+>             break
+>     done += beams                                       # unfinished beams at max_len
+>     return max(done, key=lambda c: c[1] / (len(c[0]) - 1) ** alpha)[0]   # alpha > 0: length-normalized
+> ```
+> In this simple version a finished caption leaves the beam, so the beam shrinks; production implementations keep $B$ live hypotheses and add an end-of-sequence check per step.
 
 ### Evaluation: BLEU
 

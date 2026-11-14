@@ -121,6 +121,18 @@ So for proper policies, **termination does the job of $\gamma$**. In the discoun
 >
 > Each entry is minus the expected number of steps a random walker needs to hit a corner. Note the $-20$ (not $-22$) at the end of the second row: by the grid's half-turn symmetry it must equal the first cell of the third row. Sutton and Barto's Exercise 4.2 adds a state 15 just below the second cell of the bottom row. Its moves left, up, right and down lead to the cells valued $-22$, $-20$, $-14$ and back to itself, and all other transitions are unchanged. Its Bellman equation $v=-1+\tfrac14(-22-20-14+v)$ gives $v=-20$.
 
+> [!example]- Code: is a policy proper, and what is its value? (NumPy)
+> ```python
+> # assumes: P_mu (n, n) = transition probabilities among the NON-terminal states under mu (row sums <= 1),
+> # r_mu (n,) = expected one-step rewards, including the reward of a step into the terminal state
+> n = len(r_mu)
+> alive = np.linalg.matrix_power(P_mu, n).sum(1)       # P(s_n != 0 | s_0 = s)
+> rho_mu = alive.max()
+> proper = rho_mu < 1                                  # the Lemma: proper iff rho_mu < 1
+> V = np.linalg.solve(np.eye(n) - P_mu, r_mu) if proper else None   # V^mu = (I - P^mu)^{-1} r_mu
+> ```
+> For the equiprobable policy on the $4\times4$ gridworld, `P_mu` is $14\times14$, every `r_mu` entry is $-1$, and `V` reproduces the matrix above.
+
 ![[Reinforcement Learning/images/stochastic-shortest-paths-maze.svg]]
 *Figure 1: a deterministic maze with exit G and a reward of $-1$ per step, including the step onto G. (a) The optimal policy and $V^*$, which is minus the shortest-path distance to G ($V^*(S)=-10$). (b) The same policy, except that two neighbouring cells in the fifth row point at each other. That one change makes the policy improper. The 7 orange cells feed into the loop, never reach G, and have value $-\infty$. The other 18 cells keep their finite values, because properness fails only where the loop is reachable.*
 
@@ -391,6 +403,15 @@ $$
 The operator $F$ depends on the order. Its fixed points are exactly those of $\mathcal{T}^*$. If $FV=V$, the first component gives $(\mathcal{T}^*V)(1)=V(1)$, and then each later component is computed with unchanged values, so $\mathcal{T}^*V=V$. Conversely, $\mathcal{T}^*V=V$ means no component changes when it is updated, so $FV=V$.
 
 **Asynchronous VI** is the most general form. At step $k$ it picks a single state $s_k$ and sets $V_{k+1}(s_k)=(\mathcal{T}^*V_k)(s_k)$, leaving the other components unchanged. Gauss–Seidel is the special case that cycles through the states in order.
+
+> [!example]- Code: one Jacobi sweep and one Gauss–Seidel sweep (NumPy)
+> ```python
+> # assumes: P[s, a, s'] among the non-terminal states only, R[s, a] = r(s, a) including the final step's reward
+> V_jacobi = (R + P @ V).max(1)            # every component uses the old V
+> V_gs = V.copy()
+> for s in range(len(V)):                  # Gauss-Seidel: states already updated use their new values
+>     V_gs[s] = (R[s] + P[s] @ V_gs).max()
+> ```
 
 > [!note] Proposition 4 (Gauss–Seidel and asynchronous VI)
 > Under (A) and (B), asynchronous value iteration converges to $V^*$ from any $V_0\in\mathbb{R}^n$, provided **every state is updated infinitely often**. In particular, $F^kV\to V^*$ for every $V$. If every policy is proper, $F$ is also a $\beta$-contraction in $\lVert\cdot\rVert_\xi$, with the $\beta$ of Proposition 3.

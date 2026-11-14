@@ -8,7 +8,7 @@ tags:
 date: 2026-11-13
 draft: false
 prev: "[[Flow Matching]]"
-next: "[[Index (Machine Learning)]]"
+next: "[[Unsupervised Domain Adaptation]]"
 ---
 
 > **Prerequisites:** [[Multivariable Calculus#Change of variables: the Jacobian determinant scales volume|change of variables and the Jacobian determinant]], in particular [[Multivariable Calculus#Densities under a change of variables|densities under a change of variables]] and [[Random Variables#Functions of a random variable|its one-dimensional version]]; [[Five Factorizations of a Matrix#A = LU: elimination|LU and determinants]]; [[Neural Networks#Computational graphs and reverse-mode autodiff|reverse-mode autodiff]]. From the generative series: [[Variational Autoencoders]] (latent-variable models and the direction of the KL) and [[Flow Matching]] (flows as ODEs).
@@ -143,6 +143,32 @@ The expectation needs only samples from the flow and their densities, from the s
 ![[Machine Learning/images/normalizing-flows-planar.png]]
 *Figure 3. Planar flows fitted by reverse KL to two unnormalized targets; each panel is a histogram of flow samples, labelled with the KL divergence in nats. Top: a sine-shaped ridge, fitted roughly by 2 layers and closely by 8. Bottom: two separated lobes. Trained directly, a 32-layer flow covers one lobe (KL near $\ln 2$); with an annealed target it covers both.*
 
+> [!example]- Code: a planar flow layer and the reverse-KL loss (PyTorch)
+> ```python
+> # assumes: U(x) -> (n,) the target energy, p* proportional to exp(-U)
+> import math, torch, torch.nn as nn, torch.nn.functional as F
+> class Planar(nn.Module):
+>     def __init__(self, D):
+>         super().__init__()
+>         self.u, self.w = nn.Parameter(0.1 * torch.randn(D)), nn.Parameter(0.1 * torch.randn(D))
+>         self.b = nn.Parameter(torch.zeros(1))
+>     def forward(self, z):                                 # z -> f(z), log|det J_f(z)|
+>         wu = self.w @ self.u                              # reparameterize u so w^T u >= -1
+>         u = self.u + (F.softplus(wu) - 1 - wu) * self.w / (self.w @ self.w)
+>         a = z @ self.w + self.b
+>         psi = (1 - torch.tanh(a) ** 2)[:, None] * self.w  # h'(w^T z + b) w
+>         return z + u * torch.tanh(a)[:, None], torch.log((1 + psi @ u).abs())
+>
+> def reverse_kl(layers, U, n=512, D=2):                    # E_q[log q + U] = KL(q || p*) - log Z
+>     z = torch.randn(n, D)
+>     log_q = -0.5 * (z ** 2).sum(1) - 0.5 * D * math.log(2 * math.pi)
+>     for f in layers:
+>         z, log_det = f(z)
+>         log_q = log_q - log_det                           # second line of (1), layer by layer (2)
+>     return (log_q + U(z)).mean()
+> ```
+> Minimize `reverse_kl(layers, U)` with Adam over the parameters of `layers = nn.ModuleList(Planar(2) for _ in range(K))`. Annealing multiplies `U(z)` by a factor that grows from 0.01 to 1.
+
 ## Coupling layers
 
 Coupling layers give a triangular Jacobian **and** a closed-form inverse, with an arbitrary neural network inside.
@@ -275,6 +301,35 @@ $$
 
 with $\mathbf{P}$ a fixed permutation, $\mathbf{L}$ unit lower-triangular and $\mathbf{U}$ strictly upper-triangular. This is the [[Five Factorizations of a Matrix#A = LU: elimination|LU factorization]], used here as a parameterization: the determinant is the product of the pivots.
 
+> [!example]- Code: an invertible 1×1 convolution with the LU parameterization (PyTorch)
+> ```python
+> import torch, torch.nn as nn
+> class InvConv1x1(nn.Module):
+>     def __init__(self, C):
+>         super().__init__()
+>         P, L, U = torch.linalg.lu(torch.linalg.qr(torch.randn(C, C))[0])  # start from a rotation
+>         self.register_buffer("P", P)                          # fixed permutation
+>         self.L = nn.Parameter(L)                              # used below its diagonal only
+>         self.U = nn.Parameter(torch.triu(U, 1))               # strictly upper-triangular part
+>         self.register_buffer("sign_s", torch.sign(torch.diagonal(U)))
+>         self.log_s = nn.Parameter(torch.diagonal(U).abs().log())
+>
+>     def weight(self):                                         # W = P L (U + diag(s))
+>         C = len(self.log_s)
+>         L = torch.tril(self.L, -1) + torch.eye(C)
+>         U = torch.triu(self.U, 1) + torch.diag(self.sign_s * self.log_s.exp())
+>         return self.P @ L @ U
+>
+>     def forward(self, z):                                     # z (B, C, H, W) -> x, log|det J|
+>         x = torch.einsum("ij,bjhw->bihw", self.weight(), z)   # the same C x C matrix at every pixel
+>         H, W = z.shape[2:]
+>         return x, H * W * self.log_s.sum().expand(len(z))     # HW sum_c log|s_c|, no determinant
+>
+>     def inverse(self, x):
+>         return torch.einsum("ij,bjhw->bihw", torch.linalg.inv(self.weight()), x)
+> ```
+> Actnorm is simpler still: `x = s[:, None, None] * z + b[:, None, None]` with log-determinant `H * W * s.abs().log().sum()`.
+
 Glow produced sharp $256\times256$ faces, meaningful latent interpolations, and a useful trick: sampling from a **reduced temperature**, $\mathbf{z}\sim\mathcal{N}(\mathbf{0},T^2\mathbf{I})$ with $T\approx0.7$, trades diversity for quality. On CIFAR-10 it reported 3.35 bits per dimension against RealNVP's 3.49 (bits per dimension are defined [[#Discrete data: dequantization and bits per dimension|below]]).
 
 ## Autoregressive flows
@@ -306,6 +361,26 @@ The conditioner can read either side of the map, and the choice decides which op
 - **Inverse autoregressive flow (IAF)** conditions on $\mathbf{z}$: $x_i=z_i\,e^{\alpha_i(\mathbf{z}_{<i})}+\mu_i(\mathbf{z}_{<i})$.[^kingma2016] Now sampling is **one pass**, and so is the density of the model's own samples, because their $\mathbf{z}$ is known. The density of an arbitrary new $\mathbf{x}$ needs $D$ sequential passes.
 
 In our implementation, with $D=64$, five MADE layers and a batch of 256, MAF evaluated densities in 6.3 ms and drew samples in 273 ms, a factor of 43. IAF is the same network run the other way, so its two numbers swap.
+
+> [!example]- Code: a MAF layer, one pass for the density and D passes for a sample (PyTorch)
+> ```python
+> # assumes: made(x) -> (mu, alpha), each (B, D), where column i depends only on x[:, :i]
+> import math, torch
+> def maf_log_prob(made, x):                       # density of data: ONE conditioner pass
+>     mu, alpha = made(x)
+>     z = (x - mu) * torch.exp(-alpha)             # invert (5) for every i at once
+>     log_pz = -0.5 * (z ** 2).sum(1) - 0.5 * x.shape[1] * math.log(2 * math.pi)
+>     return log_pz - alpha.sum(1)                 # log|det J_g(x)| = -sum_i alpha_i
+>
+> @torch.no_grad()
+> def maf_sample(made, z):                         # sampling: D sequential passes
+>     x = torch.zeros_like(z)
+>     for i in range(z.shape[1]):
+>         mu, alpha = made(x)                      # columns < i of x are already final
+>         x[:, i] = z[:, i] * torch.exp(alpha[:, i]) + mu[:, i]
+>     return x
+> ```
+> For an IAF, `made` reads `z` instead of `x`, and the two costs swap.
 
 ![[Machine Learning/images/normalizing-flows-maf-iaf.svg]]
 *Figure 6. MAF and IAF use the same masked network (MADE) on opposite sides of the map. (a) MAF reads $\mathbf{x}$, so the density of data is one pass and sampling is sequential. (b) IAF reads $\mathbf{z}$, so sampling is one pass and evaluating the density of an external point is sequential.*

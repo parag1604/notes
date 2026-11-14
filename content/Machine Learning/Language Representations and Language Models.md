@@ -162,6 +162,25 @@ $$
 
 Each step now touches only $k+1$ output vectors, with $k$ between 2 and 20. The authors found that the unigram distribution raised to the power $3/4$, $P_n(c)\propto\#(c)^{3/4}$, works best: it samples rare words more often than their raw frequency.
 
+> [!example]- Code: skip-gram with negative sampling, the loss of (2) (PyTorch)
+> ```python
+> import torch
+> import torch.nn.functional as F
+>
+> # assumes: counts (V,) word counts; V_emb, U_emb = nn.Embedding(V, d), nn.Embedding(V, d)
+> noise = counts.float() ** 0.75
+> noise = noise / noise.sum()                                 # P_n(c) proportional to #(c)^{3/4}
+>
+> def sgns_loss(w, c, k=5):
+>     """w, c: (B,) ids of real (centre, context) pairs. Returns minus objective (2), averaged."""
+>     v = V_emb(w)                                            # centre vectors v_w, (B, d)
+>     neg = torch.multinomial(noise, len(w) * k, replacement=True).view(-1, k)   # c_1..c_k ~ P_n
+>     pos = F.logsigmoid((U_emb(c) * v).sum(-1))              # log sigma(u_c^T v_w)
+>     negs = F.logsigmoid(-(U_emb(neg) * v[:, None]).sum(-1)).sum(-1)   # sum_i log sigma(-u_ci^T v_w)
+>     return -(pos + negs).mean()
+> ```
+> Each step reads $k+1$ rows of `U_emb` per pair instead of all $V$. The full softmax of (1) would be `F.cross_entropy(V_emb(w) @ U_emb.weight.T, c)`, which touches every output vector.
+
 This is **noise-contrastive estimation** in a simplified form: learn a distribution by training a classifier to separate data from noise, as derived in [[Self-Supervised Representation Learning]].[^gutmann2010]<sup>,</sup>[^mnih2012] Full NCE includes the term $\log kP_n(c)$ in the classifier's logit, which makes the model's scores converge to true log-probabilities. Negative sampling drops that term, so it no longer estimates $p(c\mid w)$, but it still learns good vectors, and exactly what it learns is the subject of the next subsection.[^goldberg2014]
 
 **Subsampling frequent words.** Words like "the" and "of" occur in nearly every window and say little about their neighbours. Word2vec discards each occurrence of word $w$ with probability $1-\sqrt{t/f(w)}$, where $f(w)$ is the word's frequency and $t\approx10^{-5}$. Frequent words are thinned out, training is faster, and the windows effectively widen around content words.[^mikolov2013b]
@@ -354,6 +373,25 @@ $$
 
 Of the chosen positions, **80%** are replaced by a special `[MASK]` token, **10%** by a random token, and **10%** are left unchanged. The reason for the mix: `[MASK]` never appears when the model is later fine-tuned, so a model trained only on masks might learn useful representations only at masked positions. Random and unchanged tokens force it to build a good representation of **every** token, since it can never be sure which ones are wrong. BERT also used a next-sentence prediction task, which later work found unnecessary.
 
+> [!example]- Code: BERT's 80/10/10 masking (PyTorch)
+> ```python
+> import torch
+>
+> def mlm_mask(x, mask_id, V, p=0.15):
+>     """x: (B, T) token ids. Returns the corrupted input and the targets (-100 = no loss)."""
+>     chosen = torch.rand(x.shape) < p                            # the positions M
+>     targets = torch.where(chosen, x, torch.full_like(x, -100))  # loss only on M, as in (6)
+>     r = torch.rand(x.shape)
+>     x_tilde = x.clone()
+>     x_tilde[chosen & (r < 0.8)] = mask_id                       # 80%: [MASK]
+>     rand = chosen & (r >= 0.8) & (r < 0.9)                      # 10%: a random token
+>     x_tilde[rand] = torch.randint(0, V, (int(rand.sum()),))
+>     return x_tilde, targets                                     # the other 10%: left unchanged
+>
+> # loss = F.cross_entropy(model(x_tilde).flatten(0, 1), targets.flatten(), ignore_index=-100)
+> ```
+> Real implementations also never choose special tokens such as `[CLS]` and padding.
+
 **What MLM learns.** To fill a blank, the model must use both sides of the context ("The ___ barked at the mailman" needs the right side), resolve syntax and coreference, and know facts ("Paris is the capital of ___"). Because attention is **bidirectional** (no causal mask), each output vector is a summary of its token in the context of the entire sentence.
 
 **How encoder-only models are used.**
@@ -383,6 +421,20 @@ $$
 $$
 
 **Teacher forcing.** During training, the context $x_{<t}$ is always the **true** prefix from the data, never the model's own predictions. Combined with the causal mask, all $T$ predictions of a sequence are computed in one parallel forward pass. At generation time the model must instead condition on its own samples, a mismatch called **exposure bias**: one early mistake can push it into contexts it never saw during training.
+
+> [!example]- Code: the next-token loss, bits per token and perplexity (PyTorch)
+> ```python
+> import math
+> import torch.nn.functional as F
+>
+> # assumes: model(idx) -> logits (B, T, V) under a causal mask; tokens (B, T + 1)
+> x, y = tokens[:, :-1], tokens[:, 1:]                 # targets are the inputs shifted by one
+> logits = model(x)                                    # all T predictions in one pass (teacher forcing)
+> loss = F.cross_entropy(logits.reshape(-1, logits.shape[-1]), y.reshape(-1))   # (8), in nats per token
+> bits_per_token = loss.item() / math.log(2)
+> perplexity = math.exp(loss.item())
+> ```
+> The shift is the whole trick: position $t$ of `logits` is scored against token $t+1$, and the causal mask guarantees it never saw that token. A model that outputs uniform logits gets `loss` $=\ln V$ and `perplexity` $=V$.
 
 This is the GPT recipe: generative pretraining of a decoder on a large corpus, then fine-tuning.[^radford2018] GPT-2 scaled it to 1.5 billion parameters and showed that the pretrained model alone could perform tasks like summarization and translation **zero-shot**, when the task was phrased as text to continue.[^radford2019] Earlier neural language models[^bengio2003] already used (8); what changed was the architecture, the data and the scale.
 
@@ -526,6 +578,23 @@ The KL penalty stops the policy from drifting into text that fools the reward mo
 $$
 \mathcal{L}_{\text{DPO}}(\theta)=-\log\sigma\!\left(\beta\log\frac{\pi_\theta(y_w\mid x)}{\pi_{\text{ref}}(y_w\mid x)}-\beta\log\frac{\pi_\theta(y_l\mid x)}{\pi_{\text{ref}}(y_l\mid x)}\right).
 $$
+
+> [!example]- Code: the DPO loss (PyTorch)
+> ```python
+> import torch.nn.functional as F
+>
+> def seq_logprob(logits, y, mask):
+>     """log pi(y | x) = sum of token log-probs over the response; logits (B, T, V), y and mask (B, T)."""
+>     lp = logits.log_softmax(-1).gather(-1, y.unsqueeze(-1)).squeeze(-1)
+>     return (lp * mask).sum(-1)                       # mask = 1 on response tokens, 0 on the prompt
+>
+> def dpo_loss(pi_w, pi_l, ref_w, ref_l, beta=0.1):
+>     """Sequence log-probs of the preferred (w) and rejected (l) responses, policy and frozen reference."""
+>     r_w = beta * (pi_w - ref_w)                      # implicit reward  beta log(pi / pi_ref)
+>     r_l = beta * (pi_l - ref_l)
+>     return -F.logsigmoid(r_w - r_l).mean()           # Bradley-Terry on the reward difference
+> ```
+> The reference log-probabilities are computed once, without gradients. Compared with RLHF there is no sampling, no reward model and no value function: one forward pass of each model on each response pair.
 
 > [!proof]- Why the optimal policy of (10) is a Boltzmann reweighting of the reference
 > For a fixed prompt, (10) is $\sum_y\pi(y)\,r(y)-\beta\sum_y\pi(y)\log\frac{\pi(y)}{\pi_{\text{ref}}(y)}$. Define $\pi^*(y)=\pi_{\text{ref}}(y)e^{r(y)/\beta}/Z$ with $Z=\sum_y\pi_{\text{ref}}(y)e^{r(y)/\beta}$. Then $r(y)=\beta\log\frac{\pi^*(y)}{\pi_{\text{ref}}(y)}+\beta\log Z$, and substituting gives

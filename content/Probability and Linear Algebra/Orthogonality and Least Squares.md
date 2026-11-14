@@ -299,6 +299,20 @@ $$
 
 Geometrically, this is still a projection, but perpendicularity is measured in the inner product $\langle\mathbf{u},\mathbf{v}\rangle_{\mathbf{W}}=\mathbf{u}^\top\mathbf{W}\mathbf{v}$: the condition is $\mathbf{A}^\top\mathbf{W}\mathbf{e}=\mathbf{0}$. In the line fit, giving the last point $(3,4)$ weight 4 and the others weight 1 changes $\mathbf{A}^\top\mathbf{W}\mathbf{A}$ to $\begin{bmatrix}7&15\\15&41\end{bmatrix}$ and $\mathbf{A}^\top\mathbf{W}\mathbf{b}$ to $(24,59)$, and the line becomes $b\approx1.60+0.85\,t$: flatter, pulled towards the heavily weighted point, which lay below the old line. [[Linear Models#Weighted linear regression|Weighted linear regression]] uses this for noise of unequal variance and inside Newton's method for logistic regression.
 
+> [!example]- Code: weighted least squares, two ways
+> ```python
+> import numpy as np
+> t = np.array([0.0, 1, 2, 3]); b = np.array([1.0, 3, 4, 4])
+> A = np.column_stack([np.ones_like(t), t])
+> w = np.array([1.0, 1, 1, 4])                      # trust the last point four times as much
+>
+> x_normal = np.linalg.solve(A.T @ (w[:, None] * A), A.T @ (w * b))   # A^T W A x = A^T W b
+> s = np.sqrt(w)                                    # or scale row i by sqrt(w_i), then plain LS
+> x_scaled = np.linalg.lstsq(s[:, None] * A, s * b, rcond=None)[0]
+> print(x_normal, x_scaled)                         # both [1.597 0.855]: b = 1.60 + 0.85 t
+> ```
+> The row-scaling version is the one to use: it can be solved with QR, so it inherits the stability of [[#Least squares with QR]].
+
 ## Gram–Schmidt and A = QR
 
 With orthonormal columns, least squares is easy: $\mathbf{Q}^\top\mathbf{Q}=\mathbf{I}$, so the normal equations reduce to $\hat{\mathbf{x}}=\mathbf{Q}^\top\mathbf{b}$, with nothing to invert. Gram–Schmidt manufactures orthonormal columns from any independent ones.

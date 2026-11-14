@@ -162,6 +162,23 @@ The dependence on the confidence level drops from $1/\delta$ to $\ln(1/\delta)$:
 ![[Probability and Linear Algebra/images/sample-statistics-tail-bounds.svg]]
 *Figure 2. Bounds on the probability that the fraction of heads in $n$ fair tosses exceeds 0.6. Chebyshev's bound (orange) decays like $1/n$. Hoeffding's (green) and the optimized Chernoff bound (dashed) decay exponentially, at almost the same rate as the exact tail (red), which they bound from above.*
 
+> [!example]- Code: the bounds of Figure 2 at n = 100
+> ```python
+> import numpy as np
+> from scipy import stats, optimize
+>
+> n, p, a = 100, 0.5, 0.6                          # P(fraction of heads >= 0.6) in 100 fair tosses
+> exact = stats.binom.sf(np.ceil(n * a) - 1, n, p)
+> chebyshev = p * (1 - p) / (n * (a - p)**2)
+> hoeffding = np.exp(-2 * n * (a - p)**2)          # one-sided version of (3)
+> logM = lambda s: np.log(1 - p + p * np.exp(s))   # log MGF of a single toss
+> rate = -optimize.minimize_scalar(lambda s: -(s * a - logM(s)),
+>                                  bounds=(0, 20), method="bounded").fun   # I(a), the sup in (2)
+> kl = a * np.log(a / p) + (1 - a) * np.log((1 - a) / (1 - p))
+> print(exact, chebyshev, hoeffding, np.exp(-n * rate))   # 0.028, 0.25, 0.135, 0.134
+> print(rate, kl)                                         # both 0.0201: the rate is a KL divergence
+> ```
+
 ### Concentration and the union bound
 
 Suppose we estimate $M$ different quantities from the same $n$ samples, and want **all** of them to be accurate at once. Each estimate fails with probability at most $2e^{-2n\varepsilon^2}$ by (3), so by the [[Probability Basics#The union bound|union bound]],

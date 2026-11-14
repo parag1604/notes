@@ -89,6 +89,19 @@ $$
 > 2. Estimate $\displaystyle\nabla_\theta J(\theta)\approx\frac{1}{N}\sum_{i=1}^{N}\left(\sum_{t=0}^{T-1}\nabla_\theta\log\pi_\theta(a_{i,t}\mid s_{i,t})\right)\left(\sum_{t=0}^{T-1}r(s_{i,t},a_{i,t})\right)$.
 > 3. Update $\theta\leftarrow\theta+\alpha\,\nabla_\theta J(\theta)$, a step *up* the gradient.
 
+> [!example]- Code: REINFORCE as a weighted log-likelihood (PyTorch)
+> ```python
+> # assumes: policy(obs) -> logits (B, K); N trajectories flattened into a batch of B steps:
+> # obs (B, d), actions (B,), returns (B,) = R(tau_i) repeated at every step of tau_i
+> logits = policy(obs)
+> logp = torch.log_softmax(logits, dim=1).gather(1, actions[:, None]).squeeze(1)  # log pi_theta(a_t|s_t)
+> loss = -(logp * returns).sum() / N    # minus the estimate of J; its gradient is minus step 2
+> optimizer.zero_grad()
+> loss.backward()
+> optimizer.step()                      # a descent step on the loss is an ascent step on J
+> ```
+> Deleting `* returns` leaves the behaviour-cloning (maximum-likelihood) loss of the next section; that is the whole change from `version1.py` to `version2.py` in the Policy-Gradients repository. The repository averages over the $B$ steps instead of dividing by $N$, which only rescales $\alpha$.
+
 ### Policy gradient = weighted maximum likelihood
 
 Compare this with the maximum-likelihood gradient from [[Imitation Learning#Behavior Cloning (BC)|behavior cloning]]:
@@ -171,6 +184,16 @@ $$
 $$
 
 The best such baseline is close to the value function, $b(s_t)\approx V^{\pi}(s_t)$. The weight then becomes an estimate of the **advantage** $A^{\pi}(s_t,a_t)=Q^{\pi}(s_t,a_t)-V^{\pi}(s_t)$: how much better this action was than the policy's average action. Learning $V^\pi$ with a neural network ("the critic") turns REINFORCE into an **actor-critic** method ([[Actor-Critic Algorithms]], next).[^schulman2016gae]
+
+> [!example]- Code: reward-to-go with a state-dependent baseline (PyTorch)
+> ```python
+> # assumes: one trajectory's rewards (T,), logp (T,) = log pi_theta(a_t|s_t),
+> # values (T,) = b(s_t) from a critic network (zeros for no baseline)
+> q_hat = rewards.flip(0).cumsum(0).flip(0)   # Q_hat_t = sum over t' >= t of r_t'
+> adv = q_hat - values.detach()               # Q_hat_t - b(s_t); no policy gradient through b
+> loss = -(logp * adv).sum()
+> ```
+> With a constant baseline the second line becomes `adv = q_hat - q_hat.mean()`, as in `version5.py` of the repository (which also discounts the reward-to-go and divides by its standard deviation).
 
 ![[Reinforcement Learning/images/policy-gradients-reward-to-go.svg]]
 *Figure 2: in reward design A, the reward-to-go $\hat Q_t$ shrinks linearly along the trajectory. A constant baseline (dashed) fits it only at one point, while a state-dependent baseline $b(s_t)\approx V^\pi(s_t)$ tracks it at every step.*
@@ -255,6 +278,16 @@ $$
 
 Here $p_\theta(s_t)$ is the state *marginal* at time $t$ under $\pi_\theta$, and we cannot compute it. Ignoring the state-marginal ratio is justified when $\pi_{\theta'}$ stays **close** to $\pi_\theta$. The error it introduces is then bounded by how far the policies differ, which is exactly the idea behind trust-region methods such as TRPO and PPO.[^schulman2015trpo] The result has only a single per-step ratio, so its variance stays under control.
 
+> [!example]- Code: the first-order off-policy surrogate (PyTorch)
+> ```python
+> # assumes: a batch collected by the old policy pi_theta: obs, actions, q_hat (reward-to-go),
+> # old_logp = log pi_theta(a|s) stored at collection time; policy(obs) -> logits of pi_theta'
+> logp = torch.log_softmax(policy(obs), dim=1).gather(1, actions[:, None]).squeeze(1)
+> ratio = torch.exp(logp - old_logp)    # pi_theta'(a|s) / pi_theta(a|s), one ratio per step
+> loss = -(ratio * q_hat).mean()        # gradient: -mean(ratio * grad log pi_theta' * q_hat)
+> ```
+> Because $\nabla_{\theta'}\pi_{\theta'}/\pi_\theta=(\pi_{\theta'}/\pi_\theta)\,\nabla_{\theta'}\log\pi_{\theta'}$, the gradient of this loss is the last line of the equation above, and at $\theta'=\theta$ it is the on-policy gradient. `version11.py` of the repository compares this per-step weight with the full and per-decision products; PPO (`version12.py`) clips the same ratio.
+
 ---
 
 ## Straight-Through Gumbel-Softmax (STGS) for PG Algorithms
@@ -320,6 +353,16 @@ $$
 
 where $\operatorname{sg}[\cdot]$ is stop-gradient (`.detach()`). Numerically $\tilde a=y^{\text{hard}}$, a valid discrete action. Under backpropagation $\partial\tilde a/\partial\theta=\partial y/\partial\theta$. The gradient treats the hard sample as if it were the soft one.
 
+> [!example]- Code: one straight-through Gumbel-softmax sample, by hand (PyTorch)
+> ```python
+> # assumes: logits (B, K) from the policy, temperature tau > 0
+> g = -torch.empty_like(logits).exponential_().log()              # Gumbel(0,1): -log(-log u) = -log(Exp(1))
+> y = torch.softmax((logits + g) / tau, dim=-1)                   # step 2: soft sample on the simplex
+> y_hard = F.one_hot(y.argmax(-1), logits.shape[-1]).to(y.dtype)  # step 1: Gumbel-max, an exact sample
+> a_tilde = y_hard - y.detach() + y                               # step 3: value y_hard, gradient of y
+> ```
+> The argmax of $y$ is the argmax of $\ell+g$ for every $\tau$, so `y_hard` is an exact categorical sample. `F.gumbel_softmax(logits, tau=tau, hard=True)` does all four lines in one call.
+
 ### Using STGS in a policy-gradient pipeline
 
 With a differentiable critic, the actor's update becomes a pathwise gradient through the sampled discrete action:
@@ -329,6 +372,19 @@ $$
 $$
 
 This is the discrete-action analogue of DDPG/SAC-style actor updates. The same idea extends to a multi-step rollout through a learned or differentiable model. Every sampled action in the rollout is an STGS sample, so the return is differentiable with respect to $\theta$ through the entire trajectory, and we can backpropagate through time.
+
+> [!example]- Code: the same actor update with REINFORCE, for comparison (PyTorch)
+> ```python
+> # assumes: policy_net(states) -> logits (B, K); critic(states, one_hot_actions) -> Q values (B,)
+> logits = policy_net(states)
+> dist = torch.distributions.Categorical(logits=logits)
+> actions = dist.sample()                                   # (B,); no gradient through the sample
+> with torch.no_grad():                                     # only the VALUE of Q is used
+>     q_values = critic(states, F.one_hot(actions, logits.shape[-1]).float())
+> actor_loss = -(dist.log_prob(actions) * (q_values - q_values.mean())).mean()   # batch-mean baseline
+> actor_loss.backward()
+> ```
+> The STGS version below changes two things: the sample becomes `F.gumbel_softmax(logits, tau=1.0, hard=True)`, and the weighted log-likelihood becomes `-critic(states, actions).mean()`. The gradient then flows through the action into the critic and uses $\nabla_aQ_\phi$, not just the value $Q_\phi$.
 
 ```python
 import torch

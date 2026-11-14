@@ -48,6 +48,19 @@ $$
 ![[Machine Learning/images/non-parametric-models-knn-boundaries.svg]]
 *Figure 1: $k$-NN decision regions on noisy, nearly linearly separable data. With $k=1$ the boundary is jagged and every mislabelled point gets its own island. With larger $k$ the vote averages out the noise and the boundary becomes smooth. Too large a $k$ starts to blur genuine structure.*
 
+> [!example]- Code: k-NN classification, vectorized
+> ```python
+> import numpy as np
+>
+> def knn_predict(X_train, y_train, X_test, k=5):
+>     """Majority vote of the k nearest training points (Euclidean); y_train holds ints 0..C-1."""
+>     d2 = (X_test ** 2).sum(1)[:, None] - 2 * X_test @ X_train.T + (X_train ** 2).sum(1)[None, :]
+>     nn = np.argpartition(d2, k - 1, axis=1)[:, :k]          # the k smallest per row, no full sort
+>     votes = np.eye(y_train.max() + 1)[y_train[nn]].sum(axis=1)   # (M, C) neighbour counts per class
+>     return votes.argmax(axis=1)                             # ties go to the smallest label
+> ```
+> The whole cost is the $(M\times N)$ distance matrix: $O(MND)$ for $M$ queries, with no training step at all.
+
 $k$ controls the **bias–variance trade-off**. A small $k$ gives a flexible, low-bias but high-variance predictor that overfits the noise. A large $k$ gives a smoother, more biased but low-variance one, and at the extreme $k=N$ it always predicts the majority class. Choose $k$ by cross-validation. A remarkable classical result: as $N\to\infty$, the error rate of even 1-NN is at most **twice the Bayes-optimal error**.[^coverhart1967]
 
 **Notes on $k$-NN.**
@@ -95,6 +108,25 @@ $$
 > [!note] "Kernel" means two related things
 > Here a kernel is a **smoothing window**: a non-negative bump that integrates to one. In [[Support Vector Machines#Kernels|SVMs]] a kernel is a **similarity** $K(\mathbf{x},\mathbf{x}')=\phi(\mathbf{x})^\top\phi(\mathbf{x}')$, which must be symmetric and positive semi-definite. The Gaussian is both, which is why the words overlap. Not every smoothing kernel is a valid SVM kernel, and vice versa.
 
+> [!example]- Code: Gaussian-kernel vote and the Nadaraya–Watson estimator
+> ```python
+> import numpy as np
+>
+> def kernel_weights(X_train, X_test, h):
+>     d2 = ((X_test[:, None, :] - X_train[None, :, :]) ** 2).sum(-1)    # (M, N) squared distances
+>     d2 -= d2.min(axis=1, keepdims=True)          # cancels in every ratio below; avoids underflow
+>     return np.exp(-d2 / (2 * h ** 2))            # w_i(x), up to a per-query constant
+>
+> def kernel_vote(X_train, y_train, X_test, h):
+>     W = kernel_weights(X_train, X_test, h)
+>     return (W @ np.eye(y_train.max() + 1)[y_train]).argmax(axis=1)   # argmax_c sum_i w_i 1{y_i = c}
+>
+> def nadaraya_watson(X_train, y_train, X_test, h):
+>     W = kernel_weights(X_train, X_test, h)
+>     return (W @ y_train) / W.sum(axis=1)         # locally weighted average
+> ```
+> A tiny $h$ reproduces 1-NN and a huge $h$ the global majority (or mean), the two limits listed above.
+
 ---
 
 ## Similarity-based (dot-product) neighbours
@@ -113,6 +145,21 @@ where $\mathbf{y}_i$ is a one-hot label or a regression target.
 - A large $\tau$ spreads it evenly across all points.
 
 With a Gaussian kernel this is exactly Nadaraya–Watson. With learned similarities $s_i=\mathbf{q}^\top\mathbf{k}_i$ it is the **attention** mechanism of transformers ([[Sequence Models#Attention as a soft dictionary lookup|Sequence Models]]), where a "query" softly retrieves "values" from stored "keys".[^vaswani2017]
+
+> [!example]- Code: softmax-weighted neighbours
+> ```python
+> import numpy as np
+>
+> def similarity_predict(X_train, Y_train, X_test, tau=0.1):
+>     """Y_train: (N, C) one-hot labels or (N, P) targets. Cosine similarity, softmax weights."""
+>     unit = lambda A: A / np.linalg.norm(A, axis=1, keepdims=True)
+>     S = unit(X_test) @ unit(X_train).T / tau        # s_i / tau for every (query, training point)
+>     S -= S.max(axis=1, keepdims=True)               # stability; cancels in the softmax
+>     W = np.exp(S)
+>     W /= W.sum(axis=1, keepdims=True)               # weights w_i: non-negative, sum to one
+>     return W @ Y_train                              # sum_i w_i y_i
+> ```
+> Replace the test points by queries, the training points by keys and $\mathbf{Y}$ by values, drop the normalization and set $\tau=\sqrt{d}$: the last five lines are scaled dot-product attention.
 
 ---
 
@@ -220,6 +267,35 @@ A $k$-d tree ("$k$-dimensional tree") is a binary tree in which every node split
 > For $k$ neighbours, keep the $k$ best in a max-heap and prune with the $k$-th best distance.
 
 The pruning test in step 3 is what replaces "look at everything". The query first descends to its own cell, quickly finds a good candidate, and then the ball around it is usually small enough to rule out most other cells (Figure 5).
+
+> [!example]- Code: a KD-tree with pruned nearest-neighbour search
+> ```python
+> import numpy as np
+>
+> def build(X, idx, depth=0):
+>     """A node is (point index, split coordinate, left, right); None is an empty leaf."""
+>     if len(idx) == 0:
+>         return None
+>     d = depth % X.shape[1]                          # cycle through the axes
+>     idx = idx[np.argsort(X[idx, d])]
+>     m = len(idx) // 2                               # median split keeps the tree balanced
+>     return (idx[m], d, build(X, idx[:m], depth + 1), build(X, idx[m + 1:], depth + 1))
+>
+> def nearest(node, X, q, best=(np.inf, -1)):
+>     """Returns (distance, index) of the training point nearest to q."""
+>     if node is None:
+>         return best
+>     i, d, left, right = node
+>     best = min(best, (np.linalg.norm(q - X[i]), i))  # 1. update r*
+>     diff = q[d] - X[i, d]
+>     near, far = (left, right) if diff < 0 else (right, left)
+>     best = nearest(near, X, q, best)                 # 2. go near first
+>     if abs(diff) < best[0]:                          # 3. the far side only if the ball crosses
+>         best = nearest(far, X, q, best)
+>     return best
+>
+> # tree = build(X, np.arange(len(X)));  dist, i = nearest(tree, X, q)
+> ```
 
 ![[Machine Learning/images/non-parametric-models-kdtree.svg]]
 *Figure 5: a KD-tree on 60 points in 2-D. The splitting lines alternate between vertical and horizontal, thicker lines being nearer the root. To find the nearest neighbour of the star, the search computes only 11 distances (orange). Every other cell lies entirely outside the dashed ball and is pruned without being examined.*

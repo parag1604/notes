@@ -173,6 +173,18 @@ $$
 
 which is the Laplacian quadratic form, applied column by column. On its own it is minimized by putting every node at the same point, so we add a scale constraint, $\mathbf{Z}^\top\operatorname{diag}(\mathbf{d})\mathbf{Z}=\mathbf{I}$, and exclude the constant vector. The solution, by the same [[Eigenvalues and Eigenvectors#The Rayleigh quotient|Rayleigh-quotient]] argument as spectral clustering, is given by the generalized eigenvectors $\mathbf{L}\mathbf{y}=\lambda\operatorname{diag}(\mathbf{d})\mathbf{y}$ with the smallest non-zero eigenvalues. This is **Laplacian eigenmaps**,[^belkin2003] which [[Matrix Factorization and Dimensionality Reduction#Other dimensionality-reduction methods|the dimensionality-reduction lecture]] used on a nearest-neighbour graph built from data. Spectral clustering is Laplacian eigenmaps followed by K-means.
 
+> [!example]- Code: Laplacian eigenmaps (tested)
+> ```python
+> import numpy as np
+> from scipy.linalg import eigh
+>
+> def laplacian_eigenmaps(A, D):
+>     """Embedding Z (N, D) from L y = lambda diag(d) y, skipping the constant eigenvector."""
+>     d = A.sum(axis=1)
+>     vals, vecs = eigh(np.diag(d) - A, np.diag(d))   # generalized, ascending; vecs^T diag(d) vecs = I
+>     return vecs[:, 1:D + 1], vals
+> ```
+
 Laplacian eigenmaps are deterministic, need no tuning beyond $D$, and work well for **homophily**: they put nodes of the same community together. Their weakness is that they only see **first-order** proximity, through the edges, and that every eigenvector counts equally in the embedding. The higher eigenvectors are "high-frequency" functions on the graph, so with many dimensions the embedding fills up with noise (we will see this on the karate club below).
 
 ### Factorizing a proximity matrix
@@ -220,6 +232,19 @@ $$
 $$
 
 The first term pulls real pairs together, the second pushes random pairs apart: the same push–pull that [[Self-Supervised Representation Learning#From energy to contrast|contrastive learning]] derives from an energy view. Word2vec uses $P_n(w)\propto(\text{frequency})^{3/4}$; on graphs the frequency of a node in the walks is proportional to its degree. [[Language Representations and Language Models#Negative sampling|The language-models lecture]] develops skip-gram, negative sampling and their connection to noise-contrastive estimation in depth.
+
+> [!example]- Code: the negative-sampling loss (2) in PyTorch (tested)
+> ```python
+> import torch
+> import torch.nn.functional as F
+> # assumes: Z, C (N, D) centre and context vectors; u, v (B,) real pairs; noise (N,) = P_n; k
+> negs = torch.multinomial(noise, len(u) * k, replacement=True).view(-1, k)   # w_1..w_k per pair
+> zu = Z[u]                                                                  # (B, D)
+> pos = F.logsigmoid((zu * C[v]).sum(-1))                                    # log sigma(z_u . c_v)
+> neg = F.logsigmoid(-(zu.unsqueeze(1) * C[negs]).sum(-1)).sum(-1)           # sum_i log sigma(-z_u . c_wi)
+> loss = -(pos + neg).mean()                                                 # minimize = maximize (2)
+> ```
+> One `loss.backward()` and optimizer step per batch of pairs is the whole of DeepWalk's training; the walks only supply `u` and `v`.
 
 ### node2vec: tunable walks
 
@@ -489,6 +514,22 @@ $$
 
 The map now depends on **both** the relation and the entity (a "dynamic" mapping matrix), and head and tail are mapped differently, which suits relations whose heads and tails are different kinds of things. Applying $\mathbf{M}_{rh}$ costs only an inner product, $\mathbf{M}_{rh}\mathbf{h}=\mathbf{h}+(\mathbf{h}_p^\top\mathbf{h})\mathbf{r}_p$, so there is no matrix to store or multiply. (Here the entity and relation spaces have equal dimension; the paper also allows different ones.)
 
+> [!example]- Code: TransH and TransD scores (tested)
+> ```python
+> import torch
+> import torch.nn.functional as F
+>
+> def transh_score(h, w_r, d_r, t):           # w_r: hyperplane normal, d_r: translation within it
+>     w = F.normalize(w_r, dim=-1)
+>     perp = lambda e: e - (e * w).sum(-1, keepdim=True) * w        # project onto the hyperplane
+>     return -(perp(h) + d_r - perp(t)).norm(p=1, dim=-1)
+>
+> def transd_score(h, h_p, r, r_p, t, t_p):   # *_p: the projection vectors
+>     proj = lambda e, e_p: e + (e_p * e).sum(-1, keepdim=True) * r_p   # M_r e = e + (e_p . e) r_p
+>     return -(proj(h, h_p) + r - proj(t, t_p)).norm(p=1, dim=-1)
+> ```
+> Compared with `transe_score` above, only the map applied to $\mathbf{h}$ and $\mathbf{t}$ before translating changes. TransD never builds $\mathbf{M}_{rh}$: one inner product per entity replaces the matrix.
+
 ### Products and rotations: DistMult, ComplEx and RotatE
 
 A second family scores triples with **products** instead of distances.
@@ -508,6 +549,18 @@ f_r(h,t)=\operatorname{Re}\Big(\sum_{i=1}^{D}h_i\,r_i\,\bar t_i\Big).
 $$
 
 Swapping $h$ and $t$ conjugates the sum, which flips the sign of its imaginary part. The real part of $\mathbf{r}$ therefore scores the symmetric part of a relation and the imaginary part its antisymmetric part, and inverse relations are conjugates, $\mathbf{r}_2=\bar{\mathbf{r}}_1$.
+
+> [!example]- Code: DistMult and ComplEx scores (tested)
+> ```python
+> import torch
+>
+> def distmult_score(h, r, t):                # real vectors (..., D)
+>     return (h * r * t).sum(-1)
+>
+> def complex_score(h, r, t):                 # complex vectors (..., D)
+>     return (h * r * t.conj()).sum(-1).real
+> ```
+> `distmult_score(h, r, t) == distmult_score(t, r, h)` for any input; `complex_score` with a purely imaginary `r` flips sign when $h$ and $t$ swap.
 
 **RotatE** combines the two ideas: complex vectors, but a relation is a **rotation**, not a product with an arbitrary complex number.[^sun2019] Each coordinate of $\mathbf{r}$ has modulus 1, $r_i=e^{\mathrm{i}\theta_{r,i}}$, and
 

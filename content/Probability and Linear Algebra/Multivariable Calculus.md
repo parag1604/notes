@@ -315,6 +315,27 @@ $$
 
 The product can be evaluated in either order, but not at the same cost. Starting from the left, every intermediate result is a **row vector** (because the loss is a scalar), and multiplying a row vector by a matrix is cheap. Starting from the right would multiply large matrices together. Evaluating from the loss backwards is **reverse-mode differentiation**, better known as backpropagation; [[Neural Networks#Backpropagation|Neural Networks]] works it out layer by layer.
 
+> [!example]- Code: the chain rule and reverse mode with torch.autograd
+> ```python
+> import torch
+> from torch.autograd.functional import jacobian
+>
+> F = lambda x: torch.stack([x[0]**2 * x[1], 5 * x[0] + torch.sin(x[1])])   # the example above
+> G = lambda u: torch.stack([u[0] * u[1], u[0] - u[1], torch.exp(u[1] / 5)])
+> x = torch.tensor([1.0, 0.0])
+>
+> J_F = jacobian(F, x)                          # [[0, 1], [5, 1]], as by hand
+> J_G = jacobian(G, F(x))                       # 3 x 2, evaluated at u = F(x)
+> J_GF = jacobian(lambda x: G(F(x)), x)         # 3 x 2
+> print(torch.allclose(J_GF, J_G @ J_F))        # chain rule (5): True
+>
+> x.requires_grad_(True)
+> loss = G(F(x)).sum()                          # a scalar: loss = 1^T G(F(x))
+> loss.backward()                               # reverse mode, no Jacobian is ever formed
+> print(torch.allclose(x.grad, torch.ones(3) @ J_G @ J_F))   # True
+> ```
+> `jacobian` builds the full matrices, which is what (5) multiplies. `backward` instead pushes the row vector $\partial\ell/\partial\mathbf{G}=\mathbf{1}^\top$ through the graph from the loss end, one vector–Jacobian product per operation, and arrives at the same gradient.
+
 ## The Hessian and second-order Taylor
 
 ### Second partial derivatives and the Hessian
@@ -1029,6 +1050,27 @@ p_Y(\mathbf{y})=p_X\big(\mathbf{T}^{-1}(\mathbf{y})\big)\,\big\lvert\det\mathbf{
 $$
 
 Where $\mathbf{T}$ stretches space, the same probability is spread over more volume and the density drops; where it squeezes, the density rises. The parallelogram example above is the simplest case. In one dimension this is the change-of-variables formula of [[Random Variables#Functions of a random variable|Random Variables]], and in many dimensions it is the foundation of [[Normalizing Flows|normalizing flows]], which build flexible densities by composing invertible maps and keeping track of exactly this determinant.
+
+> [!example]- Code: a density under an invertible linear map
+> ```python
+> import numpy as np
+> from scipy.stats import multivariate_normal
+> rng = np.random.default_rng(0)
+>
+> A = np.array([[2.0, 1.0], [0.0, 3.0]])              # y = T(x) = A x, the map of Figure 7(a)
+> p_X = multivariate_normal(mean=[0, 0], cov=np.eye(2)).pdf
+>
+> def p_Y(y):                                          # p_X(T^{-1}(y)) |det J_{T^{-1}}|
+>     return p_X(np.linalg.solve(A, y.T).T) / abs(np.linalg.det(A))
+>
+> y = rng.standard_normal((5, 2))
+> print(np.allclose(p_Y(y), multivariate_normal(cov=A @ A.T).pdf(y)))   # True: y ~ N(0, A A^T)
+>
+> Y = rng.standard_normal((1_000_000, 2)) @ A.T        # samples of y = A x
+> near = np.all(np.abs(Y - 0.5) < 0.1, axis=1)          # a 0.2 x 0.2 box around (0.5, 0.5)
+> print(near.mean() / 0.04, p_Y(np.array([0.5, 0.5]))) # 0.0271 vs 0.0258: equal up to sampling error
+> ```
+> The determinant $6$ spreads the probability of the unit square over an area of $6$, so the density of $\mathbf{y}$ is that of $\mathbf{x}$ divided by 6; the fraction of samples in a small box agrees with the formula up to sampling error.
 
 ## Key takeaways
 

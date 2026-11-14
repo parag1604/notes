@@ -83,6 +83,21 @@ How do the two estimators differ?
 
 Both converge to $V^\pi$ as the number of episodes grows. On the 5-state random walk used below, 20,000 episodes give an RMS error of 0.004 (first-visit) and 0.005 (every-visit); every-visit used 2.4 times as many returns.
 
+> [!example]- Code: first-visit and every-visit returns from one episode (Python)
+> ```python
+> # assumes: one episode as lists states[0..T-1], rewards[0..T-1]; returns_of = defaultdict(list)
+> G, first = 0.0, {}
+> for t in reversed(range(len(states))):          # backwards: G_t = r_t + gamma G_{t+1}
+>     G = rewards[t] + gamma * G
+>     if every_visit:
+>         returns_of[states[t]].append(G)
+>     first[states[t]] = G                        # overwritten until the FIRST visit's return is left
+> if not every_visit:
+>     for s, G_first in first.items():
+>         returns_of[s].append(G_first)
+> # after all episodes: V_hat(s) = np.mean(returns_of[s])
+> ```
+
 ### Incremental MC
 
 As in [[Multi-Armed Bandits#Incremental updates|bandits]], the sample mean can be computed incrementally. After the $n$-th return $G$ recorded for $s$,
@@ -137,6 +152,20 @@ So the MC update $V(s_t)\leftarrow V(s_t)+\alpha\big(G_t-V(s_t)\big)$ is a sum o
 > 3. $V(s_t)\leftarrow V(s_t)+\alpha_t\,\delta_t$.
 
 The target $r_t+\gamma V(s_{t+1})$ uses the current estimate of the next state's value. Using an estimate to update an estimate is called **bootstrapping**. TD(0) needs only one transition per update, so it learns during the episode and works equally well in continuing tasks.[^sutton1988]
+
+> [!example]- Code: tabular TD(0) (Python)
+> ```python
+> # assumes: env.reset() -> s, env.step(a) -> (s_next, r, terminal); policy(s) -> a;
+> # V = np.zeros(n_states); constant step size alpha
+> for episode in range(n_episodes):
+>     s, terminal = env.reset(), False
+>     while not terminal:
+>         s_next, r, terminal = env.step(policy(s))
+>         delta = r + gamma * (0.0 if terminal else V[s_next]) - V[s]   # TD error, V(terminal) = 0
+>         V[s] += alpha * delta
+>         s = s_next
+> ```
+> Compared with MC, nothing is stored about the episode: the update happens after every step.
 
 > [!note] Online and offline updates are not the same
 > Identity (1) holds for a **fixed** $V$. If we accumulate the increments $\alpha\gamma^{k-t}\delta_k$ during an episode and apply them only at the end (an **offline** update), the result is exactly the MC update. If we apply each increment immediately (**online**), later TD errors in the same episode are computed with an already-changed $V$, so the total change differs from MC. The difference is of second order in $\alpha$ (each $\delta$ moves by $O(\alpha)$ and is then multiplied by $\alpha$), and it vanishes as the step sizes go to zero.
@@ -299,6 +328,16 @@ A visit bumps the trace of the visited state by 1, and every trace decays by $\g
 > 4. $V(s)\leftarrow V(s)+\alpha\,\delta_t\,e(s)$ for all $s$.
 
 Each step costs $O(|\mathcal{S}|)$ (or only the states with non-negligible traces), and nothing has to be stored about the future. With $\lambda=0$ only the current state has a trace, and this is TD(0).
+
+> [!example]- Code: one step of TD($\lambda$) with accumulating traces (NumPy)
+> ```python
+> # assumes: inside the TD(0) loop above, with e = np.zeros(n_states) reset at the start of every episode
+> delta = r + gamma * (0.0 if terminal else V[s_next]) - V[s]
+> e *= gamma * lam             # step 3: every trace decays ...
+> e[s] += 1.0                  # ... and the visited state becomes more eligible
+> V += alpha * delta * e       # step 4: all recently visited states share the TD error
+> ```
+> These four lines replace the two update lines of TD(0). A replacing trace uses `e[s] = 1.0` instead of `e[s] += 1.0`.
 
 > [!note] Forward = backward, for offline updates
 > If $V$ is held fixed during the episode and the increments are applied at its end, the backward view changes each $V(s)$ by exactly the same total amount as the forward view. Swapping the order of summation in (2):

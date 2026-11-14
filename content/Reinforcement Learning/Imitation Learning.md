@@ -46,6 +46,17 @@ $$
 
 This is the same MLE–MSE equivalence as in [[Linear Models]], with "features → targets" replaced by "observations → actions".
 
+> [!example]- Code: the behavior-cloning loss, discrete and continuous (PyTorch)
+> ```python
+> # assumes: a batch of expert pairs obs (B, d_o) and
+> #   discrete:   logits_net(obs) -> (B, K) logits, expert actions a_disc (B,) integers
+> #   continuous: mean_net(obs) -> (B, d_a) Gaussian mean mu_theta(o), expert actions a_cont (B, d_a)
+> loss_disc = F.cross_entropy(logits_net(obs), a_disc)     # = -mean log pi_theta(a|o): classification
+> loss_cont = F.mse_loss(mean_net(obs), a_cont)            # = -mean log N(a; mu_theta(o), sigma^2 I),
+>                                                          #   up to the factor 2 sigma^2 / d_a and a constant
+> ```
+> Either loss is then minimized with any optimizer, exactly as in supervised learning. `version1.py` of the [Policy-Gradients](https://github.com/parag1604/Policy-Gradients) repository is this classifier; its `version2.py` turns it into REINFORCE by weighting each term by a return.
+
 > [!warning] Two quieter failure modes
 > - **Multimodal experts.** If the expert sometimes swerves left and sometimes right around an obstacle, the MSE-optimal prediction is the *average*: straight into the obstacle. Expressive policy classes (mixtures of Gaussians, discretized actions, diffusion or flow policies) avoid this.
 > - **Non-Markovian experts.** A human's action depends on their history, not just the current observation. A policy $\pi_\theta(a_t\mid o_t)$ may be unable to represent it. Conditioning on a short history of observations helps.
@@ -162,6 +173,20 @@ $$
 >
 > **Return** the best policy found.
 
+> [!example]- Code: the DAgger loop (Python)
+> ```python
+> # assumes: fit(data) -> policy (behavior cloning on a list of (o, a) pairs),
+> # rollout(policy) -> list of observations visited when the LEARNER acts, expert(o) -> pi*(o),
+> # data = the initial expert dataset D' as a list of (o, a) pairs
+> policies = []
+> for k in range(K):
+>     policy = fit(data)                                  # 1. train on everything collected so far
+>     visited = rollout(policy)                           # 2. the learner decides where we go
+>     data += [(o, expert(o)) for o in visited]           # 3-4. the expert only labels; aggregate
+>     policies.append(policy)
+> ```
+> Plain behavior cloning is the first iteration alone. "Return the best policy found" means evaluating the policies in `policies` and keeping the best.
+
 ![[Reinforcement Learning/images/imitation-learning-dagger-loop.svg]]
 *Figure 3: the DAgger loop. The learner chooses which observations get visited; the expert only supplies the labels.*
 
@@ -179,6 +204,7 @@ $$
 
 ## Where this shows up next
 
+- [[Unsupervised Domain Adaptation]]: the distribution drift of behaviour cloning is a covariate shift, the same problem studied there for classifiers, with importance weighting and its limits.
 - [[Policy Gradients]]: the policy-gradient estimator is the behavior-cloning (MLE) gradient with each trajectory's log-likelihood **weighted by its return**. Imitation copies every action; RL copies the good ones more.
 - [[Model-Based Reinforcement Learning]]: a learned dynamics model suffers the same distribution shift as behavior cloning: errors compound when the planner visits states the model was not trained on.
 

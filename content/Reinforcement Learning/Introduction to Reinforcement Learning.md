@@ -52,6 +52,22 @@ The interaction proceeds in discrete time steps $t=0,1,2,\dots$:
 3. The environment executes $a_t$. It returns a reward $r_t$, the next state $s_{t+1}\sim p(\cdot\mid s_t,a_t)$, and a flag $d_t$ saying whether $s_{t+1}$ is terminal.
 4. If $d_t$ is true, the episode ends and the environment resets to a new $s_0\sim\rho_0$. Otherwise, go to step 2 with $t\leftarrow t+1$.
 
+> [!example]- Code: the agent–environment loop with Gymnasium
+> ```python
+> import gymnasium as gym
+> env = gym.make("CartPole-v1")
+> s, _ = env.reset(seed=0)                                  # s_0 ~ rho_0
+> trajectory, done = [], False
+> while not done:
+>     a = env.action_space.sample()                         # a_t ~ pi(.|s_t); here a uniformly random policy
+>     s_next, r, terminated, truncated, _ = env.step(a)     # r_t and s_{t+1} ~ p(.|s_t, a_t)
+>     trajectory.append((s, a, r, s_next, terminated))      # (s_t, a_t, r_t, s_{t+1}, d_t)
+>     s, done = s_next, terminated or truncated             # truncated: a time limit, not a terminal state
+> gamma = 0.99
+> G = sum(gamma ** t * r for t, (_, _, r, _, _) in enumerate(trajectory))   # discounted return
+> ```
+> Gymnasium splits $d_t$ into `terminated` (a true terminal state) and `truncated` (the episode was cut off by a time limit). The difference matters as soon as values are bootstrapped; see [[Actor-Critic Algorithms#Fitting the critic: policy evaluation|Actor-Critic Algorithms]].
+
 So one step of experience is the tuple $(s_t,a_t,r_t,s_{t+1},d_t)$. A **trajectory** (or episode, or rollout) of $T$ steps is
 
 $$
@@ -330,6 +346,19 @@ So **given a policy, we can compute its value function exactly** for a finite MD
 
 ![[Reinforcement Learning/images/intro-rl-worked-example.svg]]
 *Figure 5: the Markov chain $P^\pi$ from the worked example, with each state's reward $r_\pi$ and value $V^\pi$.*
+
+> [!example]- Code: closed-form policy evaluation of the worked example (NumPy)
+> ```python
+> import numpy as np
+> P_pi = np.array([[0.6, 0.4, 0.0],
+>                  [0.3, 0.4, 0.3],
+>                  [0.0, 0.0, 1.0]])
+> r_pi = np.array([1.0, 2.0, 0.0])
+> gamma = 0.9
+> V = np.linalg.solve(np.eye(3) - gamma * P_pi, r_pi)   # solve (I - gamma P) V = r; no explicit inverse
+> print(V.round(3))                                     # [6.897 6.034 0.   ] = (200/29, 175/29, 0)
+> ```
+> For a policy given as a table `pi[s, a]` and a model `P[s, a, s']`, `R[s, a]`, build `P_pi = np.einsum("sa,sat->st", pi, P)` and `r_pi = (pi * R).sum(1)` first.
 
 > [!example] Worked example: hand-checking the Bellman equation on a gridworld
 > The $5\times5$ gridworld of Sutton & Barto (Example 3.5)[^suttonbarto] has four deterministic actions: up, down, left and right. A move off the grid leaves the agent in place with reward $-1$. From the special cell $A$, **every** action moves the agent to $A'$ with reward $+10$, and from $B$ every action moves it to $B'$ with reward $+5$. All other moves pay $0$. The policy picks each action with probability $\tfrac14$, and $\gamma=0.9$. Solving the $25\times25$ linear system gives the values in Figure 6(b).

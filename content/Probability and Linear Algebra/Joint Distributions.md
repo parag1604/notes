@@ -351,6 +351,28 @@ $$
 
 The conditional mean is **linear** in what we observe, and the conditional covariance does not depend on the observed value at all; it is always smaller than the marginal covariance. In two dimensions with unit variances, (4) gives $Y\mid X=x\sim\mathcal{N}(\rho x,\,1-\rho^2)$: exactly the slices of Figure 2. For a Gaussian, then, the best predictor $\mathbb{E}[Y\mid X]$ is a straight line, and least-squares linear regression loses nothing.
 
+> [!example]- Code: conditioning a Gaussian with (4)
+> ```python
+> import numpy as np
+>
+> def condition(mu, Sigma, idx2, x2):
+>     """Mean and covariance of x_1 given x_2 = x2, where idx2 lists the observed coordinates."""
+>     idx1 = [i for i in range(len(mu)) if i not in idx2]
+>     S12 = Sigma[np.ix_(idx1, idx2)]
+>     K = S12 @ np.linalg.inv(Sigma[np.ix_(idx2, idx2)])   # Sigma_12 Sigma_22^{-1}
+>     mu_c = mu[idx1] + K @ (x2 - mu[idx2])
+>     Sigma_c = Sigma[np.ix_(idx1, idx1)] - K @ S12.T      # Sigma_11 - Sigma_12 Sigma_22^{-1} Sigma_21
+>     return mu_c, Sigma_c
+>
+> mu = np.array([0.0, 1.0, -1.0])
+> Sigma = np.array([[2.0, 0.6, 0.3], [0.6, 1.0, 0.4], [0.3, 0.4, 1.5]])
+> m, C = condition(mu, Sigma, [2], np.array([0.5]))       # observe x_3 = 0.5
+> print(m, C, sep="\n")                                 # [0.3, 1.4] and [[1.94, 0.52], [0.52, 0.893]]
+> P = np.linalg.inv(Sigma)                                 # precision matrix
+> print(np.allclose(C, np.linalg.inv(P[:2, :2])))         # True: Sigma_{1|2} = (P_11)^{-1}
+> ```
+> The last line is a useful identity: the conditional covariance is the inverse of the corresponding block of the precision matrix $\boldsymbol\Sigma^{-1}$, which is why Gaussian graphical models are read off the precision.
+
 > [!warning] For Gaussians, uncorrelated does mean independent, but only jointly
 > If $(X,Y)$ is **jointly** Gaussian and $\rho=0$, then $\boldsymbol\Sigma$ is diagonal, the density factorizes, and $X$ and $Y$ are independent. This is special to the Gaussian. It also needs the *pair* to be Gaussian, not just each variable. Let $X\sim\mathcal{N}(0,1)$ and $Y=SX$ with an independent random sign $S=\pm1$. Then $Y$ is also $\mathcal{N}(0,1)$ and $\operatorname{Cov}(X,Y)=\mathbb{E}[S]\,\mathbb{E}[X^2]=0$, yet $|Y|=|X|$ always.
 

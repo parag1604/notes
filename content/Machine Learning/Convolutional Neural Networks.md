@@ -182,6 +182,25 @@ $$
 
 The identity term carries the gradient from the loss straight to every layer, however deep, without passing through a product of many Jacobians that could shrink it.[^he2016identity] We will meet the same "residual stream" in every [[Sequence Models#The transformer block|transformer block]].
 
+> [!example]- Code: a residual block (PyTorch)
+> ```python
+> import torch
+> import torch.nn as nn
+>
+> class ResidualBlock(nn.Module):
+>     """h_{l+1} = ReLU(h_l + F(h_l)), with F = conv-BN-ReLU-conv-BN."""
+>     def __init__(self, C):
+>         super().__init__()
+>         self.F = nn.Sequential(
+>             nn.Conv2d(C, C, 3, padding=1, bias=False), nn.BatchNorm2d(C), nn.ReLU(),
+>             nn.Conv2d(C, C, 3, padding=1, bias=False), nn.BatchNorm2d(C))
+>         nn.init.zeros_(self.F[-1].weight)        # start with F = 0: the block is the identity
+>
+>     def forward(self, h):
+>         return torch.relu(h + self.F(h))          # the skip connection is just "h +"
+> ```
+> When a block changes the number of channels or the resolution, the shortcut becomes a $1\times1$ convolution with the same stride so the two terms can be added. Zero-initializing the last batch-norm scale, as here, is a common trick: a freshly initialized deep ResNet then starts out as a shallow one.
+
 ### Image classification in practice
 
 The classifier itself is the familiar one from [[Linear Models]]: the last layer produces $K$ logits, a softmax turns them into class probabilities, and training minimizes the cross-entropy. A typical network is a stack of `conv → batch norm → ReLU` blocks with occasional pooling, followed by global average pooling and a linear layer. **Accuracy** counts how often the top class is correct. With many similar classes, **top-$k$ accuracy** (is the true class among the $k$ highest-scoring ones?) is also reported; ImageNet results usually quote top-1 and top-5.
@@ -242,6 +261,29 @@ A real image contains an unknown number of objects of several classes, so a fixe
 - **Two-stage detectors (the R-CNN family).** R-CNN first proposed about 2000 candidate regions with a classical algorithm, then classified each crop with a CNN and refined its box.[^girshick2014] Faster R-CNN made the proposals themselves learned: a small **region proposal network** slides over the shared feature map and, at each position, scores a fixed set of reference boxes called **anchors** (several scales and aspect ratios).[^ren2015] Each anchor $(x_a,y_a,w_a,h_a)$ predicts offsets rather than absolute coordinates, for example $t_x=(x-x_a)/w_a$ and $t_w=\log(w/w_a)$, which keeps the regression targets small and scale-free.
 - **One-stage detectors.** YOLO divides the image into a grid and lets each cell directly predict a few boxes with confidences and class probabilities, in a single forward pass.[^redmon2016] SSD does the same with default boxes at several feature-map resolutions, so that small objects are found on fine maps and large objects on coarse ones.[^liu2016] One-stage detectors are faster; two-stage ones were historically more accurate.
 
+> [!example]- Code: anchor box offsets and the smooth $L_1$ box loss (PyTorch)
+> ```python
+> import torch
+>
+> def encode(box, anchor):
+>     """Boxes as (x_center, y_center, w, h), shape (N, 4) -> targets (t_x, t_y, t_w, t_h)."""
+>     (x, y, w, h), (xa, ya, wa, ha) = box.unbind(-1), anchor.unbind(-1)
+>     return torch.stack([(x - xa) / wa, (y - ya) / ha, torch.log(w / wa), torch.log(h / ha)], -1)
+>
+> def decode(t, anchor):
+>     (tx, ty, tw, th), (xa, ya, wa, ha) = t.unbind(-1), anchor.unbind(-1)
+>     return torch.stack([xa + tx * wa, ya + ty * ha, wa * torch.exp(tw), ha * torch.exp(th)], -1)
+>
+> def smooth_l1(z, beta=1.0):
+>     """Quadratic for |z| < beta, linear beyond: the Huber-type box loss."""
+>     a = z.abs()
+>     return torch.where(a < beta, 0.5 * a ** 2 / beta, a - 0.5 * beta).sum(-1).mean()
+>
+> # assumes: pred_t (N, 4) from the network, gt_box and anchor (N, 4)
+> # loss = smooth_l1(pred_t - encode(gt_box, anchor))
+> ```
+> The network regresses the offsets $t$, not the box itself; `decode` turns its outputs back into boxes before non-maximum suppression.
+
 **Non-maximum suppression.** Neighbouring anchors or cells tend to fire on the same object, producing a cluster of overlapping boxes. Greedy **NMS** cleans this up (Figure 3b): sort the boxes by score, keep the best one, discard all remaining boxes whose IoU with it exceeds a threshold (typically 0.5), and repeat with what is left. NMS runs separately for each class.
 
 > [!example]- Code: IoU and greedy NMS (checked against torchvision)
@@ -291,6 +333,21 @@ $$
 
 A $2\times2$ kernel with stride 2 and no padding exactly doubles the resolution. When the kernel size is not a multiple of the stride the copies overlap unevenly, which can produce **checkerboard artifacts**; resize-then-convolve avoids them.[^odena2016]
 
+> [!example]- Code: a transposed convolution as "scatter a scaled kernel" (NumPy, checked against PyTorch)
+> ```python
+> import numpy as np
+>
+> def conv_transpose2d(x, w, s=2):
+>     """x: (H, W) input, w: (k, k) kernel, stride s, no padding (one channel)."""
+>     H, W = x.shape; k = w.shape[0]
+>     y = np.zeros(((H - 1) * s + k, (W - 1) * s + k))   # H_out = (H - 1) s + k
+>     for i in range(H):
+>         for j in range(W):
+>             y[i*s:i*s+k, j*s:j*s+k] += x[i, j] * w      # each input pixel stamps the kernel
+>     return y
+> ```
+> A convolution *gathers* a window into one output; its transpose *scatters* one input into a window. Where stamps overlap (here when $k$ is not a multiple of $s$) they add up, which is the source of checkerboard artifacts.
+
 ### U-Net
 
 Coarse feature maps know *what* is in the image but have lost precise *where*. **U-Net** recovers the detail with **skip connections**:[^ronneberger2015] an encoder halves the resolution step by step, a decoder doubles it back, and at each resolution the decoder concatenates the encoder's feature map of the same size before convolving (Figure 4). The decoder thus combines high-level context from below with fine spatial detail from across.
@@ -299,6 +356,25 @@ Coarse feature maps know *what* is in the image but have lost precise *where*. *
 *Figure 4: the U-Net of Parag's segmentation code. Each box is a feature map (channels, spatial size). The encoder (left) halves the resolution five times, from $224\times224$ to $7\times7$; the decoder (right) doubles it back with transposed convolutions, concatenating the encoder map of the same size (dashed skip connections); a final $1\times1$ convolution outputs one logit per pixel.*
 
 Parag's U-Net is trained from scratch. It uses padded convolutions, so every level keeps its size exactly; the original U-Net used unpadded convolutions and cropped the skip features to match.
+
+> [!example]- Code: one U-Net decoder step (PyTorch, after Parag's `decoder_block`)
+> ```python
+> import torch
+> import torch.nn as nn
+>
+> class DecoderBlock(nn.Module):
+>     def __init__(self, c_in, c_out):
+>         super().__init__()
+>         self.up = nn.ConvTranspose2d(c_in, c_out, 2, stride=2)    # doubles H and W
+>         self.conv = nn.Sequential(
+>             nn.BatchNorm2d(2 * c_out), nn.ReLU(),
+>             nn.Conv2d(2 * c_out, c_out, 3, padding=1), nn.BatchNorm2d(c_out), nn.ReLU(),
+>             nn.Conv2d(c_out, c_out, 3, padding=1), nn.BatchNorm2d(c_out), nn.ReLU())
+>
+>     def forward(self, h, skip):            # h: coarse "what"; skip: encoder map, same size as up(h)
+>         return self.conv(torch.cat([skip, self.up(h)], dim=1))   # concatenate channels
+> ```
+> The skip connection is the `torch.cat`: the decoder sees the upsampled context and the encoder's fine detail side by side.
 
 ### Losses: per-pixel cross-entropy and Dice
 

@@ -102,6 +102,19 @@ $$
 
 Compare with nearest-mean, which effectively uses $\boldsymbol{\mu}_1-\boldsymbol{\mu}_0$ itself. Fisher **whitens** that direction by the within-class scatter, so directions in which the classes are naturally spread out count for less. If $\mathbf{S}_W$ is singular (for example $D>N$), use $\mathbf{S}_W+\epsilon\mathbf{I}$.
 
+> [!example]- Code: Fisher's direction
+> ```python
+> import numpy as np
+> # assumes: X (N, D) data, y (N,) labels in {0, 1}
+> mu0, mu1 = X[y == 0].mean(axis=0), X[y == 1].mean(axis=0)
+> S_W = sum((X[y == k] - m).T @ (X[y == k] - m) for k, m in [(0, mu0), (1, mu1)])   # S_0 + S_1
+> w = np.linalg.solve(S_W, mu1 - mu0)                     # w* proportional to S_W^{-1} (mu_1 - mu_0)
+>
+> def fisher_ratio(v):                                    # R(v) = v^T S_B v / v^T S_W v
+>     return (v @ (mu1 - mu0)) ** 2 / (v @ S_W @ v)
+> ```
+> No direction beats $\mathbf{w}^*$: `fisher_ratio(w)` equals the largest generalized eigenvalue of $(\mathbf{S}_B,\mathbf{S}_W)$.
+
 > [!note] What Fisher does not give you
 > Fisher's criterion needs **no distributional assumption**. It is a geometric statement about means and scatters. It also gives only a *direction*: to classify, we still need a threshold $c$ on $\mathbf{w}^{*\top}\mathbf{x}$, such as the midpoint of the projected means. With $K>2$ classes, the same idea, using $\mathbf{S}_B=\sum_kN_k(\boldsymbol{\mu}_k-\boldsymbol{\mu})(\boldsymbol{\mu}_k-\boldsymbol{\mu})^\top$, gives up to $K-1$ directions: the top generalized eigenvectors. This makes Fisher's method a *supervised dimensionality reduction* technique, the labelled counterpart of PCA.
 
@@ -170,6 +183,33 @@ $$
 $$
 
 and $\hat y=0$ otherwise. In words: project $\mathbf{x}$ onto $\mathbf{w}=\boldsymbol{\Sigma}^{-1}(\boldsymbol{\mu}_1-\boldsymbol{\mu}_0)$ and compare with a threshold. The threshold moves towards the rarer class's mean, so a larger $\pi_1$ makes it easier to predict class $1$.
+
+> [!example]- Code: QDA and LDA from class statistics
+> ```python
+> import numpy as np
+>
+> def fit_gda(X, y, shared=False):
+>     """MLE priors, means and covariances per class; shared=True pools them (LDA)."""
+>     classes = np.unique(y)
+>     pi = np.array([np.mean(y == k) for k in classes])
+>     mu = np.array([X[y == k].mean(axis=0) for k in classes])
+>     S = np.array([(X[y == k] - m).T @ (X[y == k] - m) for k, m in zip(classes, mu)])   # scatters S_k
+>     if shared:                                          # pooled covariance S_W / (N - K)
+>         Sigma = np.repeat(S.sum(axis=0)[None] / (len(y) - len(classes)), len(classes), axis=0)
+>     else:
+>         Sigma = S / np.array([np.sum(y == k) for k in classes])[:, None, None]
+>     return classes, pi, mu, Sigma
+>
+> def predict_gda(model, X):
+>     classes, pi, mu, Sigma = model
+>     delta = []
+>     for p, m, S in zip(pi, mu, Sigma):                  # delta_k(x) for every point
+>         diff = X - m
+>         maha = np.einsum("nd,nd->n", diff, np.linalg.solve(S, diff.T).T)
+>         delta.append(np.log(p) - 0.5 * np.linalg.slogdet(S)[1] - 0.5 * maha)
+>     return classes[np.argmax(delta, axis=0)]            # compare differences, never ratios
+> ```
+> `slogdet` and `solve` avoid computing $\lvert\boldsymbol{\Sigma}_k\rvert$ and $\boldsymbol{\Sigma}_k^{-1}$ explicitly. With `shared=True` the prediction equals the linear rule $\mathbf{x}^\top\mathbf{w}>c$ above.
 
 ![[Machine Learning/images/discriminant-analysis-qda-vs-lda.svg]]
 *Figure 3: two Gaussian classes with very different shapes (dashed ellipses mark two standard deviations of each fitted Gaussian). QDA fits one covariance per class, and its boundary is a curve; it can even enclose a separate region far from the data. LDA forces one shared covariance, and its boundary is a straight line.*

@@ -375,6 +375,16 @@ This explains when a positive test does mean something (Figure 8):
 - **The false-positive rate matters most for rare conditions.** Cutting it from 10% to 1% raises the likelihood ratio to 95, and $\mathbb{P}(D\mid+)$ from 0.088 to 0.49.
 - **A second positive test helps a lot.** Yesterday's posterior is today's prior, as in the example above. In odds form the update is just a multiplication: if the tests' errors are independent given the true status, each positive multiplies the odds by another 9.5, and the probability goes from 0.01 to 0.088, then 0.48, then 0.90. If the errors are correlated (the same lab mistake, or a cross-reacting antibody), repeating the same test helps much less. This is why a positive screening test is usually confirmed with a *different* test.
 
+> [!example]- Code: repeated positive tests in odds form
+> ```python
+> prior, sensitivity, false_pos = 0.01, 0.95, 0.10
+> odds = prior / (1 - prior)                         # prior odds 1 : 99
+> for test in range(1, 4):
+>     odds *= sensitivity / false_pos                # (4): times the likelihood ratio 9.5
+>     print(test, round(odds / (1 + odds), 3))       # 1 0.088 / 2 0.477 / 3 0.896
+> ```
+> Converting back with $p=\text{odds}/(1+\text{odds})$ gives the probabilities $0.088$, $0.48$ and $0.90$ quoted above.
+
 ![[Probability and Linear Algebra/images/probability-basics-bayes-tests.svg]]
 *Figure 8. When does a positive test mean you are ill? (a) $\mathbb{P}(D\mid+)$ against the prevalence, for a test with 95% sensitivity and a 10% or 1% false-positive rate. At 1% prevalence (dot), a positive from the first test means only an 8.8% chance of illness. (b) Repeating a test whose errors are independent: each positive multiplies the odds by the likelihood ratio 9.5.*
 

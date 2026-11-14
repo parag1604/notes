@@ -174,6 +174,21 @@ Bootstrapping needs only one transition, so the critic and the actor can both be
 > 3. Actor: $\theta\leftarrow\theta+\alpha\,\delta\,\nabla_\theta\log\pi_\theta(a\mid s)$, using the same $\delta$ as the advantage estimate.
 > 4. $s\leftarrow s'$ (or reset if the episode ended).
 
+> [!example]- Code: one online actor-critic step (PyTorch)
+> ```python
+> # assumes: policy(s) -> torch.distributions object, critic(s) -> V_phi(s) (scalar), separate
+> # optimizers actor_opt, critic_opt; one transition s, a, r, s_next, terminated (0. or 1.)
+> v = critic(s)
+> with torch.no_grad():
+>     y = r + gamma * (1.0 - terminated) * critic(s_next)   # bootstrapped target, a fixed label
+> delta = (y - v).detach()                                  # TD error = advantage estimate
+> critic_loss = 0.5 * (y - v) ** 2                          # step 2: gradient is -delta * grad V_phi(s)
+> actor_loss = -policy(s).log_prob(a) * delta               # step 3: gradient is -delta * grad log pi
+> critic_opt.zero_grad(); critic_loss.backward(); critic_opt.step()
+> actor_opt.zero_grad(); actor_loss.backward(); actor_opt.step()
+> ```
+> `version2.py` of the Actor-Critic repository runs this loop on CartPole. Note `terminated`, not `terminated or truncated`: a time limit still bootstraps (see the warning above).
+
 The online algorithm is elegant and cheap, but a single transition gives a very noisy update. Consecutive transitions are also strongly correlated, which is bad for stochastic gradient descent on neural networks. The next two sections fix this.
 
 ### Architecture: one network or two?
@@ -255,6 +270,20 @@ Three facts make GAE convenient.
 1. **The endpoints are the familiar estimators.** $\lambda=0$ gives $\delta_t$, the one-step TD advantage. $\lambda=1$ gives $\sum_l\gamma^l\delta_{t+l}=\sum_l\gamma^lr_{t+l}-\hat V(s_t)$, the Monte Carlo advantage with $\hat V$ as a baseline (take the limit $\lambda\to1$ in (5); for a terminating episode the sum is finite).
 2. **It is cheap.** (5) satisfies the backward recursion $\hat A_t=\delta_t+\gamma\lambda\,\hat A_{t+1}$, so a single backward pass over a rollout computes every advantage. It is the same computation as the $\lambda$-return of TD($\lambda$) in [[Monte Carlo and Temporal-Difference Learning]], with weights $\gamma\lambda$.
 3. **With an exact critic it is unbiased for every $\lambda$** (shown next).
+
+> [!example]- Code: GAE in one backward pass (PyTorch)
+> ```python
+> # assumes: tensors of shape (T,) for one rollout: rewards, values = V(s_t), next_values = V(s_{t+1}),
+> # terminated (1. at a true terminal state), done (1. if the episode ended at t, terminal OR time limit)
+> delta = rewards + gamma * (1 - terminated) * next_values - values     # TD errors, eq. (3)
+> adv = torch.zeros_like(delta)
+> running = 0.0
+> for t in reversed(range(len(delta))):
+>     running = delta[t] + gamma * lam * (1 - done[t]) * running        # A_t = delta_t + gamma lam A_{t+1}
+>     adv[t] = running
+> critic_target = adv + values                                          # the lambda-return
+> ```
+> `lam = 0` returns the TD errors and `lam = 1` the Monte Carlo advantages. This is the `advantages` function of `version3.py`, which runs it on a (T, N) batch from N parallel environments.
 
 If $\hat V=V^\pi$, then $\mathbb{E}[\delta_t\mid s_t,a_t]=A^\pi(s_t,a_t)$ by (3), and for $l\ge1$,
 
@@ -365,6 +394,22 @@ DDPG is sample-efficient but brittle. Its main failure mode is the **maximizatio
 2. **Target policy smoothing.** Evaluate the target at a noisy action, $\tilde a'=\operatorname{clip}\big(\mu_{\bar\theta}(s')+\operatorname{clip}(\epsilon,-c,c),\,a_{\text{low}},a_{\text{high}}\big)$ with $\epsilon\sim\mathcal{N}(0,\tilde\sigma^2)$. Similar actions should have similar values, so the actor cannot exploit narrow spikes in $\hat Q$.
 3. **Delayed policy updates.** Update the actor (and the targets) only every $d$ critic updates (the paper uses $d=2$), so the actor follows a critic that has had time to settle. This is a crude version of the two-timescale idea below.
 
+> [!example]- Code: the TD3 critic target, and the Polyak update (PyTorch)
+> ```python
+> # assumes: target networks actor_targ, q1_targ, q2_targ (and online q1, q2); a replay mini-batch r, s2, term;
+> # smoothing noise sigma_tilde, clip c, action bounds a_low, a_high, Polyak rate kappa
+> with torch.no_grad():
+>     a2 = actor_targ(s2)
+>     eps = (sigma_tilde * torch.randn_like(a2)).clamp(-c, c)
+>     a2 = (a2 + eps).clamp(a_low, a_high)                      # 2. target policy smoothing
+>     q_next = torch.min(q1_targ(s2, a2), q2_targ(s2, a2))      # 1. clipped double-Q
+>     y = r + gamma * (1 - term) * q_next                       # both critics regress on this y
+>     for net, targ in ((q1, q1_targ), (q2, q2_targ)):          # soft target update
+>         for p, p_targ in zip(net.parameters(), targ.parameters()):
+>             p_targ.mul_(1 - kappa).add_(kappa * p)
+> ```
+> Fix 3 is a counter: update the actor and `actor_targ` only on every second pass.
+
 ### Soft actor-critic: maximum-entropy RL
 
 **Soft actor-critic** (SAC; Haarnoja et al., 2018)[^haarnoja2018] keeps a stochastic actor and changes the objective. It rewards the policy for staying random:
@@ -392,6 +437,20 @@ $$
 $$
 
 and the critic regresses on $y=r+\gamma\big(\min_{j}\hat Q_{\bar\phi_j}(s',a')-\tau\log\pi_\theta(a'\mid s')\big)$ with $a'\sim\pi_\theta(\cdot\mid s')$. Like TD3, SAC uses two critics with the clipped minimum and Polyak-averaged targets. Actions are a Gaussian squashed by $\tanh$ into the action bounds. A later version also tunes $\tau$ automatically, so that the policy's entropy stays near a target value.[^haarnoja2018b]
+
+> [!example]- Code: the SAC critic and actor losses (PyTorch)
+> ```python
+> # assumes: actor(s) -> (action, log pi(action|s)) using rsample(), so the action is differentiable in theta;
+> # critics q1, q2, target critics q1_targ, q2_targ, temperature tau, a replay batch s, a, r, s2, term
+> with torch.no_grad():
+>     a2, logp2 = actor(s2)                                       # FRESH next action a' ~ pi(.|s')
+>     q_next = torch.min(q1_targ(s2, a2), q2_targ(s2, a2))
+>     y = r + gamma * (1 - term) * (q_next - tau * logp2)         # soft Bellman target
+> critic_loss = 0.5 * ((q1(s, a) - y) ** 2).mean() + 0.5 * ((q2(s, a) - y) ** 2).mean()
+> a_pi, logp = actor(s)                                           # reparameterized: a = f_theta(s, xi)
+> actor_loss = (tau * logp - torch.min(q1(s, a_pi), q2(s, a_pi))).mean()   # L_pi(theta)
+> ```
+> Only the actor's optimizer steps on `actor_loss`; the critics' gradients from it are discarded. `version5.py` of the repository adds the tanh squashing (with its log-determinant correction), the automatic temperature and the Polyak update.
 
 ![[Reinforcement Learning/images/actor-critic-soft-policies.svg]]
 *Figure 4: soft-optimal policies for a two-peaked critic. The narrow peak at $a\approx0.9$ is higher; the wide peak at $a\approx-0.8$ is lower but more forgiving. A greedy (or DDPG) actor commits to the narrow peak. The Boltzmann policy puts probability 0.000, 0.264, 0.545 and 0.534 on the wider left peak at $\tau=0.02$, $0.1$, $0.3$ and $1$.*

@@ -80,6 +80,29 @@ So $J$ decreases monotonically, and the algorithm must stop after finitely many 
 
 **k-means++ seeding.** Pick the first centre uniformly at random. Pick each subsequent centre at random with probability proportional to $\mathrm{dist}(\mathbf{x},\text{nearest chosen centre})^2$. This spreads the initial centres out. It is guaranteed to be $O(\log K)$-competitive with the optimal $J$ in expectation, *before* any Lloyd iterations,[^kmeanspp] and it is the default in most libraries.
 
+> [!example]- Code: k-means++ seeding and Lloyd's iterations
+> ```python
+> import numpy as np
+>
+> def sq_dists(X, C):                                  # (N, K) matrix of ||x_i - mu_j||^2
+>     return np.maximum((X ** 2).sum(1)[:, None] - 2 * X @ C.T + (C ** 2).sum(1), 0)
+>
+> def kmeans(X, K, n_iter=100, rng=None):
+>     rng = np.random.default_rng(rng)
+>     C = X[[rng.integers(len(X))]]                    # k-means++: first centre uniformly at random
+>     for _ in range(1, K):
+>         p = sq_dists(X, C).min(axis=1)               # squared distance to the nearest chosen centre
+>         C = np.vstack([C, X[rng.choice(len(X), p=p / p.sum())]])
+>     for _ in range(n_iter):
+>         c = sq_dists(X, C).argmin(axis=1)            # 1. assign to the nearest centre
+>         C_old = C                                    # 2. move each centre to its cluster mean
+>         C = np.array([X[c == j].mean(0) if np.any(c == j) else C_old[j] for j in range(K)])
+>         if np.allclose(C, C_old):
+>             break
+>     return C, sq_dists(X, C).argmin(axis=1)
+> ```
+> The distance matrix uses $\lVert\mathbf{x}-\boldsymbol\mu\rVert^2=\lVert\mathbf{x}\rVert^2-2\mathbf{x}^\top\boldsymbol\mu+\lVert\boldsymbol\mu\rVert^2$, so it needs only an $N\times K$ array. Run it from several seeds and keep the lowest $J$.
+
 **Choosing $K$.** $J$ always decreases as $K$ grows ($K=N$ gives $J=0$), so we cannot simply minimize it.
 
 - **Elbow:** plot the converged $J$ against $K$ and look for the "elbow" where the improvements suddenly flatten.
@@ -153,6 +176,27 @@ $$
 
 > [!example] Algorithm: kernel K-Means
 > Compute the Gram matrix $\mathbf{G}_{il}=\kappa(\mathbf{x}_i,\mathbf{x}_l)$ and initialize the assignments. **Repeat:** assign each point to the cluster minimizing the distance above. The update step is implicit, because the centres are defined by the assignments.
+
+> [!example]- Code: kernel K-Means from the Gram matrix alone
+> ```python
+> import numpy as np
+>
+> def kernel_kmeans(G, K, n_iter=100, rng=None):
+>     """G: (N, N) Gram matrix kappa(x_i, x_l). Returns cluster labels in 0..K-1."""
+>     rng = np.random.default_rng(rng)
+>     c = rng.integers(K, size=len(G))                   # random initial assignment
+>     for _ in range(n_iter):
+>         dist = np.full((len(G), K), np.inf)
+>         for j in range(K):
+>             m = c == j
+>             if m.any():                                # ||phi(x_i) - m_j||^2, kernel values only
+>                 dist[:, j] = np.diag(G) - 2 * G[:, m].mean(axis=1) + G[np.ix_(m, m)].mean()
+>         c_new = dist.argmin(axis=1)
+>         if np.array_equal(c_new, c):
+>             break
+>         c = c_new
+>     return c
+> ```
 
 So kernel K-Means needs **no explicit projection**. Its real costs are $O(N^2)$ kernel evaluations and $O(N^2)$ memory for the Gram matrix. Two cautions, both visible in Figure 4:
 
@@ -303,6 +347,24 @@ $$
 >
 > These are the QDA estimates with **soft labels** $q_{ij}$ in place of $\mathbb{1}\{y_i=j\}$. Compute the E-step in log space with the log-sum-exp trick to avoid underflow.
 
+> [!example]- Code: one EM iteration for a Gaussian mixture, in log space
+> ```python
+> import numpy as np
+> from scipy.special import logsumexp
+> from scipy.stats import multivariate_normal
+> # assumes: X (N, D), pi (K,), mu (K, D), Sigma (K, D, D), reg = 1e-6
+> log_p = np.column_stack([np.log(pi[j]) + multivariate_normal(mu[j], Sigma[j]).logpdf(X)
+>                          for j in range(len(pi))])                # log pi_j N(x_i; mu_j, Sigma_j)
+> loglik = logsumexp(log_p, axis=1).sum()                           # l(theta) at the current parameters
+> q = np.exp(log_p - logsumexp(log_p, axis=1, keepdims=True))       # E-step: responsibilities q_ij
+> Nj = q.sum(axis=0)                                                # M-step
+> pi = Nj / len(X)
+> mu = (q.T @ X) / Nj[:, None]
+> Sigma = np.array([(q[:, j, None] * (X - mu[j])).T @ (X - mu[j]) / Nj[j] for j in range(len(pi))])
+> Sigma += reg * np.eye(X.shape[1])                                 # small ridge against collapse
+> ```
+> Repeating these lines never decreases `loglik` (up to the small ridge), as the chain (a)–(c) above guarantees.
+
 > [!warning] Degeneracies
 > If a component collapses onto a single point ($\boldsymbol{\mu}_j=\mathbf{x}_i$, $\boldsymbol{\Sigma}_j\to\mathbf{0}$), the likelihood goes to $+\infty$. The global "MLE" of an unconstrained GMM is therefore meaningless. Add a small ridge to every covariance ($\boldsymbol{\Sigma}_j+\epsilon\mathbf{I}$), or use a prior. Restricting the covariance type (spherical, diagonal, tied as in LDA, or full) also trades flexibility for stability.
 
@@ -364,6 +426,22 @@ This is not a linear program. It minimizes a *quadratic* form over a sphere, i.e
 - Eigenvectors of a symmetric matrix are orthogonal, so the constraint $\mathbf{1}^\top\mathbf{s}=0$ simply excludes $\mathbf{1}$. By the Courant–Fischer theorem, the minimizer is the eigenvector of the **second-smallest eigenvalue** $\lambda_2$: the **Fiedler vector** $\mathbf{s}_F$. (This needs a connected graph, so that $\lambda=0$ is simple.)
 
 **Rounding.** Assign nodes by the **sign** of their entry in $\mathbf{s}_F$, or run K-Means on the 1-D values, which often works surprisingly well. For $K>2$ clusters, embed each node using the eigenvectors of the **$K$ smallest eigenvalues** of $\mathbf{L}$ and run K-Means on these $K$-dimensional embeddings. The popular Ng–Jordan–Weiss variant uses the normalized Laplacian $\mathbf{L}_{\text{sym}}=\mathbf{I}-\operatorname{diag}(\mathbf{d})^{-1/2}\mathbf{A}\operatorname{diag}(\mathbf{d})^{-1/2}$ and row-normalizes the embedding first. This corresponds to the *normalized cut*, which balances clusters by volume rather than by size.[^njw2001]<sup>,</sup>[^luxburg2007] Computing a few eigenvectors of a sparse $\mathbf{L}$ (Lanczos) is far cheaper than a dense $O(N^3)$ decomposition.
+
+> [!example]- Code: spectral clustering with the graph Laplacian
+> ```python
+> import numpy as np
+> from scipy.cluster.vq import kmeans2
+>
+> def spectral_clustering(A, K, seed=0):
+>     """A: (N, N) symmetric adjacency matrix of a connected graph. Returns labels in 0..K-1."""
+>     L = np.diag(A.sum(axis=1)) - A                         # L = diag(d) - A
+>     vals, vecs = np.linalg.eigh(L)                         # ascending eigenvalues
+>     if K == 2:
+>         return (vecs[:, 1] < 0).astype(int)                # sign of the Fiedler vector
+>     _, labels = kmeans2(vecs[:, :K], K, minit="++", seed=seed)   # K smallest eigenvectors
+>     return labels
+> ```
+> On the worked example below, `np.linalg.eigh(L)` returns $\lambda_2\approx0.291$ and the sign split $\{1,2,3,4\}$ / $\{5,6,7,8\}$. For large sparse graphs, `scipy.sparse.linalg.eigsh` computes just the few eigenvectors needed.
 
 ### A worked example by hand
 

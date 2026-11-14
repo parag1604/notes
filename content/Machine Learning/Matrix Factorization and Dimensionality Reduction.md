@@ -392,7 +392,22 @@ $$
 \end{aligned}
 $$
 
-This is no longer an SVD, because the missing entries break the structure. But **alternating least squares** (ALS) solves it efficiently. With all movie factors fixed, each user's $(\mathbf{u}_i,b_i)$ is an independent [[Linear Models#MAP estimation and regularization|ridge regression]] on the movies that user rated, and vice versa. SGD over the observed entries is the other standard choice.
+This is no longer an SVD, because the missing entries break the structure. But **alternating least squares** (ALS) solves it efficiently. With all movie factors fixed, each user's $(\mathbf{v}_j,c_j)$ is an independent [[Linear Models#MAP estimation and regularization|ridge regression]] on the movies that user rated, and vice versa. SGD over the observed entries is the other standard choice.
+
+> [!example]- Code: one sweep of alternating least squares
+> ```python
+> import numpy as np
+> # assumes: R (m, n) observed ratings minus mu + b_i + c_j (anything where missing),
+> #          mask (m, n) True where observed, U (m, k) movie factors, V (n, k) user factors, lam > 0
+> def ridge(F, r, lam):                               # argmin_x ||F x - r||^2 + lam ||x||^2
+>     return np.linalg.solve(F.T @ F + lam * np.eye(F.shape[1]), F.T @ r)
+>
+> for i in range(R.shape[0]):                         # user factors fixed: one ridge per movie
+>     U[i] = ridge(V[mask[i]], R[i, mask[i]], lam)
+> for j in range(R.shape[1]):                         # movie factors fixed: one ridge per user
+>     V[j] = ridge(U[mask[:, j]], R[mask[:, j], j], lam)
+> ```
+> Here the biases are fitted first and held fixed, and the factors fit what is left, as in the code repository. Each half-sweep solves its subproblem exactly, so the regularized loss never increases.
 
 ![[Machine Learning/images/matrix-factorization-recommender.svg]]
 *Figure 7: synthetic ratings (200 movies × 150 users, rank-4 structure plus biases and noise, 15% observed). Filling the missing entries and taking a rank-4 SVD barely beats predicting the global mean. Fitting biased rank-4 factors only to observed ratings (ALS) halves the held-out error.*
@@ -420,6 +435,20 @@ $$
 $$
 
 where $\odot$ and the fractions act elementwise. The factors stay non-negative automatically: positive times a ratio of positives. Lee and Seung proved that the loss **never increases** under these updates.[^leeseung2001] The problem is non-convex, so NMF finds local optima, and its factors are not unique (any positive rescaling or permutation works). Initialization matters.
+
+> [!example]- Code: NMF with multiplicative updates
+> ```python
+> import numpy as np
+>
+> def nmf(A, k, n_iter=500, eps=1e-10, rng=None):
+>     """A: (m, n) non-negative. Returns W (m, k) and H (k, n), both non-negative."""
+>     rng = np.random.default_rng(rng)
+>     W, H = rng.random((A.shape[0], k)), rng.random((k, A.shape[1]))
+>     for _ in range(n_iter):
+>         H *= (W.T @ A) / (W.T @ W @ H + eps)        # eps guards against 0 / 0
+>         W *= (A @ H.T) / (W @ H @ H.T + eps)
+>     return W, H
+> ```
 
 ![[Machine Learning/images/matrix-factorization-nmf-vs-pca.svg]]
 *Figure 8: eight components learned from $8\times8$ handwritten digits. NMF's non-negative components are localized strokes: parts that add up to digits. PCA's components are global signed patterns, mixing positive (red) and negative (blue) pixels, and they only make sense in combination.*
@@ -537,6 +566,19 @@ $$
 
 In practice PCA is computed through the SVD rather than by forming $\mathbf{S}$. Squaring the data matrix squares its condition number and loses precision.
 
+> [!example]- Code: PCA through the SVD
+> ```python
+> import numpy as np
+> # assumes: X (N, D) data, K number of components
+> mu = X.mean(axis=0)
+> U, s, Vt = np.linalg.svd(X - mu, full_matrices=False)    # thin SVD of the centred data
+> W = Vt[:K].T                                             # principal directions, (D, K)
+> Z = (X - mu) @ W                                         # scores; equal to U[:, :K] * s[:K]
+> lam = s ** 2 / (len(X) - 1)                              # variances lambda_k
+> kept = lam[:K].sum() / lam.sum()                         # fraction of variance kept
+> X_hat = Z @ W.T + mu                                     # best rank-K reconstruction
+> ```
+
 **How many components?** The fraction of variance kept by the first $K$ components is $\sum_{k\le K}\lambda_k/\sum_k\lambda_k$. Plot the per-component fractions (a **scree plot**) and keep enough components to reach a target, such as 90%, or stop at an elbow (Figure 11).
 
 ![[Machine Learning/images/matrix-factorization-scree.svg]]
@@ -589,6 +631,22 @@ Every solution of the right-hand equation solves the left one. The parts of $\bo
 1. **Centre in feature space.** The assumption $\sum_n\phi(\mathbf{x}_n)=\mathbf{0}$ is not free. Use the centred Gram matrix $\tilde{\mathbb{K}}=\mathbb{K}-\mathbf{1}_N\mathbb{K}-\mathbb{K}\mathbf{1}_N+\mathbf{1}_N\mathbb{K}\mathbf{1}_N$, where $\mathbf{1}_N$ is the $N\times N$ matrix with every entry $1/N$.
 2. **Normalize.** $\lVert\mathbf{v}_i\rVert=1$ requires $\boldsymbol{\alpha}_i^\top\tilde{\mathbb{K}}\boldsymbol{\alpha}_i=1$, so rescale each eigenvector of $\tilde{\mathbb{K}}$ by $1/\sqrt{\text{its eigenvalue}}$.
 3. **Project.** The $i$-th kernel principal component of a point $\mathbf{x}$ is $z_i(\mathbf{x})=\mathbf{v}_i^\top\phi(\mathbf{x})=\sum_n\alpha_{in}\,\kappa(\mathbf{x},\mathbf{x}_n)$. For new points, centre their kernel values consistently.
+
+> [!example]- Code: kernel PCA from a Gram matrix
+> ```python
+> import numpy as np
+>
+> def kernel_pca(Kmat, n_comp):
+>     """Kmat: (N, N) Gram matrix of the training points. Returns their kernel PC scores, (N, n_comp)."""
+>     N = len(Kmat)
+>     one = np.full((N, N), 1.0 / N)
+>     Kc = Kmat - one @ Kmat - Kmat @ one + one @ Kmat @ one     # 1. centre in feature space
+>     vals, vecs = np.linalg.eigh(Kc)                            # ascending eigenvalues
+>     vals, vecs = vals[::-1][:n_comp], vecs[:, ::-1][:, :n_comp]
+>     alphas = vecs / np.sqrt(vals)                              # 2. normalize: alpha^T Kc alpha = 1
+>     return Kc @ alphas                                         # 3. project: sum_n alpha_in Kc[l, n]
+> ```
+> With a linear kernel, `Kmat = X @ X.T`, the scores equal ordinary PCA's up to the sign of each component.
 
 ![[Machine Learning/images/matrix-factorization-kernel-pca.svg]]
 *Figure 13: two concentric rings. Linear PCA can only rotate the data, so the rings stay nested. Kernel PCA with an RBF kernel maps them to separate regions, where a linear method can split them.*

@@ -121,6 +121,20 @@ The triad does not need bad features or an unrepresentable target to cause troub
 
 Since every reward is zero, $V^\pi=0$, which the features represent exactly with $\mathbf{w}=0$. The behaviour chain visits all states uniformly, $d_b(s)=1/7$, while the target policy's chain jumps straight to the lower state and stays there. With $\gamma=0.99$ the matrix $A_b$ has the eigenvalues $-0.239$, $-0.022$, $0$ (the features have rank 7, one less than the number of weights) and $0.571$ (five times). Two eigenvalues are negative, so the mean ODE is unstable.
 
+> [!example]- Code: Baird's counterexample and its key matrix $A_b$ (NumPy)
+> ```python
+> gamma = 0.99
+> Phi = np.zeros((7, 8))                       # 7 states, 8 weights
+> Phi[:6, :6] = 2 * np.eye(6)                  # upper state i: 2 w_i + w_8
+> Phi[:6, 7] = 1
+> Phi[6, 6], Phi[6, 7] = 1, 2                  # lower state: w_7 + 2 w_8
+> P_pi = np.zeros((7, 7))
+> P_pi[:, 6] = 1                               # target policy: always the solid action
+> d_b = np.full(7, 1 / 7)                      # behaviour policy: next state uniform over all 7
+> A_b = Phi.T @ np.diag(d_b) @ (np.eye(7) - gamma * P_pi) @ Phi
+> print(np.sort(np.linalg.eigvals(A_b).real).round(3))   # [-0.239 -0.022 0. 0.571 ...]
+> ```
+
 ![[Reinforcement Learning/images/off-policy-function-approximation-baird-weights.svg]]
 *Figure 2: left: off-policy semi-gradient TD(0) on Baird's counterexample, from $\mathbf{w}_0=(1,1,1,1,1,1,10,1)$ with $\alpha=0.01$. The weight norm grows from 10.3 to 315 in 1000 steps, and the expected-update version reaches 437 after 1000 sweeps; both keep growing. Right: the expected update of emphatic TD(0) (introduced below), $\alpha=0.005$, is stable. Its weights settle (not at 0, because one direction of weight space does not change any value), and the values $\Phi\mathbf{w}$ go to the true value 0: their largest magnitude after 1000 sweeps is $9\times10^{-5}$.*
 
@@ -144,6 +158,16 @@ F_t=\sum_{k=0}^{t}\gamma^{k}\prod_{j=1}^{k}\rho_{t-j},
 $$
 
 which is the discounted, importance-weighted "how much would the target policy have led here" from each earlier time. The plain off-policy update corresponds to $F_t\equiv1$.
+
+> [!example]- Code: one step of emphatic TD(0) (NumPy)
+> ```python
+> # assumes: features x = phi(s_t), x_next = phi(s_{t+1}), weights w, reward r, rho = pi(a_t|s_t) / b(a_t|s_t);
+> # before the first step F = 0 and rho_prev = 0, so that F becomes 1
+> F = gamma * rho_prev * F + 1.0                # follow-on trace
+> delta = r + gamma * x_next @ w - x @ w        # the usual TD error
+> w = w + alpha * F * rho * delta * x           # off-policy TD(0) is the same line with F = 1
+> rho_prev = rho
+> ```
 
 **The mean ODE.** $F_t$ is determined by the history up to $s_t$, so by Lemma 1 the expected increment given that history is $F_t\,h(\mathbf{w}_t,s_t)$. Define the **emphatic weighting**
 
@@ -217,6 +241,14 @@ This is the criterion Sutton used for TD in 1988.[^sutton1988] It is the reason 
 > Compare the off-policy matrix $D_b(I-\gamma P^\pi)$: its column sums are $d_b^\top-\gamma d_b^\top P^\pi$, which can be negative. In Baird's example, $d_b^\top P^\pi$ puts all its mass on the lower state, so that column sums to $\tfrac17-0.99<0$. The follow-on trace exists precisely to repair the column sums.
 
 On Baird's example, $d_e$ equals $1/7$ on each upper state and $1/7+\gamma/(1-\gamma)\approx99.1$ on the lower state, for a total of $100=1/(1-\gamma)$. All the non-zero eigenvalues of $A_e$ are positive (the largest is $3.69$), and Figure 2 (right) converges.
+
+> [!example]- Code: the emphatic weighting $d_e$ and $A_e$ for Baird's example (NumPy)
+> ```python
+> # assumes: gamma, Phi, P_pi, d_b from the Baird snippet above
+> d_e = np.linalg.solve((np.eye(7) - gamma * P_pi).T, d_b)   # d_e^T (I - gamma P_pi) = d_b^T
+> A_e = Phi.T @ np.diag(d_e) @ (np.eye(7) - gamma * P_pi) @ Phi
+> print(d_e.round(2), np.sort(np.linalg.eigvals(A_e).real).round(3))   # lower state 99.14; eigenvalues >= 0
+> ```
 
 **Convergence and the limit.** Yu proved that emphatic TD($\lambda$) converges with probability one under diminishing step sizes.[^yu2015] The limit $\mathbf{w}_e$ solves $\Phi^\top D_e(\mathcal{T}^\pi\Phi\mathbf{w}-\Phi\mathbf{w})=0$, i.e. the projected Bellman equation with the projection weighted by $d_e$. It is generally neither the on-policy TD fixed point nor the best fit. Sutton, Mahmood and White give an error bound for it, and the general algorithm adds an **interest** function $i(s)$ (replacing the "$+1$" in the trace) and eligibility traces.[^smw2016]
 

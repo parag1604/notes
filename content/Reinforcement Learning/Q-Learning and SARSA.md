@@ -95,6 +95,24 @@ Usually there is no simulator, only a single stream of experience. Then only the
 
 A standard step size is $\alpha_t(s,a)=\frac{c_1}{c_2+n_t(s,a)}$, where $n_t(s,a)$ counts the visits to $(s,a)$ so far and $c_1,c_2>0$. The **next** action $a_{t+1}$ is again chosen by the behaviour policy. The greedy action $\arg\max_{a'}Q(s_{t+1},a')$ appears only inside the **target**; the agent need not take it.
 
+> [!example]- Code: one episode of tabular Q-learning (NumPy, from RL-Basics)
+> ```python
+> # assumes: a Gymnasium env with discrete states and actions, Q = np.zeros((n_states, n_actions)),
+> # step size alpha, discount gamma, exploration rate epsilon
+> s, _ = env.reset()
+> done = False
+> while not done:
+>     if np.random.rand() < epsilon:                          # behaviour policy b: epsilon-greedy
+>         a = np.random.randint(n_actions)
+>     else:
+>         a = int(np.argmax(Q[s]))
+>     s_next, r, terminated, truncated, _ = env.step(a)
+>     target = r + (0.0 if terminated else gamma * np.max(Q[s_next]))   # target policy: greedy
+>     Q[s, a] += alpha * (target - Q[s, a])
+>     s, done = s_next, terminated or truncated
+> ```
+> This is the inner loop of `03_q_learning.py` in the RL-Basics repository, which runs it on FrozenLake with a decaying $\varepsilon$, a constant $\alpha$ and a shaped reward ($-1$ for falling into a hole).
+
 ### Q-learning is off-policy
 
 Two policies are involved:
@@ -285,6 +303,19 @@ $$
 
 This removes the variance due to sampling $a_{t+1}$, at the cost of a sum over actions, so it can use larger step sizes.[^vanseijen2009] With $\pi$ the agent's own $\varepsilon$-greedy policy it is on-policy and, as Figure 3 shows, it does better than SARSA online. With $\pi$ greedy it becomes exactly Q-learning. Since $\pi$ need not be the behaviour policy, Expected SARSA is a general off-policy method that contains both.
 
+> [!example]- Code: three TD targets for control (NumPy)
+> ```python
+> # assumes: Q (n_states, n_actions), a transition (s, a, r, s_next) with s_next non-terminal,
+> # a_next = the action the agent actually takes in s_next, epsilon = the agent's exploration rate
+> pi_next = np.full(n_actions, epsilon / n_actions)
+> pi_next[np.argmax(Q[s_next])] += 1 - epsilon                # the epsilon-greedy policy at s_next
+> target_q = r + gamma * Q[s_next].max()                      # Q-learning: greedy target policy
+> target_sarsa = r + gamma * Q[s_next, a_next]                # SARSA: the next action actually taken
+> target_esarsa = r + gamma * pi_next @ Q[s_next]             # Expected SARSA: average under pi
+> Q[s, a] += alpha * (target_sarsa - Q[s, a])                 # the update is the same for all three
+> ```
+> SARSA's target is a sample of Expected SARSA's when `a_next` is drawn from `pi_next`; with `epsilon = 0` Expected SARSA's target is Q-learning's.
+
 ---
 
 ## Maximization bias and Double Q-learning
@@ -313,11 +344,37 @@ $$
 
 and otherwise update $Q^B$ with the roles swapped. Behave $\varepsilon$-greedily with respect to $Q^A+Q^B$. Because $Q^B$'s errors are independent of the choice of $a^\star$ made with $Q^A$, the target is no longer biased upwards (it can be slightly pessimistic instead). Van Hasselt proved that Double Q-learning also converges to $Q^*$ under conditions like those of the Q-learning theorem.
 
+> [!example]- Code: one Double Q-learning update (NumPy)
+> ```python
+> # assumes: two tables QA, QB of shape (n_states, n_actions); one transition (s, a, r, s_next, terminal)
+> Q1, Q2 = (QA, QB) if np.random.rand() < 0.5 else (QB, QA)   # which table to update this time
+> a_star = np.argmax(Q1[s_next])                                # SELECT the action with one table ...
+> target = r + (0.0 if terminal else gamma * Q2[s_next, a_star])   # ... EVALUATE it with the other
+> Q1[s, a] += alpha * (target - Q1[s, a])                       # in place, so QA or QB itself changes
+> ```
+> Act $\varepsilon$-greedily with respect to `QA + QB`. Replacing `Q2[s_next, a_star]` by `Q1[s_next].max()` gives back ordinary Q-learning.
+
 ---
 
 ## Beyond tables
 
 Everything above assumes a table with one entry per pair, visited infinitely often. For large or continuous state spaces $Q$ must be approximated, $Q(s,a)\approx Q_\theta(s,a)$, and the contraction argument no longer applies: Q-learning with function approximation can diverge. **DQN** made Q-learning work with deep networks by adding an experience-replay buffer (which exploits the off-policy property) and a slowly updated *target network* that stabilizes the bootstrapped target.[^mnih2015] Its successor, Double DQN, uses exactly the decoupling above. The theory of what goes wrong, and what can be guaranteed, is the subject of [[Linear Function Approximation]] and [[Off-Policy Learning with Function Approximation]].
+
+> [!example]- Code: the DQN loss, and the change for Double DQN (PyTorch, from Deep-Q-Networks)
+> ```python
+> # assumes: q_net and q_target map states (B, d) -> Q values (B, n_actions); a replay mini-batch
+> # states, actions (B, 1) long, rewards (B, 1), next_states, terminated (B, 1) float; Polyak rate kappa
+> with torch.no_grad():
+>     q_next_dqn = q_target(next_states).max(1, keepdim=True)[0]    # DQN: target net selects AND evaluates
+>     a_star = q_net(next_states).argmax(1, keepdim=True)            # Double DQN: online net selects ...
+>     q_next_ddqn = q_target(next_states).gather(1, a_star)          # ... target net evaluates
+>     y = rewards + gamma * (1 - terminated) * q_next_ddqn           # use q_next_dqn for plain DQN
+> loss = F.mse_loss(q_net(states).gather(1, actions), y)             # regress Q(s, a) on the fixed target
+> optimizer.zero_grad(); loss.backward(); optimizer.step()
+> for p_targ, p in zip(q_target.parameters(), q_net.parameters()):   # slowly moving target network
+>     p_targ.data.copy_(kappa * p.data + (1 - kappa) * p_targ.data)
+> ```
+> The repository's `agent.py` uses the DQN line; the Double DQN version costs one extra forward pass.
 
 ## Key takeaways
 
