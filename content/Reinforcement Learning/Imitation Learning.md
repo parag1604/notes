@@ -3,7 +3,7 @@ title: Imitation Learning
 tags:
   - reinforcement-learning
   - imitation-learning
-  - behavior-cloning
+  - behaviour-cloning
   - dagger
 prev: "[[Introduction to Reinforcement Learning]]"
 next: "[[Policy Gradients]]"
@@ -11,7 +11,7 @@ next: "[[Policy Gradients]]"
 
 > **Prerequisites:** [[Introduction to Reinforcement Learning]] (MDPs, POMDPs, cost vs. reward), maximum likelihood estimation ([[Linear Models]]).
 >
-> **TL;DR:** Behavior cloning turns control into supervised learning: regress the expert's actions on the observations. It is simple, but a small per-step error $\epsilon$ compounds into an expected trajectory cost of $O(\epsilon T^2)$, because the learner drifts into states the expert never showed it. DAgger fixes this by collecting data under the learner's *own* state distribution and asking the expert to label it, which brings the cost back to $O(\epsilon T)$.
+> **TL;DR:** Behaviour cloning turns control into supervised learning: regress the expert's actions on the observations. It is simple, but a small per-step error $\epsilon$ compounds into an expected trajectory cost of $O(\epsilon T^2)$, because the learner drifts into states the expert never showed it. DAgger fixes this by collecting data under the learner's *own* state distribution and asking the expert to label it, which brings the cost back to $O(\epsilon T)$.
 
 ## Motivation
 
@@ -19,7 +19,7 @@ Suppose an expert can already do the task: a human driving a car, a teleoperator
 
 ## Setup
 
-Say we have a policy $\pi^\beta$, known as the **behavior policy**. We run $\pi^\beta$ in the environment and record a dataset $\mathcal{D}$ of experience tuples $(o_t,a_t,r_t,o_{t+1},d_t)$: observation, action, reward, next observation and done flag at time-step $t$. From it we keep only the observation–action pairs:
+Say we have a policy $\pi^\beta$, known as the **behaviour policy**. We run $\pi^\beta$ in the environment and record a dataset $\mathcal{D}$ of experience tuples $(o_t,a_t,r_t,o_{t+1},d_t)$: observation, action, reward, next observation and done flag at time-step $t$. From it we keep only the observation–action pairs:
 
 $$
 \mathcal{D}'=\{(o_i,a_i)\}_{i=1}^{N}.
@@ -30,9 +30,9 @@ By analogy with supervised learning, the $o_i$ are the input features and the $a
 > [!note]
 > We write everything with observations $o_t$, because in general the agent sees a partial observation of the state ([[Introduction to Reinforcement Learning|POMDP]]). Everything below goes through with $o_t$ replaced by $s_t$.
 
-## Behavior Cloning (BC)
+## Behaviour Cloning (BC)
 
-For behavior cloning to make sense, we assume the behavior policy is the **expert**: $\pi^\beta=\pi^*$. There is little point in imitating a sub-optimal policy. Given $\mathcal{D}'$, we learn a policy $\pi_\theta(a_t\mid o_t)$, a parametric distribution over actions conditioned on the observation, by **empirical risk minimization** (ERM). With the negative log-likelihood as the loss, ERM is maximum likelihood:
+For behaviour cloning to make sense, we assume the behaviour policy is the **expert**: $\pi^\beta=\pi^*$. There is little point in imitating a sub-optimal policy. Given $\mathcal{D}'$, we learn a policy $\pi_\theta(a_t\mid o_t)$, a parametric distribution over actions conditioned on the observation, by **empirical risk minimization** (ERM). With the negative log-likelihood as the loss, ERM is maximum likelihood:
 
 $$
 \theta^*=\arg\max_\theta\;\mathbb{E}_{(o_t,a_t)\sim\mathcal{D}'}\big[\log\pi_\theta(a_t\mid o_t)\big].
@@ -46,7 +46,7 @@ $$
 
 This is the same MLE–MSE equivalence as in [[Linear Models]], with "features → targets" replaced by "observations → actions".
 
-> [!example]- Code: the behavior-cloning loss, discrete and continuous (PyTorch)
+> [!example]- Code: the behaviour-cloning loss, discrete and continuous (PyTorch)
 > ```python
 > # assumes: a batch of expert pairs obs (B, d_o) and
 > #   discrete:   logits_net(obs) -> (B, K) logits, expert actions a_disc (B,) integers
@@ -153,7 +153,7 @@ $$
 ### What can we do about it?
 
 - **Be smart about data collection and augmentation.** Show the learner how to *recover*. The classic example is NVIDIA's self-driving car, which added side-facing cameras labelled with corrective steering, so the training data contained "slightly off the road → steer back" examples.[^bojarski2016] ALVINN used a similar trick decades earlier.[^pomerleau1988]
-- **Use very powerful models that make very few mistakes.** Driving $\epsilon$ down shrinks $\epsilon T^2$, provided the model can also handle multimodal and non-Markovian behavior (see the warning above).
+- **Use very powerful models that make very few mistakes.** Driving $\epsilon$ down shrinks $\epsilon T^2$, provided the model can also handle multimodal and non-Markovian behaviour (see the warning above).
 - **Use multi-task learning.** Training on many related tasks or goals widens the training distribution, so the learner is less often off-distribution.
 - **Change the algorithm.** Collect data from the learner's distribution directly: DAgger.
 
@@ -166,7 +166,7 @@ $$
 > [!example] Algorithm: DAgger
 > **Input:** an initial expert dataset $\mathcal{D}'=\{(o_i,a_i)\}_{i=1}^N$, and an expert $\pi^*$ that can be queried.
 > **For** $k=1,\dots,K$:
-> 1. Train $\pi_\theta(a_t\mid o_t)$ on $\mathcal{D}'$ (behavior cloning).
+> 1. Train $\pi_\theta(a_t\mid o_t)$ on $\mathcal{D}'$ (behaviour cloning).
 > 2. Run $\pi_\theta$ in the environment to collect observations $\mathcal{D}_\pi=\{o_1,\dots,o_M\}$.
 > 3. Ask the expert to label them: $a_j=\pi^*(o_j)$ for all $o_j\in\mathcal{D}_\pi$.
 > 4. Aggregate: $\mathcal{D}'\leftarrow\mathcal{D}'\cup\{(o_j,a_j)\}_{j=1}^M$.
@@ -175,7 +175,7 @@ $$
 
 > [!example]- Code: the DAgger loop (Python)
 > ```python
-> # assumes: fit(data) -> policy (behavior cloning on a list of (o, a) pairs),
+> # assumes: fit(data) -> policy (behaviour cloning on a list of (o, a) pairs),
 > # rollout(policy) -> list of observations visited when the LEARNER acts, expert(o) -> pi*(o),
 > # data = the initial expert dataset D' as a list of (o, a) pairs
 > policies = []
@@ -185,7 +185,7 @@ $$
 >     data += [(o, expert(o)) for o in visited]           # 3-4. the expert only labels; aggregate
 >     policies.append(policy)
 > ```
-> Plain behavior cloning is the first iteration alone. "Return the best policy found" means evaluating the policies in `policies` and keeping the best.
+> Plain behaviour cloning is the first iteration alone. "Return the best policy found" means evaluating the policies in `policies` and keeping the best.
 
 ![[Reinforcement Learning/images/imitation-learning-dagger-loop.svg]]
 *Figure 3: the DAgger loop. The learner chooses which observations get visited; the expert only supplies the labels.*
@@ -197,16 +197,16 @@ $$
 
 ## Key takeaways
 
-- **Behavior cloning** is supervised learning of $\pi_\theta(a\mid o)$ from expert data. With a Gaussian policy, maximum likelihood is the same as MSE regression on actions.
+- **Behaviour cloning** is supervised learning of $\pi_\theta(a\mid o)$ from expert data. With a Gaussian policy, maximum likelihood is the same as MSE regression on actions.
 - **Covariate shift:** the learner's own mistakes take it to observations the expert never visited. A per-step error $\epsilon$ then compounds into an expected trajectory cost of $O(\epsilon T^2)$.
 - **Fixes:** data that shows recovery, better models (lower $\epsilon$, multimodal and history-aware), multi-task data, or **DAgger**, which labels the learner's own visited observations and recovers $O(\epsilon T)$.
 - The *source of the data distribution* is central to RL. It comes back in [[Introduction to Reinforcement Learning#On-policy vs Off-policy Algorithm|on- vs off-policy learning]] and in importance sampling for [[Policy Gradients#Off-policy Policy Gradients|off-policy policy gradients]].
 
 ## Where this shows up next
 
+- [[Policy Gradients]] (next): the policy-gradient estimator is the behaviour-cloning (MLE) gradient with each trajectory's log-likelihood **weighted by its return**. Imitation copies every action; RL copies the good ones more.
 - [[Unsupervised Domain Adaptation]]: the distribution drift of behaviour cloning is a covariate shift, the same problem studied there for classifiers, with importance weighting and its limits.
-- [[Policy Gradients]]: the policy-gradient estimator is the behavior-cloning (MLE) gradient with each trajectory's log-likelihood **weighted by its return**. Imitation copies every action; RL copies the good ones more.
-- [[Model-Based Reinforcement Learning]]: a learned dynamics model suffers the same distribution shift as behavior cloning: errors compound when the planner visits states the model was not trained on.
+- [[Model-Based Reinforcement Learning]]: a learned dynamics model suffers the same distribution shift as behaviour cloning: errors compound when the planner visits states the model was not trained on.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

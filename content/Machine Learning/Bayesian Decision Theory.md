@@ -98,19 +98,19 @@ R(a_i\mid\mathbf{x})=\sum_{k=1}^{K}\lambda(a_i\mid k)\,\mathbb{P}(k\mid\mathbf{x
 \tag{2}
 $$
 
-A **decision rule** $\alpha(\mathbf{x})$ chooses an action for every $\mathbf{x}$, and its **overall risk** is the average
+A **decision rule** $f(\mathbf{x})$ chooses an action for every $\mathbf{x}$, and its **overall risk** is the average
 
 $$
-R[\alpha]=\int R\big(\alpha(\mathbf{x})\mid\mathbf{x}\big)\,p(\mathbf{x})\,d\mathbf{x}.
+R[f]=\int R\big(f(\mathbf{x})\mid\mathbf{x}\big)\,p(\mathbf{x})\,d\mathbf{x}.
 $$
 
 The same argument as for the error applies: to minimize the overall risk, minimize the conditional risk separately at each $\mathbf{x}$. The **Bayes decision rule** is
 
 $$
-\alpha^*(\mathbf{x})=\arg\min_{a_i}R(a_i\mid\mathbf{x}),
+f^*(\mathbf{x})=\arg\min_{a_i}R(a_i\mid\mathbf{x}),
 $$
 
-and its risk $R^*=R[\alpha^*]$ is the **Bayes risk**, the smallest achievable.
+and its risk $R^*=R[f^*]$ is the **Bayes risk**, the smallest achievable.
 
 ### 0-1 loss gives the maximum posterior
 
@@ -133,13 +133,13 @@ $$
 It is natural to assume that a mistake costs more than a correct decision: $\lambda_{21}>\lambda_{11}$ and $\lambda_{12}>\lambda_{22}$. Collecting terms, and replacing the posteriors by likelihood × prior via (1), gives the rule: decide class 1 if
 
 $$
-\psi(\mathbf{x})=\frac{p(\mathbf{x}\mid1)}{p(\mathbf{x}\mid2)}>\theta,\qquad\theta=\frac{\lambda_{12}-\lambda_{22}}{\lambda_{21}-\lambda_{11}}\cdot\frac{\pi_2}{\pi_1}.
+\psi(\mathbf{x})=\frac{p(\mathbf{x}\mid1)}{p(\mathbf{x}\mid2)}>\eta,\qquad\eta=\frac{\lambda_{12}-\lambda_{22}}{\lambda_{21}-\lambda_{11}}\cdot\frac{\pi_2}{\pi_1}.
 \tag{3}
 $$
 
-This is a **likelihood ratio test**. The data enter only through the likelihood ratio $\psi(\mathbf{x})$, while the costs and the priors are folded into a threshold $\theta$ that does not depend on $\mathbf{x}$. Changing the costs or the priors does not change the classifier's "shape", only where we cut.
+This is a **likelihood ratio test**. The data enter only through the likelihood ratio $\psi(\mathbf{x})$, while the costs and the priors are folded into a threshold $\eta$ that does not depend on $\mathbf{x}$. Changing the costs or the priors does not change the classifier's "shape", only where we cut.
 
-Figure 3 shows this for the fish. With 0-1 loss, $\theta=\pi_2/\pi_1=2$ and the boundary is at 5.05, as before. Suppose instead that wrongly calling a salmon "sea bass" costs 5 (salmon are expensive), while the opposite mistake costs 1. Then $\theta=\frac{1}{5}\cdot2=0.4$, and the boundary moves to 5.81. More fish are called salmon, because missing one is now expensive.
+Figure 3 shows this for the fish. With 0-1 loss, $\eta=\pi_2/\pi_1=2$ and the boundary is at 5.05, as before. Suppose instead that wrongly calling a salmon "sea bass" costs 5 (salmon are expensive), while the opposite mistake costs 1. Then $\eta=\frac{1}{5}\cdot2=0.4$, and the boundary moves to 5.81. More fish are called salmon, because missing one is now expensive.
 
 ![[Machine Learning/images/bayesian-decision-theory-likelihood-ratio.svg]]
 *Figure 3. The likelihood ratio $\psi(x)$ on a log scale, with two thresholds. With 0-1 loss we decide salmon wherever $\psi(x)>2$, that is for $x<5.05$. If missing a salmon costs five times as much, the threshold drops to 0.4 and the boundary moves to $x=5.81$.*
@@ -148,20 +148,20 @@ Figure 3 shows this for the fish. With 0-1 loss, $\theta=\pi_2/\pi_1=2$ and the 
 > Because the sea bass density is wider, it dominates again in the far left tail. The likelihood ratio drops below 2 again for $x<-1.85$, off the plot, so the exact Bayes region for salmon is the interval $(-1.85,\,5.05)$. Lightness cannot be negative, so this does not matter here. In general, though, unequal spreads make decision regions curved, or even split into pieces. We will see the same thing in two dimensions [[#Gaussian class-conditionals|below]].
 
 > [!example]- Aside: Neyman–Pearson and ROC curves
-> Sometimes we cannot put a price on mistakes, but we can cap one kind of error. A radar must keep its false-alarm rate below 1%, say, and then detect as many real aircraft as possible. Neyman and Pearson showed that the best test under such a constraint is again a likelihood ratio test (3), with the threshold chosen to meet the constraint.[^neyman1933] Sweeping $\theta$ from $\infty$ to 0 traces out all the achievable pairs of (false positive rate, true positive rate): the **ROC curve**. A classifier that outputs a score is evaluated by its whole ROC curve, and each operating point corresponds to some choice of costs and priors.
+> Sometimes we cannot put a price on mistakes, but we can cap one kind of error. A radar must keep its false-alarm rate below 1%, say, and then detect as many real aircraft as possible. Neyman and Pearson showed that the best test under such a constraint is again a likelihood ratio test (3), with the threshold chosen to meet the constraint.[^neyman1933] Sweeping $\eta$ from $\infty$ to 0 traces out all the achievable pairs of (false positive rate, true positive rate): the **ROC curve**. A classifier that outputs a score is evaluated by its whole ROC curve, and each operating point corresponds to some choice of costs and priors.
 
 ### The reject option
 
-When the largest posterior is not much larger than the others, any decision is close to a coin flip. Often it is better not to decide, and to hand the case to a human expert or ask for more tests. Add a **reject** action with a fixed cost $c$, cheaper than a likely mistake. With 0-1 loss for the other actions, the conditional risk of deciding class $i$ is $1-\mathbb{P}(i\mid\mathbf{x})$, and the risk of rejecting is $c$. So the Bayes rule becomes:
+When the largest posterior is not much larger than the others, any decision is close to a coin flip. Often it is better not to decide, and to hand the case to a human expert or ask for more tests. Add a **reject** action with a fixed cost $\lambda_r$, cheaper than a likely mistake. With 0-1 loss for the other actions, the conditional risk of deciding class $i$ is $1-\mathbb{P}(i\mid\mathbf{x})$, and the risk of rejecting is $\lambda_r$. So the Bayes rule becomes:
 
 $$
-\text{decide }\arg\max_k\mathbb{P}(k\mid\mathbf{x})\ \text{ if }\ \max_k\mathbb{P}(k\mid\mathbf{x})\ge1-c,\qquad\text{otherwise reject.}
+\text{decide }\arg\max_k\mathbb{P}(k\mid\mathbf{x})\ \text{ if }\ \max_k\mathbb{P}(k\mid\mathbf{x})\ge1-\lambda_r,\qquad\text{otherwise reject.}
 $$
 
-The cheaper rejection is, the more cases are rejected and the lower the error on the cases we do decide. Chow analysed this error–reject trade-off.[^chow1970] Figure 4 shows the reject band for the fish with $c=0.2$: every fish with lightness between 4.23 and 5.71 is sent for manual inspection. The option only makes sense if rejecting is cheaper than guessing: with $K$ classes the largest posterior is always at least $1/K$, so for $c\ge(K-1)/K$ (for two classes, $c\ge\tfrac12$) the rule never rejects.
+The cheaper rejection is, the more cases are rejected and the lower the error on the cases we do decide. Chow analysed this error–reject trade-off.[^chow1970] Figure 4 shows the reject band for the fish with $\lambda_r=0.2$: every fish with lightness between 4.23 and 5.71 is sent for manual inspection. The option only makes sense if rejecting is cheaper than guessing: with $K$ classes the largest posterior is always at least $1/K$, so for $\lambda_r\ge(K-1)/K$ (for two classes, $\lambda_r\ge\tfrac12$) the rule never rejects.
 
 ![[Machine Learning/images/bayesian-decision-theory-reject.svg]]
-*Figure 4. A reject option with cost $c=0.2$. Where neither posterior reaches $1-c=0.8$ (the shaded band, $4.23<x<5.71$), rejecting is cheaper than the expected cost of a mistake.*
+*Figure 4. A reject option with cost $\lambda_r=0.2$. Where neither posterior reaches $1-\lambda_r=0.8$ (the shaded band, $4.23<x<5.71$), rejecting is cheaper than the expected cost of a mistake.*
 
 > [!example]- Code: the Bayes rule with a loss matrix and a reject option
 > ```python
@@ -187,7 +187,7 @@ The cheaper rejection is, the more cases are rejected and the lower the error on
 > L = np.array([[0, 1], [5, 0]])                                 # calling a salmon "sea bass" costs 5
 > print(x[np.argmax(bayes_action(post, L) == 1)])                # boundary moves right, to about 5.81
 > ```
-> The risk is one matrix product: row $i$ of `loss` holds the $\lambda_{ik}$ of the conditional risk. Rejecting wins exactly when $c$ is below $1-\max_k\mathbb{P}(k\mid\mathbf{x})$, the rule above.
+> The risk is one matrix product: row $i$ of `loss` holds the $\lambda_{ik}$ of the conditional risk. Rejecting wins exactly when $\lambda_r$ is below $1-\max_k\mathbb{P}(k\mid\mathbf{x})$, the rule above.
 
 ## The minimax rule: when the priors are unknown
 
@@ -227,7 +227,7 @@ $$
 g(\mathbf{x})=\ln\frac{p(\mathbf{x}\mid1)}{p(\mathbf{x}\mid2)}+\ln\frac{\pi_1}{\pi_2}=\ln\frac{\mathbb{P}(1\mid\mathbf{x})}{\mathbb{P}(2\mid\mathbf{x})}.
 $$
 
-That is the **log posterior odds**, which is exactly what [[Linear Models#Logistic regression|logistic regression]] models as a linear function of $\mathbf{x}$.
+That is the **log posterior odds**, which is exactly what [[Linear Models#Logistic Regression|logistic regression]] models as a linear function of $\mathbf{x}$.
 
 ## Gaussian class-conditionals
 
@@ -268,7 +268,8 @@ $$
 \mathbf{x}_0&=\frac12(\boldsymbol\mu_1+\boldsymbol\mu_2)-\frac{\ln(\pi_1/\pi_2)}{(\boldsymbol\mu_1-\boldsymbol\mu_2)^\top\boldsymbol\Sigma^{-1}(\boldsymbol\mu_1-\boldsymbol\mu_2)}\,(\boldsymbol\mu_1-\boldsymbol\mu_2).
 \end{aligned}
 $$
- This is generally **not** perpendicular to the line joining the means: it is tilted to account for the correlation (Figure 6b). The rule is "nearest mean in Mahalanobis distance". With equal priors its error is $\Phi(-\Delta/2)$, where $\Delta$ is the Mahalanobis distance between the two means. When these parameters are estimated from data, this is **linear discriminant analysis** (LDA).
+
+This is generally **not** perpendicular to the line joining the means: it is tilted to account for the correlation (Figure 6b). The rule is "nearest mean in Mahalanobis distance". With equal priors its error is $\Phi(-\Delta/2)$, where $\Delta$ is the Mahalanobis distance between the two means. When these parameters are estimated from data, this is **linear discriminant analysis** (LDA).
 
 **Case 3: arbitrary $\boldsymbol\Sigma_k$.** Nothing cancels, and the discriminant is **quadratic**:
 
@@ -351,7 +352,7 @@ $$
 g_k(\mathbf{x})=\ln\pi_k+\sum_{j=1}^{D}\big[x_j\ln\theta_{kj}+(1-x_j)\ln(1-\theta_{kj})\big],
 $$
 
-which is **linear** in $\mathbf{x}$. For two classes the log posterior odds $g_1-g_0$ is $\mathbf{w}^\top\mathbf{x}+b$ with
+which is **linear** in $\mathbf{x}$. For two classes, labelled $0$ and $1$ here as in logistic regression, the log posterior odds $g_1-g_0$ is $\mathbf{w}^\top\mathbf{x}+b$ with
 
 $$
 w_j=\ln\frac{\theta_{1j}(1-\theta_{0j})}{\theta_{0j}(1-\theta_{1j})},\qquad b=\ln\frac{\pi_1}{\pi_0}+\sum_{j=1}^{D}\ln\frac{1-\theta_{1j}}{1-\theta_{0j}}.
@@ -425,7 +426,7 @@ Figure 7b makes this concrete. Copy one feature ten times. The true posterior do
 
 Everything above assumed the distributions were known. In practice we have only a labelled dataset $\mathcal{D}=\{(\mathbf{x}_i,y_i)\}_{i=1}^N$, and the rest of the supervised-learning lectures are different strategies for getting close to the Bayes classifier from data:
 - **Generative (plug-in) classifiers** estimate $\pi_k$ and $p(\mathbf{x}\mid k)$ and then apply Bayes' rule. With Gaussian class-conditionals these are LDA and QDA ([[Discriminant Analysis]]), and with conditionally independent features, naive Bayes (above).
-- **Discriminative probabilistic classifiers** model the posterior $\mathbb{P}(k\mid\mathbf{x})$ directly, as [[Linear Models#Logistic regression|logistic and softmax regression]] do.
+- **Discriminative probabilistic classifiers** model the posterior $\mathbb{P}(k\mid\mathbf{x})$ directly, as [[Linear Models#Logistic Regression|logistic and softmax regression]] do.
 - **Discriminant-function methods** learn the boundary itself, without probabilities, by minimizing a surrogate for the empirical risk: [[Support Vector Machines]] (hinge loss) and [[Neural Networks|neural networks]].
 - **Non-parametric methods** estimate the posterior locally, from the training points near $\mathbf{x}$. The 1-nearest-neighbour rule's asymptotic error is at most twice the Bayes error ([[Non-parametric Models]]).
 
@@ -451,7 +452,7 @@ $$
 R(\hat h)-R^*=\underbrace{\Big(R(\hat h)-\inf_{h\in\mathcal{H}}R(h)\Big)}_{\text{estimation error}}+\underbrace{\Big(\inf_{h\in\mathcal{H}}R(h)-R^*\Big)}_{\text{approximation error}}.
 $$
 
-A richer class lowers the approximation error (the best member is closer to the Bayes classifier) but raises the estimation error (with finite data we may pick the wrong member). **Regularized ERM**, $\min_{h}\hat R_N(h)+\lambda\,\Omega(h)$, controls this trade-off continuously: ridge and lasso in [[Linear Models#MAP estimation and regularization|Linear Models]] are examples.
+A richer class lowers the approximation error (the best member is closer to the Bayes classifier) but raises the estimation error (with finite data we may pick the wrong member). **Regularized ERM**, $\min_{h}\hat R_N(h)+\gamma\,\Omega(h)$, controls this trade-off continuously: ridge and lasso in [[Linear Models#MAP estimation and regularization|Linear Models]] are examples.
 
 How large can the estimation error be? For a finite class of $M$ predictors and a loss bounded in $[0,1]$, Hoeffding's inequality plus the union bound ([[Sample Statistics#Concentration and the union bound|Sample Statistics]]) give, with probability at least $1-\delta$, simultaneously for every $h\in\mathcal{H}$,
 
@@ -472,7 +473,7 @@ Decision theory also separates two questions that are easy to conflate. **Infere
 
 - With known priors and class-conditional densities, the Bayes rule (largest posterior, $\propto p(\mathbf{x}\mid k)\,\pi_k$) minimizes the probability of error, because it minimizes the conditional error at every $\mathbf{x}$. Its error, the Bayes error, is the area under the lower envelope of the curves $\pi_k\,p(\mathbf{x}\mid k)$. Only better features can reduce it.
 - With a loss function, minimize the conditional risk $R(a\mid\mathbf{x})=\sum_k\lambda(a\mid k)\,\mathbb{P}(k\mid\mathbf{x})$. 0-1 loss gives the MAP rule. For two classes the rule is a likelihood ratio test whose threshold absorbs the costs and the priors.
-- A reject option abstains when the largest posterior is below $1-c$. The minimax rule is the safe choice when priors are unknown; for 0-1 loss it equalizes the two conditional error rates.
+- A reject option abstains when the largest posterior is below $1-\lambda_r$. The minimax rule is the safe choice when priors are unknown; for 0-1 loss it equalizes the two conditional error rates.
 - Discriminant functions are equivalent up to increasing transformations; $\ln p(\mathbf{x}\mid k)+\ln\pi_k$ is the convenient one. For two classes it gives the log posterior odds.
 - Learning from data is (regularized) empirical risk minimization over a hypothesis class. Its excess risk over the Bayes risk splits into estimation and approximation error; held-out data are needed because training error is optimistic.
 - Gaussian class-conditionals give linear boundaries with equal covariances (nearest mean, LDA) and quadratic ones otherwise (QDA). The priors shift the boundaries.
@@ -482,7 +483,7 @@ Decision theory also separates two questions that are easy to conflate. **Infere
 
 - [[Linear Models]] models the log posterior odds directly (logistic regression), and fits regression by minimizing squared loss, the regression analogue of the risk.
 - [[Discriminant Analysis]] estimates the Gaussian discriminants of this lecture from data (LDA, QDA) and compares generative with discriminative classifiers.
-- [[Support Vector Machines]] and [[Neural Networks|neural networks]] learn decision boundaries directly; [[Non-parametric Models]] relate $k$-NN's error to the Bayes error.
+- [[Support Vector Machines]] and [[Neural Networks|neural networks]] learn decision boundaries directly; [[Non-parametric Models]] relates $k$-NN's error to the Bayes error.
 - In [[Introduction to Reinforcement Learning]], an agent again chooses actions to minimize expected loss (or maximize expected reward), but its actions also change the future.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->

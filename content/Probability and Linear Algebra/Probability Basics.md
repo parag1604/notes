@@ -23,7 +23,7 @@ next: "[[Random Variables]]"
 
 ## Motivation
 
-Probability provides a mathematical framework for reasoning under uncertainty. Every lecture in this series leans on it:
+Probability provides a mathematical framework for reasoning under uncertainty. Every machine-learning and reinforcement-learning lecture leans on it:
 - regression assumes Gaussian noise;
 - classifiers output class probabilities;
 - clustering fits mixture models;
@@ -241,21 +241,21 @@ $$
 The idea is to make the events disjoint without changing their union, and then use σ-additivity (Figure 5b). Define
 
 $$
-E_1=A_1,\qquad E_k=A_k\cap\Big(\bigcup_{i=1}^{k-1}A_i\Big)^c\quad(k\ge2),
+F_1=A_1,\qquad F_k=A_k\cap\Big(\bigcup_{i=1}^{k-1}A_i\Big)^c\quad(k\ge2),
 $$
 
-so $E_k$ keeps the outcomes of $A_k$ that no earlier event has already claimed.
+so $F_k$ keeps the outcomes of $A_k$ that no earlier event has already claimed.
 
 > [!proof]- Proof of the union bound
-> We need three facts about the $E_k$.
-> - **They are pairwise disjoint.** Take $i<j$. Then $E_i\subseteq A_i$, while $E_j\subseteq A_i^c$ because $E_j$ removes everything in $A_1\cup\cdots\cup A_{j-1}$, which includes $A_i$. So $E_i\cap E_j=\emptyset$.
-> - **They have the same union.** Each $E_k\subseteq A_k$, so $\bigcup_kE_k\subseteq\bigcup_kA_k$. Conversely, if $\omega\in\bigcup_kA_k$, let $k$ be the smallest index with $\omega\in A_k$. Then $\omega$ is in no earlier $A_i$, so $\omega\in E_k$.
-> - **Each is smaller:** $E_k\subseteq A_k$, so $\mathbb{P}(E_k)\le\mathbb{P}(A_k)$ by monotonicity.
+> We need three facts about the $F_k$.
+> - **They are pairwise disjoint.** Take $i<j$. Then $F_i\subseteq A_i$, while $F_j\subseteq A_i^c$ because $F_j$ removes everything in $A_1\cup\cdots\cup A_{j-1}$, which includes $A_i$. So $F_i\cap F_j=\emptyset$.
+> - **They have the same union.** Each $F_k\subseteq A_k$, so $\bigcup_kF_k\subseteq\bigcup_kA_k$. Conversely, if $\omega\in\bigcup_kA_k$, let $k$ be the smallest index with $\omega\in A_k$. Then $\omega$ is in no earlier $A_i$, so $\omega\in F_k$.
+> - **Each is smaller:** $F_k\subseteq A_k$, so $\mathbb{P}(F_k)\le\mathbb{P}(A_k)$ by monotonicity.
 >
 > Putting these together, with σ-additivity in the middle step:
 >
 > $$
-> \mathbb{P}\Big(\bigcup_kA_k\Big)=\mathbb{P}\Big(\bigcup_kE_k\Big)=\sum_k\mathbb{P}(E_k)\le\sum_k\mathbb{P}(A_k).
+> \mathbb{P}\Big(\bigcup_kA_k\Big)=\mathbb{P}\Big(\bigcup_kF_k\Big)=\sum_k\mathbb{P}(F_k)\le\sum_k\mathbb{P}(A_k).
 > $$
 
 The union bound is crude, since it ignores all overlaps, but it needs no assumptions at all. That makes it the standard way to say "with high probability, **none** of many bad events happens": bound each one, then add. The [[Multi-Armed Bandits#UCB achieves logarithmic regret|UCB regret proof]] and generalization bounds both work this way. We combine it with concentration inequalities in [[Sample Statistics#Concentration and the union bound|Sample Statistics]].
@@ -280,7 +280,7 @@ Any countable union is the limit of finite ones in this way: $E_k=\bigcup_{i=1}^
 > Taking complements gives the decreasing version: $E_k\downarrow E$ implies $\mathbb{P}(E_k)\to\mathbb{P}(E)$.
 
 ![[Probability and Linear Algebra/images/probability-basics-unions.svg]]
-*Figure 5. (a) Continuity: the finite unions $E_k=A_1\cup\cdots\cup A_k$ grow towards the countable union, and their probabilities converge to its probability. (b) The disjointification behind the union bound: $E_1=A_1$, $E_2$ is the part of $A_2$ outside $A_1$, and $E_3$ is the part of $A_3$ outside both. Together they cover $A_1\cup A_2\cup A_3$ exactly once.*
+*Figure 5. (a) Continuity: the finite unions $E_k=A_1\cup\cdots\cup A_k$ grow towards the countable union, and their probabilities converge to its probability. (b) The disjointification behind the union bound: $F_1=A_1$, $F_2$ is the part of $A_2$ outside $A_1$, and $F_3$ is the part of $A_3$ outside both. Together they cover $A_1\cup A_2\cup A_3$ exactly once.*
 
 
 ## Conditional probability and independence
@@ -328,7 +328,7 @@ Read the $B_k$ as competing explanations (hypotheses, causes, classes) and $A$ a
 - the **posterior** $\mathbb{P}(B_k\mid A)$ is how plausible it is after the evidence;
 - the denominator, the **evidence** $\mathbb{P}(A)$, is the same for every $k$ and just makes the posteriors sum to 1.
 
-So *posterior ∝ likelihood × prior*. Bayes' theorem reverses the direction of conditioning: we usually know how causes produce evidence, $\mathbb{P}(A\mid B_k)$, and want to reason back from the evidence to the causes, $\mathbb{P}(B_k\mid A)$. In Figure 6b it asks what share of the shaded area lies in a given strip. For $B_1$ the share is $0.15/0.49\approx0.31$. $B_1$ had the largest prior, but after observing $A$ it is the *least* likely explanation, because $A$ is rare under it. [[Discriminant Analysis]] classifies with exactly (3), the classes playing the role of the $B_k$.
+So *posterior ∝ likelihood × prior*. Bayes' theorem reverses the direction of conditioning: we usually know how causes produce evidence, $\mathbb{P}(A\mid B_k)$, and want to reason back from the evidence to the causes, $\mathbb{P}(B_k\mid A)$. In Figure 6b it asks what share of the shaded area lies in a given strip. For $B_1$ the share is $0.15/0.49\approx0.31$. $B_1$ had the largest prior, but after observing $A$ it is the *least* likely explanation, because $A$ is rare under it. [[Bayesian Decision Theory]] and [[Discriminant Analysis]] classify with exactly (3), the classes playing the role of the $B_k$.
 
 > [!example] Example: a rare condition and a good test
 > A condition affects 1% of a population. A test detects it 95% of the time when present (its **sensitivity**), and gives a false positive 10% of the time when absent (so its **specificity** is 90%). You test positive. What is the probability that you have the condition? Let $D$ be "has the condition" and $+$ be "tests positive":
@@ -383,7 +383,7 @@ This explains when a positive test does mean something (Figure 8):
 >     odds *= sensitivity / false_pos                # (4): times the likelihood ratio 9.5
 >     print(test, round(odds / (1 + odds), 3))       # 1 0.088 / 2 0.477 / 3 0.896
 > ```
-> Converting back with $p=\text{odds}/(1+\text{odds})$ gives the probabilities $0.088$, $0.48$ and $0.90$ quoted above.
+> Converting back with $\text{probability}=\text{odds}/(1+\text{odds})$ gives the probabilities $0.088$, $0.48$ and $0.90$ quoted above.
 
 ![[Probability and Linear Algebra/images/probability-basics-bayes-tests.svg]]
 *Figure 8. When does a positive test mean you are ill? (a) $\mathbb{P}(D\mid+)$ against the prevalence, for a test with 95% sensitivity and a 10% or 1% false-positive rate. At 1% prevalence (dot), a positive from the first test means only an 8.8% chance of illness. (b) Repeating a test whose errors are independent: each positive multiplies the odds by the likelihood ratio 9.5.*
@@ -442,7 +442,7 @@ For more than two events, **mutual** independence requires the product rule for 
 
 Independence is usually an **assumption** we build into a model ("the tosses do not influence each other"), not something we derive. Repeated independent trials are the setting for the binomial distribution, the law of large numbers and the central limit theorem.
 
-$A$ and $B$ are **conditionally independent** given $C$ if $\mathbb{P}(A\cap B\mid C)=\mathbb{P}(A\mid C)\,\mathbb{P}(B\mid C)$. Neither kind of independence implies the other. For example, two tosses of a coin whose bias is unknown are conditionally independent given the bias, but not independent: a head on the first toss makes a heads-biased coin more likely, and so makes a head on the second toss more likely. The Markov property in [[Markov Chains]] and [[Introduction to Reinforcement Learning|RL]] is a conditional independence: the future is independent of the past given the present. Naive Bayes ([[Discriminant Analysis]]) assumes features are conditionally independent given the class.
+$A$ and $B$ are **conditionally independent** given $C$ if $\mathbb{P}(A\cap B\mid C)=\mathbb{P}(A\mid C)\,\mathbb{P}(B\mid C)$. Neither kind of independence implies the other. For example, two tosses of a coin whose bias is unknown are conditionally independent given the bias, but not independent: a head on the first toss makes a heads-biased coin more likely, and so makes a head on the second toss more likely. The Markov property in [[Markov Chains]] and [[Introduction to Reinforcement Learning|RL]] is a conditional independence: the future is independent of the past given the present. [[Bayesian Decision Theory#Naive Bayes|Naive Bayes]] assumes features are conditionally independent given the class.
 
 ## Key takeaways
 

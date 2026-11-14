@@ -59,7 +59,7 @@ $Q^*$ is its fixed point. For $\gamma<1$, $\mathcal{T}^*$ is a **$\gamma$-contra
 > [!note] The episodic case, $\gamma=1$
 > In episodic tasks without discounting (a [[Stochastic Shortest Path Problems|stochastic shortest path]] problem in reward form), there is an absorbing, reward-free terminal state with $Q(\text{terminal},\cdot)=0$. A policy is **proper** if it reaches the terminal state with probability 1 from every state. The standard assumptions are:
 > - **(A)** at least one proper policy exists;
-> - **(B)** every improper policy has value $-\infty$ from at least one state (for example, every step costs a negative reward, as in "reach the goal quickly").
+> - **(B)** every improper policy has value $-\infty$ from at least one state (for example, every step earns a negative reward, as in "reach the goal quickly").
 >
 > Under (A) and (B), $Q^*$ is the unique fixed point of $\mathcal{T}^*$ (with $\gamma=1$) and Q-value iteration converges to it. Assumption (B) is needed because otherwise a policy that never terminates could collect zero (or even positive) reward forever. It would then look at least as good as reaching the goal, values could be infinite, and the Bellman equation could have many solutions. If **all** policies are proper, $\mathcal{T}^*$ is even a contraction, in a weighted max-norm (below).
 
@@ -156,7 +156,7 @@ Watkins and Dayan gave the first proof, by an "action-replay" construction.[^wat
 > $$
 > Check the three hypotheses of [[Stochastic Approximation#Asynchronous stochastic approximation|Tsitsiklis's theorem]].
 > 1. **Step sizes:** this is condition 3.
-> 2. **Noise:** given the history $\mathcal{F}_t$ (which includes $s_t$, $a_t$ and $Q_t$), $s_{t+1}\sim p(\cdot\mid s_t,a_t)$ and $r_t$ is drawn from the reward distribution of that transition. So $\mathbb{E}[w_t\mid\mathcal{F}_t]=0$ by the definition of $\mathcal{T}^*$. With $|r_t|\le R_{\max}$, $|w_t|\le2R_{\max}+2\gamma\lVert Q_t\rVert_\infty$, hence $\mathbb{E}[w_t^2\mid\mathcal{F}_t]\le K\big(1+\lVert Q_t\rVert_\infty^2\big)$ for a constant $K$ (using $(x+y)^2\le2x^2+2y^2$).
+> 2. **Noise:** given the history $\mathcal{F}_t$ (which includes $s_t$, $a_t$ and $Q_t$), $s_{t+1}\sim p(\cdot\mid s_t,a_t)$ and $r_t$ is drawn from the reward distribution of that transition. So $\mathbb{E}[w_t\mid\mathcal{F}_t]=0$ by the definition of $\mathcal{T}^*$. With $|r_t|\le r_{\max}$, $|w_t|\le2r_{\max}+2\gamma\lVert Q_t\rVert_\infty$, hence $\mathbb{E}[w_t^2\mid\mathcal{F}_t]\le K\big(1+\lVert Q_t\rVert_\infty^2\big)$ for a constant $K$ (using $(x+y)^2\le2x^2+2y^2$).
 > 3. **Contraction:** $\mathcal{T}^*$ is a $\gamma$-contraction in $\lVert\cdot\rVert_\infty$ (shown above), hence a max-norm pseudo-contraction with fixed point $Q^*$, weights $\xi\equiv1$ and modulus $\gamma$.
 >
 > Tsitsiklis's theorem gives boundedness of the iterates and $Q_t\to Q^*$ with probability 1. $\blacksquare$

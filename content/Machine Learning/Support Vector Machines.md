@@ -14,7 +14,7 @@ next: "[[Non-parametric Models]]"
 > **TL;DR:**
 > - Among all hyperplanes that separate two classes, the SVM picks the one with the **largest margin**.
 > - This is a convex quadratic program. Its **dual** depends on the data only through dot products $\mathbf{x}_i^\top\mathbf{x}_j$, and its solution depends only on the few **support vectors** on the margin.
-> - Replacing those dot products by a **kernel** $K(\mathbf{x},\mathbf{x}')$ gives non-linear boundaries without ever computing the feature map.
+> - Replacing those dot products by a **kernel** $\kappa(\mathbf{x},\mathbf{x}')$ gives non-linear boundaries without ever computing the feature map.
 > - The **soft-margin** SVM tolerates violations through slack variables, and is the same thing as $L_2$-regularized **hinge-loss** minimization.
 >
 > **Code:** [Support-Vector-Machines](https://github.com/parag1604/Support-Vector-Machines): hard-margin, soft-margin and kernel SVMs solved as quadratic programs with cvxopt.
@@ -71,7 +71,7 @@ All $N$ constraints must stay, as inequalities. We do not know in advance which 
 > [!tip] Prerequisite: constrained optimization
 > This lecture leans on Lagrange multipliers, duality and the KKT conditions. If they are new, study [[Multivariable Calculus#Constrained optimization: Lagrange multipliers|constrained optimization]] first: it covers penalties, the Lagrangian as a min–max, weak and strong duality, and the four KKT conditions, with worked examples. Chapter 5 of Boyd and Vandenberghe is the standard reference.[^boyd2004]
 >
-> **For the SVM:** $g_i=1-y_i(\mathbf{w}^\top\mathbf{x}_i+b)\le0$ and $\lambda_i=\alpha_i$. Stationarity gives $\mathbf{w}=\sum_i\alpha_iy_i\mathbf{x}_i$, dual feasibility gives $\alpha_i\ge0$, and complementary slackness says only points on the margin can have $\alpha_i>0$. Those are the support vectors.
+> **For the SVM:** the constraints are $g_i=1-y_i(\mathbf{w}^\top\mathbf{x}_i+b)\le0$, with multipliers $\alpha_i$. Stationarity gives $\mathbf{w}=\sum_i\alpha_iy_i\mathbf{x}_i$, dual feasibility gives $\alpha_i\ge0$, and complementary slackness says only points on the margin can have $\alpha_i>0$. Those are the support vectors.
 
 ### The Lagrangian dual
 
@@ -81,7 +81,7 @@ $$
 \mathcal{L}(\mathbf{w},b,\boldsymbol{\alpha})=\frac12\lVert\mathbf{w}\rVert^2-\sum_{i=1}^{N}\alpha_i\big[y_i(\mathbf{w}^\top\mathbf{x}_i+b)-1\big].
 $$
 
-The primal is $\min_{\mathbf{w},b}\max_{\boldsymbol{\alpha}\ge0}\mathcal{L}$. This is a convex quadratic program with linear constraints that are strictly feasible when the data are separable, so **strong duality** holds. We may swap the order and solve $\max_{\boldsymbol{\alpha}\ge0}\min_{\mathbf{w},b}\mathcal{L}$ instead (see the KKT aside above). The inner minimization is unconstrained, so we set the gradients to zero:
+The primal is $\min_{\mathbf{w},b}\max_{\boldsymbol{\alpha}\ge0}\mathcal{L}$. This is a convex quadratic program with linear constraints that are strictly feasible when the data are separable, so **strong duality** holds. We may swap the order and solve $\max_{\boldsymbol{\alpha}\ge0}\min_{\mathbf{w},b}\mathcal{L}$ instead (see the prerequisite note above). The inner minimization is unconstrained, so we set the gradients to zero:
 
 $$
 \begin{aligned}
@@ -105,9 +105,9 @@ $$
 \max_{\boldsymbol{\alpha}}\ \sum_{i=1}^{N}\alpha_i-\frac12\sum_{i=1}^{N}\sum_{j=1}^{N}\alpha_i\alpha_jy_iy_j\,\boxed{\mathbf{x}_i^\top\mathbf{x}_j}\qquad\text{s.t.}\qquad\alpha_i\ge0,\quad\sum_{i=1}^N\alpha_iy_i=0.
 $$
 
-In matrix form this is $\max_{\boldsymbol{\alpha}}\ \boldsymbol{\alpha}^\top\mathbf{1}-\frac12\boldsymbol{\alpha}^\top\mathbf{G}\boldsymbol{\alpha}$, with $G_{ij}=y_iy_j\,\mathbf{x}_i^\top\mathbf{x}_j$, a concave QP in $N$ variables.
+In matrix form this is $\max_{\boldsymbol{\alpha}}\ \boldsymbol{\alpha}^\top\mathbf{1}-\frac12\boldsymbol{\alpha}^\top\mathbf{Q}\boldsymbol{\alpha}$, with $Q_{ij}=y_iy_j\,\mathbf{x}_i^\top\mathbf{x}_j$, a concave QP in $N$ variables.
 
-**Support vectors via complementary slackness.** At the optimum, the [[#The Lagrangian dual|KKT conditions]] include
+**Support vectors via complementary slackness.** At the optimum, the [[Multivariable Calculus#The KKT conditions|KKT conditions]] include
 
 $$
 \alpha_i\Big[y_i\big(\mathbf{w}^\top\mathbf{x}_i+b\big)-1\Big]=0\qquad\forall i.
@@ -135,15 +135,15 @@ In practice, average this over all support vectors for numerical stability.
 Suppose we first map the inputs to a richer feature space, $\mathbf{x}\mapsto\phi(\mathbf{x})$, and run the linear SVM there. Every dot product becomes $\phi(\mathbf{x}_i)^\top\phi(\mathbf{x}_j)$. If some function computes this directly,
 
 $$
-K(\mathbf{x},\mathbf{x}')=\phi(\mathbf{x})^\top\phi(\mathbf{x}'),\qquad K:\mathcal{X}\times\mathcal{X}\to\mathbb{R},
+\kappa(\mathbf{x},\mathbf{x}')=\phi(\mathbf{x})^\top\phi(\mathbf{x}'),\qquad \kappa:\mathcal{X}\times\mathcal{X}\to\mathbb{R},
 $$
 
 then we never need $\phi$ itself. This is the **kernel trick**.[^boser1992] The kernel SVM is
 
 $$
 \begin{aligned}
-&\max_{\boldsymbol{\alpha}}\ \sum_i\alpha_i-\frac12\sum_{i,j}\alpha_i\alpha_jy_iy_j\,K(\mathbf{x}_i,\mathbf{x}_j)\quad\text{s.t. }\alpha_i\ge0,\ \sum_i\alpha_iy_i=0,\\
-&\hat y(\mathbf{u})=\operatorname{sign}\Big(\sum_i\alpha_iy_i\,K(\mathbf{x}_i,\mathbf{u})+b\Big).
+&\max_{\boldsymbol{\alpha}}\ \sum_i\alpha_i-\frac12\sum_{i,j}\alpha_i\alpha_jy_iy_j\,\kappa(\mathbf{x}_i,\mathbf{x}_j)\quad\text{s.t. }\alpha_i\ge0,\ \sum_i\alpha_iy_i=0,\\
+&\hat y(\mathbf{u})=\operatorname{sign}\Big(\sum_i\alpha_iy_i\,\kappa(\mathbf{x}_i,\mathbf{u})+b\Big).
 \end{aligned}
 $$
 
@@ -152,30 +152,30 @@ Even if the data are not linearly separable in the input space, they may be sepa
 ![[Machine Learning/images/support-vector-machines-kernel-trick.svg]]
 *Figure 2: left, two concentric rings cannot be separated by a line. Middle, adding the feature $x_1^2+x_2^2$ lifts the inner ring below a plane, so the classes become linearly separable in 3D. Right, an RBF-kernel SVM finds the circular boundary directly from kernel evaluations, without ever building $\phi$.*
 
-**An explicit example.** For $\mathbf{x}\in\mathbb{R}^2$, the polynomial kernel $K(\mathbf{x},\mathbf{x}')=(\mathbf{x}^\top\mathbf{x}')^2$ expands to
+**An explicit example.** For $\mathbf{x}\in\mathbb{R}^2$, the polynomial kernel $\kappa(\mathbf{x},\mathbf{x}')=(\mathbf{x}^\top\mathbf{x}')^2$ expands to
 
 $$
 (x_1x_1'+x_2x_2')^2=x_1^2x_1'^2+2x_1x_2x_1'x_2'+x_2^2x_2'^2=\phi(\mathbf{x})^\top\phi(\mathbf{x}'),
 $$
 
-with $\phi(\mathbf{x})=(x_1^2,\sqrt2\,x_1x_2,x_2^2)$. Evaluating $K$ costs $O(D)$. Building $\phi$ for degree $d$ would cost $O(D^d)$.
+with $\phi(\mathbf{x})=(x_1^2,\sqrt2\,x_1x_2,x_2^2)$. Evaluating $\kappa$ costs $O(D)$. Building $\phi$ for degree $d$ would cost $O(D^d)$.
 
-**Which functions are kernels?** $K$ is a valid kernel, i.e. equals $\phi(\mathbf{x})^\top\phi(\mathbf{x}')$ for some feature map, if and only if it is **symmetric** and **positive semi-definite**. That means every Gram matrix $[K(\mathbf{x}_i,\mathbf{x}_j)]_{ij}$ built from any finite set of points must be PSD. This is the finite-sample form of Mercer's condition. It also guarantees that the dual stays a concave QP.[^scholkopf2002] Common choices:
+**Which functions are kernels?** $\kappa$ is a valid kernel, i.e. equals $\phi(\mathbf{x})^\top\phi(\mathbf{x}')$ for some feature map, if and only if it is **symmetric** and **positive semi-definite**. That means every Gram matrix $\mathbf{K}=[\kappa(\mathbf{x}_i,\mathbf{x}_j)]_{ij}$ built from any finite set of points must be PSD. This is the finite-sample form of Mercer's condition. It also guarantees that the dual stays a concave QP.[^scholkopf2002] Common choices:
 
-| Kernel | $K(\mathbf{x},\mathbf{x}')$ | Feature space |
+| Kernel | $\kappa(\mathbf{x},\mathbf{x}')$ | Feature space |
 |---|---|---|
 | linear | $\mathbf{x}^\top\mathbf{x}'$ | $\mathbb{R}^D$ itself |
 | polynomial | $(\mathbf{x}^\top\mathbf{x}'+c)^d$ | all monomials up to degree $d$ |
 | Gaussian (RBF) | $\exp\big(-\lVert\mathbf{x}-\mathbf{x}'\rVert^2/2\ell^2\big)$ | infinite-dimensional |
 
-New kernels can be built from old ones: sums, positive scalings, products, and $f(\mathbf{x})K(\mathbf{x},\mathbf{x}')f(\mathbf{x}')$ all preserve validity. The kernel trick applies to *any* algorithm that touches data only through dot products. That includes Parzen windows in [[Non-parametric Models]], kernel $k$-means, kernel PCA, kernel ridge regression and Gaussian processes. This section is their common reference point.
+New kernels can be built from old ones: sums, positive scalings, products, and $s(\mathbf{x})\kappa(\mathbf{x},\mathbf{x}')s(\mathbf{x}')$ all preserve validity. The kernel trick applies to *any* algorithm that touches data only through dot products. That includes Parzen windows in [[Non-parametric Models]], [[Clustering and Expectation Maximization#Kernel K-Means|kernel K-Means]], [[Matrix Factorization and Dimensionality Reduction#Kernel PCA|kernel PCA]], kernel ridge regression and Gaussian processes. This section is their common reference point.
 
 > [!example]- Code: Gram matrices for the common kernels
 > ```python
 > import numpy as np
 >
 > def gram(X1, X2, kind="rbf", ell=1.0, c=1.0, d=2):
->     """K[i, j] = K(x_i, x'_j) for the rows of X1 (N1, D) and X2 (N2, D)."""
+>     """K[i, j] = kappa(x_i, x'_j) for the rows of X1 (N1, D) and X2 (N2, D)."""
 >     if kind == "linear":
 >         return X1 @ X2.T
 >     if kind == "poly":
@@ -200,10 +200,10 @@ $$
 
 The term $C\sum_i\xi_i$ is the **slack penalty**: the total amount by which points violate the margin, weighted by $C>0$. Points pay only if they need to. They sit inside the margin only when keeping them outside would make the classifier worse overall.
 
-**Dual.** With multipliers $\alpha_i\ge0$ for the margin constraints and $\beta_i\ge0$ for $\xi_i\ge0$:
+**Dual.** With multipliers $\alpha_i\ge0$ for the margin constraints and $\mu_i\ge0$ for $\xi_i\ge0$:
 
 $$
-\mathcal{L}=\frac12\lVert\mathbf{w}\rVert^2+C\sum_i\xi_i+\sum_i\alpha_i\big(1-\xi_i-y_i(\mathbf{w}^\top\mathbf{x}_i+b)\big)-\sum_i\beta_i\xi_i.
+\mathcal{L}=\frac12\lVert\mathbf{w}\rVert^2+C\sum_i\xi_i+\sum_i\alpha_i\big(1-\xi_i-y_i(\mathbf{w}^\top\mathbf{x}_i+b)\big)-\sum_i\mu_i\xi_i.
 $$
 
 Setting the gradients to zero:
@@ -211,20 +211,20 @@ Setting the gradients to zero:
 $$
 \begin{aligned}
 \nabla_\mathbf{w}\mathcal{L}&=\mathbf{w}-\sum_i\alpha_iy_i\mathbf{x}_i=\mathbf{0},\qquad\frac{\partial\mathcal{L}}{\partial b}=-\sum_i\alpha_iy_i=0,\\
-\frac{\partial\mathcal{L}}{\partial\xi_i}&=C-\alpha_i-\beta_i=0.
+\frac{\partial\mathcal{L}}{\partial\xi_i}&=C-\alpha_i-\mu_i=0.
 \end{aligned}
 $$
 
-The first two conditions are as before. The third gives $\beta_i=C-\alpha_i$, and $\beta_i\ge0$ then means $\alpha_i\le C$. Substituting, the $\xi_i$ terms cancel: $C\xi_i-\alpha_i\xi_i-\beta_i\xi_i=(C-\alpha_i-\beta_i)\xi_i=0$. We are left with *the same dual as before, plus a box constraint*:
+The first two conditions are as before. The third gives $\mu_i=C-\alpha_i$, and $\mu_i\ge0$ then means $\alpha_i\le C$. Substituting, the $\xi_i$ terms cancel: $C\xi_i-\alpha_i\xi_i-\mu_i\xi_i=(C-\alpha_i-\mu_i)\xi_i=0$. We are left with *the same dual as before, plus a box constraint*:
 
 $$
-\max_{\boldsymbol{\alpha}}\ \boldsymbol{\alpha}^\top\mathbf{1}-\frac12\boldsymbol{\alpha}^\top\mathbf{G}\boldsymbol{\alpha}\qquad\text{s.t.}\qquad0\le\alpha_i\le C,\quad\boldsymbol{\alpha}^\top\mathbf{y}=0.
+\max_{\boldsymbol{\alpha}}\ \boldsymbol{\alpha}^\top\mathbf{1}-\frac12\boldsymbol{\alpha}^\top\mathbf{Q}\boldsymbol{\alpha}\qquad\text{s.t.}\qquad0\le\alpha_i\le C,\quad\boldsymbol{\alpha}^\top\mathbf{y}=0.
 $$
 
-Kernels plug in exactly as before. Complementary slackness, $\alpha_i\big(1-\xi_i-y_if(\mathbf{x}_i)\big)=0$ and $\beta_i\xi_i=0$, sorts the points into three groups:
+Kernels plug in exactly as before. Complementary slackness, $\alpha_i\big(1-\xi_i-y_if(\mathbf{x}_i)\big)=0$ and $\mu_i\xi_i=0$, sorts the points into three groups:
 
 - **$\alpha_i=0$:** correctly classified, beyond the margin. The point plays no role.
-- **$0<\alpha_i<C$:** then $\beta_i>0$, so $\xi_i=0$, and the point lies **exactly on the margin**. Use these points to compute $b$.
+- **$0<\alpha_i<C$:** then $\mu_i>0$, so $\xi_i=0$, and the point lies **exactly on the margin**. Use these points to compute $b$.
 - **$\alpha_i=C$:** inside the margin ($0<\xi_i\le1$) or misclassified ($\xi_i>1$).
 
 ![[Machine Learning/images/support-vector-machines-soft-margin.svg]]
@@ -268,7 +268,7 @@ Compare this with $L_2$-regularized [[Linear Models#Logistic Regression|logistic
 
 ## Solving SVMs in practice
 
-- **Generic QP solvers.** The dual is a standard QP, so a convex solver such as cvxopt[^cvxopt] works directly. First estimate $\boldsymbol{\alpha}$ by solving the dual. Then compute $b$ from the margin support vectors, averaging over several of them. This is fine for small $N$. `cvxopt.solvers.qp` minimizes $\frac12\mathbf{a}^\top\mathbf{P}\mathbf{a}+\mathbf{q}^\top\mathbf{a}$ subject to $\mathbf{G}\mathbf{a}\le\mathbf{h}$ and $\mathbf{A}\mathbf{a}=\mathbf{b}$. Maximizing the dual is the same as minimizing its negative, so $P_{ij}=y_iy_jK(\mathbf{x}_i,\mathbf{x}_j)$ and $\mathbf{q}=-\mathbf{1}$:
+- **Generic QP solvers.** The dual is a standard QP, so a convex solver such as cvxopt[^cvxopt] works directly. First estimate $\boldsymbol{\alpha}$ by solving the dual. Then compute $b$ from the margin support vectors, averaging over several of them. This is fine for small $N$. `cvxopt.solvers.qp` minimizes $\frac12\mathbf{a}^\top\mathbf{P}\mathbf{a}+\mathbf{q}^\top\mathbf{a}$ subject to $\mathbf{G}\mathbf{a}\le\mathbf{h}$ and $\mathbf{A}\mathbf{a}=\mathbf{b}$. Maximizing the dual is the same as minimizing its negative, so $P_{ij}=y_iy_j\kappa(\mathbf{x}_i,\mathbf{x}_j)$ and $\mathbf{q}=-\mathbf{1}$:
 
 ```python
 import numpy as np
@@ -277,7 +277,7 @@ from cvxopt import matrix, solvers
 def fit_svm_dual(K, y, C):
     """K: (N, N) kernel Gram matrix, y: (N,) labels in {-1, +1}, C: slack penalty."""
     N = len(y)
-    P = matrix(np.outer(y, y) * K)                       # P_ij = y_i y_j K(x_i, x_j)
+    P = matrix(np.outer(y, y) * K)                       # P_ij = y_i y_j kappa(x_i, x_j)
     q = matrix(-np.ones(N))                              # min 1/2 a'Pa - 1'a  (= max of the dual)
     G = matrix(np.vstack([-np.eye(N), np.eye(N)]))       # -a_i <= 0  and  a_i <= C
     h = matrix(np.hstack([np.zeros(N), C * np.ones(N)]))
@@ -288,7 +288,7 @@ def fit_svm_dual(K, y, C):
     b = np.mean(y[on_margin] - (a * y) @ K[:, on_margin])
     return a, b
 
-# Prediction for test points u_j, with K_test[i, j] = K(x_i, u_j):
+# Prediction for test points u_j, with K_test[i, j] = kappa(x_i, u_j):
 #     y_hat = np.sign((a * y) @ K_test + b)
 ```
 
@@ -316,11 +316,11 @@ $$
 
 ### Dual
 
-Introduce multipliers $\alpha_i,\alpha_i^*\ge0$ for the two tube constraints and $\eta_i,\eta_i^*\ge0$ for the slack signs:
+Introduce multipliers $\alpha_i,\alpha_i^*\ge0$ for the two tube constraints and $\mu_i,\mu_i^*\ge0$ for the slack signs:
 
 $$
 \begin{aligned}
-\mathcal{L}=\ &\frac12\lVert\mathbf{w}\rVert^2+C\sum_i(\xi_i+\xi_i^*)-\sum_i(\eta_i\xi_i+\eta_i^*\xi_i^*)\\
+\mathcal{L}=\ &\frac12\lVert\mathbf{w}\rVert^2+C\sum_i(\xi_i+\xi_i^*)-\sum_i(\mu_i\xi_i+\mu_i^*\xi_i^*)\\
 &+\sum_i\alpha_i\big(y_i-\mathbf{w}^\top\mathbf{x}_i-b-\varepsilon-\xi_i\big)+\sum_i\alpha_i^*\big(\mathbf{w}^\top\mathbf{x}_i+b-y_i-\varepsilon-\xi_i^*\big).
 \end{aligned}
 $$
@@ -330,7 +330,7 @@ Stationarity in each primal variable gives
 $$
 \begin{aligned}
 \nabla_\mathbf{w}\mathcal{L}=\mathbf{0}&\ \Longrightarrow\ \mathbf{w}=\sum_i(\alpha_i-\alpha_i^*)\,\mathbf{x}_i,\qquad\frac{\partial\mathcal{L}}{\partial b}=0\ \Longrightarrow\ \sum_i(\alpha_i-\alpha_i^*)=0,\\
-\frac{\partial\mathcal{L}}{\partial\xi_i}=0&\ \Longrightarrow\ \eta_i=C-\alpha_i\ \Longrightarrow\ 0\le\alpha_i\le C\quad(\text{and likewise }0\le\alpha_i^*\le C).
+\frac{\partial\mathcal{L}}{\partial\xi_i}=0&\ \Longrightarrow\ \mu_i=C-\alpha_i\ \Longrightarrow\ 0\le\alpha_i\le C\quad(\text{and likewise }0\le\alpha_i^*\le C).
 \end{aligned}
 $$
 
@@ -343,7 +343,7 @@ $$
 \end{aligned}
 $$
 
-As before, the data appear only through dot products. Replace $\mathbf{x}_i^\top\mathbf{x}_j$ by $K(\mathbf{x}_i,\mathbf{x}_j)$, and the prediction becomes $f(\mathbf{x})=\sum_i\beta_i\,K(\mathbf{x}_i,\mathbf{x})+b$.
+As before, the data appear only through dot products. Replace $\mathbf{x}_i^\top\mathbf{x}_j$ by $\kappa(\mathbf{x}_i,\mathbf{x}_j)$, and the prediction becomes $f(\mathbf{x})=\sum_i\beta_i\,\kappa(\mathbf{x}_i,\mathbf{x})+b$.
 
 ### Which points are support vectors?
 
@@ -354,14 +354,14 @@ Complementary slackness, $\alpha_i\big(y_i-f(\mathbf{x}_i)-\varepsilon-\xi_i\big
 - **Outside the tube**: $\alpha_i=C$ (above) or $\alpha_i^*=C$ (below), with positive slack.
 - A point cannot be above and below the tube at once, so $\alpha_i\alpha_i^*=0$.
 
-The bias comes from the edge points. If $0<\alpha_i<C$, then $b=y_i-\varepsilon-\sum_j\beta_jK(\mathbf{x}_j,\mathbf{x}_i)$. If $0<\alpha_i^*<C$, then $b=y_i+\varepsilon-\sum_j\beta_jK(\mathbf{x}_j,\mathbf{x}_i)$. Average over all such points. The width $\varepsilon$ therefore controls **sparsity**: a wider tube holds more points and leaves fewer support vectors. $C$ controls how hard outliers pull on the fit.
+The bias comes from the edge points. If $0<\alpha_i<C$, then $b=y_i-\varepsilon-\sum_j\beta_j\kappa(\mathbf{x}_j,\mathbf{x}_i)$. If $0<\alpha_i^*<C$, then $b=y_i+\varepsilon-\sum_j\beta_j\kappa(\mathbf{x}_j,\mathbf{x}_i)$. Average over all such points. The width $\varepsilon$ therefore controls **sparsity**: a wider tube holds more points and leaves fewer support vectors. $C$ controls how hard outliers pull on the fit.
 
 ![[Machine Learning/images/support-vector-machines-svr.svg]]
 *Figure 5: an RBF-kernel SVR on noisy samples of $\sin x$. Grey points lie inside the $\varepsilon$-tube and have zero multipliers. Only the red points, on or outside the tube, are support vectors (27 of 80 here). The orange segments show the slacks of points outside the tube.*
 
 ### Solving the SVR dual with cvxopt
 
-Stack the variables as $\mathbf{z}=[\boldsymbol{\alpha};\boldsymbol{\alpha}^*]\in\mathbb{R}^{2N}$. Then $\boldsymbol{\beta}^\top\mathbf{K}\boldsymbol{\beta}=\mathbf{z}^\top\begin{pmatrix}\mathbf{K}&-\mathbf{K}\\-\mathbf{K}&\mathbf{K}\end{pmatrix}\mathbf{z}$, and minimizing the negated dual is a standard QP:
+Stack the variables as $\mathbf{z}=[\boldsymbol{\alpha};\boldsymbol{\alpha}^*]\in\mathbb{R}^{2N}$. With the Gram matrix $\mathbf{K}$, $K_{ij}=\kappa(\mathbf{x}_i,\mathbf{x}_j)$ (no labels in it here, unlike the classification dual's $\mathbf{Q}$), $\boldsymbol{\beta}^\top\mathbf{K}\boldsymbol{\beta}=\mathbf{z}^\top\begin{pmatrix}\mathbf{K}&-\mathbf{K}\\-\mathbf{K}&\mathbf{K}\end{pmatrix}\mathbf{z}$, and minimizing the negated dual is a standard QP:
 
 ```python
 import numpy as np
@@ -385,7 +385,7 @@ def fit_svr_dual(K, y, C, eps):
     b = np.mean(np.r_[y[up] - eps - f0[up], y[lo] + eps - f0[lo]])
     return beta, b, a, a_s
 
-# Prediction: f(u_j) = beta @ K_test[:, j] + b, with K_test[i, j] = K(x_i, u_j)
+# Prediction: f(u_j) = beta @ K_test[:, j] + b, with K_test[i, j] = kappa(x_i, u_j)
 ```
 
 On the problem of Figure 5, this agrees with scikit-learn's `SVR` to within $0.004$ everywhere, and $\alpha_i\alpha_i^*\approx0$ as predicted.
@@ -401,10 +401,10 @@ On the problem of Figure 5, this agrees with scikit-learn's `SVR` to within $0.0
 
 ## Where this shows up next
 
-- [[Linear Models]]: the logistic-regression counterpart, and $L_2$ regularization.
-- [[Discriminant Analysis]]: generative linear classifiers. LDA, logistic regression and the linear SVM are three routes to a hyperplane.
-- [[Non-parametric Models]]: Parzen windows and kernels as smoothing windows.
-- [[Clustering and Expectation Maximization#Kernel K-Means|Kernel K-Means]] and [[Clustering and Expectation Maximization#Spectral clustering|spectral clustering]] reuse this lecture's kernels and Lagrangian tools; kernel PCA comes with matrix factorization.
+- [[Non-parametric Models]], the next lecture: Parzen windows and kernels as smoothing windows.
+- [[Clustering and Expectation Maximization#Kernel K-Means|Kernel K-Means]] and [[Clustering and Expectation Maximization#Spectral clustering|spectral clustering]] reuse this lecture's kernels and Lagrangian tools, and [[Matrix Factorization and Dimensionality Reduction#Kernel PCA|kernel PCA]] runs PCA in the same feature spaces.
+- [[Neural Networks]]: the other answer to non-linear boundaries, learning the features instead of fixing them with a kernel; the perceptron there is a mistake-driven linear classifier like the one above.
+- Back in [[Linear Models]] and [[Discriminant Analysis]]: the logistic-regression counterpart with $L_2$ regularization, and generative linear classifiers. LDA, logistic regression and the linear SVM are three routes to a hyperplane.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

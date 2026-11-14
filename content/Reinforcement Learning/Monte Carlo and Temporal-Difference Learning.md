@@ -138,7 +138,7 @@ G_t-V(s_t)&=\sum_{k=t}^{T-1}\gamma^{k-t}r_k-V(s_t)\\
 \tag{1}
 $$
 
-The middle line telescopes: the $V(s_k)$ terms cancel in pairs, leaving $-V(s_t)$ and $\gamma^{T-t}V(s_T)$, which is $0$ because $s_T$ is terminal. (In a continuing discounted task the last term is $\gamma^{T-t}V(s_T)\to0$ as $T\to\infty$.) Identity (1) is exact for every trajectory and every $V$; the test script checks it to $10^{-14}$.
+The middle line telescopes: the $V(s_k)$ terms cancel in pairs, leaving $-V(s_t)$ and $\gamma^{T-t}V(s_T)$, which is $0$ because $s_T$ is terminal. (In a continuing discounted task the last term is $\gamma^{T-t}V(s_T)\to0$ as $T\to\infty$.) Identity (1) is exact for every trajectory and every $V$; a numerical check on random episodes confirms it to $10^{-14}$.
 
 So the MC update $V(s_t)\leftarrow V(s_t)+\alpha\big(G_t-V(s_t)\big)$ is a sum of pieces $\alpha\gamma^{k-t}\delta_k$, one per future step. Each piece becomes known as soon as the transition $s_k\to s_{k+1}$ has been observed. Rather than waiting for the end of the episode, we can apply the pieces as they arrive. Keeping **only the first piece** gives TD(0).
 
@@ -348,7 +348,7 @@ Each step costs $O(|\mathcal{S}|)$ (or only the states with non-negligible trace
 > &=\sum_{k=0}^{T-1}\alpha\,\delta_k\,e_k(s).
 > \end{aligned}
 > $$
-> In particular, **offline TD(1) is exactly every-visit MC**. The test script confirms both statements numerically (differences below $10^{-13}$).
+> In particular, **offline TD(1) is exactly every-visit MC**. A numerical check confirms both statements (differences below $10^{-13}$).
 
 With **online** updates the two views differ slightly, for the same reason as before: the TD errors are computed with a $V$ that has already moved. *True online TD($\lambda$)* modifies the trace and the update so that the online backward view matches an online version of the forward view exactly.[^vanseijen2016] A related variant, *replacing* traces (reset $e(s_t)$ to 1 instead of adding 1), makes TD(1) correspond to **first-visit** MC rather than every-visit MC.[^singhsutton1996]
 

@@ -6,7 +6,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-11-12T01:41:26.673277</dc:date>
+    <dc:date>2026-11-14T14:50:33.663603</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -36,7 +36,7 @@ L 85.32 22.7232
 L 175.158 65.412 
 L 175.158 104.22 
 z
-" clip-path="url(#p06a18b2abd)" style="fill: #0072b2; opacity: 0.3; stroke: #0072b2; stroke-linejoin: miter"/>
+" clip-path="url(#pf297a4721f)" style="fill: #0072b2; opacity: 0.3; stroke: #0072b2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_3">
     <path d="M 229.842 104.22 
@@ -44,7 +44,7 @@ L 229.842 65.412
 L 319.68 22.7232 
 L 319.68 146.9088 
 z
-" clip-path="url(#p06a18b2abd)" style="fill: #009e73; opacity: 0.3; stroke: #009e73; stroke-linejoin: miter"/>
+" clip-path="url(#pf297a4721f)" style="fill: #009e73; opacity: 0.3; stroke: #009e73; stroke-linejoin: miter"/>
    </g>
    <g id="text_1">
     <!-- encoder -->
@@ -253,7 +253,7 @@ z
      <use xlink:href="#DejaVuSans-65" transform="translate(304.638672 0)"/>
      <use xlink:href="#DejaVuSans-72" transform="translate(366.162109 0)"/>
     </g>
-    <!-- $g_\phi$ -->
+    <!-- $g_\psi$ -->
     <g style="fill: #808080" transform="translate(270.499 93.448938) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-Oblique-67" d="M 3816 3500 
@@ -294,40 +294,32 @@ Q 2219 481 2584 976
 Q 2950 1472 2950 2216 
 z
 " transform="scale(0.015625)"/>
-      <path id="DejaVuSans-Oblique-3d5" d="M 2991 4863 
-L 2738 3572 
-Q 3363 3572 3684 3094 
-Q 4016 2606 3850 1747 
-Q 3681 888 3159 400 
-Q 2653 -78 2028 -78 
-L 1784 -1331 
-L 1213 -1331 
-L 1456 -78 
-Q 834 -78 509 400 
-Q 178 888 347 1747 
-Q 513 2606 1034 3094 
-Q 1544 3572 2166 3572 
-L 2419 4863 
-L 2991 4863 
-z
-M 2128 434 
-Q 2481 434 2784 756 
-Q 3116 1116 3244 1747 
-Q 3369 2372 3169 2738 
-Q 2991 3059 2638 3059 
-L 2128 434 
-z
-M 1556 434 
-L 2066 3059 
-Q 1716 3059 1413 2738 
-Q 1072 2372 953 1747 
-Q 834 1116 1028 756 
-Q 1203 434 1556 434 
+      <path id="DejaVuSans-Oblique-3c8" d="M 1591 -78 
+Q 891 38 616 341 
+Q 278 713 425 1472 
+L 819 3500 
+L 1400 3500 
+L 1009 1494 
+Q 900 922 1119 684 
+Q 1313 478 1691 434 
+L 2284 3500 
+L 2856 3500 
+L 2263 438 
+Q 2681 481 2928 688 
+Q 3247 950 3353 1497 
+L 3741 3500 
+L 4322 3500 
+L 3928 1475 
+Q 3775 688 3300 344 
+Q 2872 34 2163 -75 
+L 1919 -1331 
+L 1347 -1331 
+L 1591 -78 
 z
 " transform="scale(0.015625)"/>
      </defs>
      <use xlink:href="#DejaVuSans-Oblique-67"/>
-     <use xlink:href="#DejaVuSans-Oblique-3d5" transform="translate(63.476562 -16.40625) scale(0.7)"/>
+     <use xlink:href="#DejaVuSans-Oblique-3c8" transform="translate(63.476562 -16.40625) scale(0.7)"/>
     </g>
    </g>
    <g id="text_3">
@@ -838,7 +830,7 @@ z
   </g>
  </g>
  <defs>
-  <clipPath id="p06a18b2abd">
+  <clipPath id="pf297a4721f">
    <rect x="7.2" y="7.2" width="390.6" height="155.232"/>
   </clipPath>
  </defs>

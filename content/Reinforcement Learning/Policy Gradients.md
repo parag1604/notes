@@ -9,7 +9,7 @@ prev: "[[Imitation Learning]]"
 next: "[[Actor-Critic Algorithms]]"
 ---
 
-> **Prerequisites:** [[Introduction to Reinforcement Learning]] (MDPs, trajectories, $Q^\pi$ and $V^\pi$), [[Imitation Learning]] (behavior cloning as maximum likelihood).
+> **Prerequisites:** [[Introduction to Reinforcement Learning]] (MDPs, trajectories, $Q^\pi$ and $V^\pi$), [[Imitation Learning]] (behaviour cloning as maximum likelihood).
 >
 > **TL;DR:** Write the RL objective as an expectation over trajectories and differentiate it with the log-derivative trick. The result is REINFORCE: maximum likelihood on your own samples, with each action's log-probability weighted by the reward that followed it. The estimator is unbiased but very noisy. *Baselines* and *reward-to-go* reduce the variance without adding bias, and *importance sampling* lets us reuse old data.
 >
@@ -17,7 +17,7 @@ next: "[[Actor-Critic Algorithms]]"
 
 ## Motivation
 
-[[Imitation Learning|Behavior cloning]] copies every action of an expert. Without an expert, we can still collect our own trajectories and see how well they did. The natural idea is to make the actions that led to high reward *more likely* and the rest less likely. Policy gradient methods turn this "trial and error" idea into exact gradient ascent on the expected return. The presentation loosely follows CS285.[^cs285] Sutton & Barto, Chapter 13, is the textbook treatment.[^suttonbarto]
+[[Imitation Learning|Behaviour cloning]] copies every action of an expert. Without an expert, we can still collect our own trajectories and see how well they did. The natural idea is to make the actions that led to high reward *more likely* and the rest less likely. Policy gradient methods turn this "trial and error" idea into exact gradient ascent on the expected return. The presentation loosely follows CS285.[^cs285] Sutton & Barto, Chapter 13, is the textbook treatment.[^suttonbarto]
 
 ## The objective and its gradient
 
@@ -27,7 +27,7 @@ $$
 \theta^*=\arg\max_\theta\sum_{t=0}^{T-1}\mathbb{E}_{(s_t,a_t)\sim p_\theta(s_t,a_t)}\big[r(s_t,a_t)\big]=\arg\max_\theta\underbrace{\mathbb{E}_{\tau\sim p_\theta(\tau)}\left[\sum_{t=0}^{T-1}r(s_t,a_t)\right]}_{J(\theta)}.
 $$
 
-$J(\theta)$ can be estimated from samples. Run $\pi_\theta$ to collect $N$ trajectories and average their returns. This is a Monte-Carlo estimate:
+$J(\theta)$ can be estimated from samples. Run $\pi_\theta$ to collect $N$ trajectories and average their returns. This is a Monte Carlo estimate:
 
 $$
 J(\theta)\approx\frac{1}{N}\sum_{i=1}^{N}\sum_{t=0}^{T-1}r(s_{i,t},a_{i,t}).
@@ -48,19 +48,19 @@ $$
 **The dynamics drop out.** The trajectory distribution factorizes as
 
 $$
-p_\theta(\tau)=p_\theta(s_0,a_0,\dots,s_{T-1},a_{T-1},s_T)=\rho(s_0)\prod_{t=0}^{T-1}\pi_\theta(a_t\mid s_t)\,p(s_{t+1}\mid s_t,a_t),
+p_\theta(\tau)=p_\theta(s_0,a_0,\dots,s_{T-1},a_{T-1},s_T)=\rho_0(s_0)\prod_{t=0}^{T-1}\pi_\theta(a_t\mid s_t)\,p(s_{t+1}\mid s_t,a_t),
 $$
 
 so
 
 $$
 \begin{aligned}
-\log p_\theta(\tau)&=\underbrace{\log\rho(s_0)}_{\text{independent of }\theta}+\sum_{t=0}^{T-1}\Big[\log\pi_\theta(a_t\mid s_t)+\underbrace{\log p(s_{t+1}\mid s_t,a_t)}_{\text{independent of }\theta}\Big]\\
+\log p_\theta(\tau)&=\underbrace{\log\rho_0(s_0)}_{\text{independent of }\theta}+\sum_{t=0}^{T-1}\Big[\log\pi_\theta(a_t\mid s_t)+\underbrace{\log p(s_{t+1}\mid s_t,a_t)}_{\text{independent of }\theta}\Big]\\
 \implies\nabla_\theta\log p_\theta(\tau)&=\sum_{t=0}^{T-1}\nabla_\theta\log\pi_\theta(a_t\mid s_t).
 \end{aligned}
 $$
 
-We never need to know $\rho$ or $p(s'\mid s,a)$: policy gradients are **model-free**. Putting this into (1):
+We never need to know $\rho_0$ or $p(s'\mid s,a)$: policy gradients are **model-free**. Putting this into (1):
 
 $$
 \begin{aligned}
@@ -104,13 +104,13 @@ $$
 
 ### Policy gradient = weighted maximum likelihood
 
-Compare this with the maximum-likelihood gradient from [[Imitation Learning#Behavior Cloning (BC)|behavior cloning]]:
+Compare this with the maximum-likelihood gradient from [[Imitation Learning#Behaviour Cloning (BC)|behaviour cloning]]:
 
 $$
 \nabla_\theta J_{\text{MLE}}(\theta)\approx\frac{1}{N}\sum_{i=1}^{N}\sum_{t=0}^{T-1}\nabla_\theta\log\pi_\theta(a_{i,t}\mid s_{i,t}).
 $$
 
-The policy gradient has one extra factor, the return $R(\tau_i)$, which **weights** each trajectory's log-likelihood. Policy gradient is therefore formalized *trial and error*. Actions from more rewarding trajectories get more weight in the update, which *reinforces* the behavior that led to reward (hence the name). Unlike BC, the data comes from the current policy itself, not from an expert. With a horizon of one step, REINFORCE with a softmax policy is exactly the [[Multi-Armed Bandits#Gradient bandit algorithms|gradient bandit]] algorithm.
+The policy gradient has one extra factor, the return $R(\tau_i)$, which **weights** each trajectory's log-likelihood. Policy gradient is therefore formalized *trial and error*. Actions from more rewarding trajectories get more weight in the update, which *reinforces* the behaviour that led to reward (hence the name). Unlike BC, the data comes from the current policy itself, not from an expert. With a horizon of one step, REINFORCE with a softmax policy is exactly the [[Multi-Armed Bandits#Gradient bandit algorithms|gradient bandit]] algorithm.
 
 ---
 
@@ -149,19 +149,19 @@ So subtracting a baseline leaves the *expected* gradient unchanged and only chan
 
 ### Optimal baseline (variance analysis)
 
-What baseline minimizes the variance? Work with a single component $k$ of the gradient, and write $g(\tau)=\partial_{\theta_k}\log p_\theta(\tau)$. Then
+What baseline minimizes the variance? Work with a single component $k$ of the gradient, and write $\psi(\tau)=\partial_{\theta_k}\log p_\theta(\tau)$. Then
 
 $$
-\operatorname{Var}=\mathbb{E}\Big[g(\tau)^2\big(R(\tau)-b\big)^2\Big]-\Big(\mathbb{E}\big[g(\tau)\big(R(\tau)-b\big)\big]\Big)^2.
+\operatorname{Var}=\mathbb{E}\Big[\psi(\tau)^2\big(R(\tau)-b\big)^2\Big]-\Big(\mathbb{E}\big[\psi(\tau)\big(R(\tau)-b\big)\big]\Big)^2.
 $$
 
-The second term equals $\big(\mathbb{E}[g(\tau)R(\tau)]\big)^2$ for every $b$, because baselines are unbiased. So it does not depend on $b$:
+The second term equals $\big(\mathbb{E}[\psi(\tau)R(\tau)]\big)^2$ for every $b$, because baselines are unbiased. So it does not depend on $b$:
 
 $$
 \begin{aligned}
-\frac{d\operatorname{Var}}{db}&=\frac{d}{db}\Big(\mathbb{E}\big[g(\tau)^2R(\tau)^2\big]-2b\,\mathbb{E}\big[g(\tau)^2R(\tau)\big]+b^2\,\mathbb{E}\big[g(\tau)^2\big]\Big)\\
-&=-2\,\mathbb{E}\big[g(\tau)^2R(\tau)\big]+2b\,\mathbb{E}\big[g(\tau)^2\big]=0\\
-\implies b^*&=\frac{\mathbb{E}\big[g(\tau)^2R(\tau)\big]}{\mathbb{E}\big[g(\tau)^2\big]}.
+\frac{d\operatorname{Var}}{db}&=\frac{d}{db}\Big(\mathbb{E}\big[\psi(\tau)^2R(\tau)^2\big]-2b\,\mathbb{E}\big[\psi(\tau)^2R(\tau)\big]+b^2\,\mathbb{E}\big[\psi(\tau)^2\big]\Big)\\
+&=-2\,\mathbb{E}\big[\psi(\tau)^2R(\tau)\big]+2b\,\mathbb{E}\big[\psi(\tau)^2\big]=0\\
+\implies b^*&=\frac{\mathbb{E}\big[\psi(\tau)^2R(\tau)\big]}{\mathbb{E}\big[\psi(\tau)^2\big]}.
 \end{aligned}
 $$
 
@@ -175,7 +175,7 @@ $$
 \nabla_\theta J(\theta)\approx\frac{1}{N}\sum_{i=1}^{N}\sum_{t=0}^{T-1}\nabla_\theta\log\pi_\theta(a_{i,t}\mid s_{i,t})\underbrace{\left(\sum_{t'=t}^{T-1}r(s_{i,t'},a_{i,t'})\right)}_{\hat Q_{i,t}\,\approx\,Q^{\pi}(s_{i,t},a_{i,t})}.
 $$
 
-The **reward-to-go** $\hat Q_{i,t}$ is a single-sample Monte-Carlo estimate of the state-action value $Q^{\pi}(s_{i,t},a_{i,t})$. Replacing it by the true $Q^\pi$ gives the **policy gradient theorem**, $\nabla_\theta J=\mathbb{E}\big[\sum_t\nabla_\theta\log\pi_\theta(a_t\mid s_t)\,Q^\pi(s_t,a_t)\big]$.[^sutton1999]
+The **reward-to-go** $\hat Q_{i,t}$ is a single-sample Monte Carlo estimate of the state-action value $Q^{\pi}(s_{i,t},a_{i,t})$. Replacing it by the true $Q^\pi$ gives the **policy gradient theorem**, $\nabla_\theta J=\mathbb{E}\big[\sum_t\nabla_\theta\log\pi_\theta(a_t\mid s_t)\,Q^\pi(s_t,a_t)\big]$.[^sutton1999]
 
 **Baselines with reward-to-go.** A constant $b$ is *still unbiased* here. But it is a poor choice, because the scale of the reward-to-go changes along the trajectory. In design A, $\hat Q$ is about $100$ at $s_0$, about $50$ at $s_{50}$ and about $0$ near $s_{100}$, so no single constant centres them all. The natural fix is a **state-dependent baseline** $b(s_t)$. It is also unbiased, since it does not depend on $a_t$:
 
@@ -221,7 +221,7 @@ $$
 and the unknown initial-state distribution and dynamics cancel in the ratio:
 
 $$
-\frac{p_\theta(\tau)}{\bar p(\tau)}=\frac{\rho(s_0)\prod_{t=0}^{T-1}\pi_\theta(a_t\mid s_t)\,p(s_{t+1}\mid s_t,a_t)}{\rho(s_0)\prod_{t=0}^{T-1}\bar\pi(a_t\mid s_t)\,p(s_{t+1}\mid s_t,a_t)}=\prod_{t=0}^{T-1}\frac{\pi_\theta(a_t\mid s_t)}{\bar\pi(a_t\mid s_t)}.\tag{2}
+\frac{p_\theta(\tau)}{\bar p(\tau)}=\frac{\rho_0(s_0)\prod_{t=0}^{T-1}\pi_\theta(a_t\mid s_t)\,p(s_{t+1}\mid s_t,a_t)}{\rho_0(s_0)\prod_{t=0}^{T-1}\bar\pi(a_t\mid s_t)\,p(s_{t+1}\mid s_t,a_t)}=\prod_{t=0}^{T-1}\frac{\pi_\theta(a_t\mid s_t)}{\bar\pi(a_t\mid s_t)}.\tag{2}
 $$
 
 **Notation.** The data in our buffer was collected by an older policy. Call it $\pi_\theta$, and call the current policy that we want to improve $\pi_{\theta'}$. This follows the convention that past objects get a plain letter and newer ones a prime, as with $s$ and $s'$. We want to update $\pi_{\theta'}$ using samples from $\pi_\theta$:
@@ -323,7 +323,7 @@ a=\arg\max_{k}\big(\ell_k+g_k\big)\quad\sim\quad\operatorname{Categorical}\big(\
 $$
 
 > [!proof]- Why Gumbel-max samples exactly from the softmax
-> The Gumbel$(\mu,1)$ CDF is $F(x)=\exp(-e^{-(x-\mu)})$, so $\ell_k+g_k\sim\text{Gumbel}(\ell_k,1)$. The probability that $k$ wins is
+> The Gumbel$(m,1)$ CDF is $F(x)=\exp(-e^{-(x-m)})$, so $\ell_k+g_k\sim\text{Gumbel}(\ell_k,1)$. The probability that $k$ wins is
 > $P(k)=\int p_k(x)\prod_{j\neq k}F_j(x)\,dx=\int e^{-(x-\ell_k)}\exp\!\Big(-\sum_j e^{-(x-\ell_j)}\Big)dx.$
 > With $Z=\sum_j e^{\ell_j}$ and the substitution $v=Z e^{-x}$, this becomes $\frac{e^{\ell_k}}{Z}\int_0^\infty e^{-v}\,dv=\frac{e^{\ell_k}}{Z}=\operatorname{softmax}(\ell)_k$.
 
@@ -331,16 +331,16 @@ All the randomness now sits in parameter-free noise $g$, and the parameters ente
 
 ### Step 2: relax the argmax with a tempered softmax
 
-Replace the one-hot $\arg\max$ by a softmax with **temperature** $\tau>0$:
+Replace the one-hot $\arg\max$ by a softmax with **temperature** $\lambda>0$:
 
 $$
-y_k=\frac{\exp\big((\ell_k+g_k)/\tau\big)}{\sum_{j=1}^{K}\exp\big((\ell_j+g_j)/\tau\big)},\qquad k=1,\dots,K.
+y_k=\frac{\exp\big((\ell_k+g_k)/\lambda\big)}{\sum_{j=1}^{K}\exp\big((\ell_j+g_j)/\lambda\big)},\qquad k=1,\dots,K.
 $$
 
-$y$ is a point on the probability simplex and a smooth function of $\theta$. This is the **Gumbel-softmax**, or **Concrete**, distribution.[^jang2017]<sup>,</sup>[^maddison2017] As $\tau\to0$, $y$ approaches the one-hot Gumbel-max sample, so the relaxation is exact but the gradients become huge and spiky. As $\tau\to\infty$, $y$ approaches the uniform vector, which is smooth but carries no information. Typical practice is $\tau\approx0.5$–$1$, sometimes annealed towards $0$ during training.
+$y$ is a point on the probability simplex and a smooth function of $\theta$. This is the **Gumbel-softmax**, or **Concrete**, distribution.[^jang2017]<sup>,</sup>[^maddison2017] As $\lambda\to0$, $y$ approaches the one-hot Gumbel-max sample, so the relaxation is exact but the gradients become huge and spiky. As $\lambda\to\infty$, $y$ approaches the uniform vector, which is smooth but carries no information. Typical practice is $\lambda\approx0.5$–$1$, sometimes annealed towards $0$ during training.
 
 ![[Reinforcement Learning/images/policy-gradients-gumbel-softmax.svg]]
-*Figure 4: one Gumbel-softmax sample (bars) for a 4-action policy (outlines show $\pi_\theta$), using the same Gumbel noise at four temperatures. Low $\tau$ gives a nearly one-hot action; high $\tau$ washes the sample out towards uniform.*
+*Figure 4: one Gumbel-softmax sample (bars) for a 4-action policy (outlines show $\pi_\theta$), using the same Gumbel noise at four temperatures. Low $\lambda$ gives a nearly one-hot action; high $\lambda$ washes the sample out towards uniform.*
 
 ### Step 3: straight-through, so the forward pass is discrete and the backward pass is soft
 
@@ -355,20 +355,20 @@ where $\operatorname{sg}[\cdot]$ is stop-gradient (`.detach()`). Numerically $\t
 
 > [!example]- Code: one straight-through Gumbel-softmax sample, by hand (PyTorch)
 > ```python
-> # assumes: logits (B, K) from the policy, temperature tau > 0
+> # assumes: logits (B, K) from the policy, temperature lam > 0 (PyTorch calls it tau)
 > g = -torch.empty_like(logits).exponential_().log()              # Gumbel(0,1): -log(-log u) = -log(Exp(1))
-> y = torch.softmax((logits + g) / tau, dim=-1)                   # step 2: soft sample on the simplex
+> y = torch.softmax((logits + g) / lam, dim=-1)                   # step 2: soft sample on the simplex
 > y_hard = F.one_hot(y.argmax(-1), logits.shape[-1]).to(y.dtype)  # step 1: Gumbel-max, an exact sample
 > a_tilde = y_hard - y.detach() + y                               # step 3: value y_hard, gradient of y
 > ```
-> The argmax of $y$ is the argmax of $\ell+g$ for every $\tau$, so `y_hard` is an exact categorical sample. `F.gumbel_softmax(logits, tau=tau, hard=True)` does all four lines in one call.
+> The argmax of $y$ is the argmax of $\ell+g$ for every $\lambda$, so `y_hard` is an exact categorical sample. `F.gumbel_softmax(logits, tau=lam, hard=True)` does all four lines in one call.
 
 ### Using STGS in a policy-gradient pipeline
 
 With a differentiable critic, the actor's update becomes a pathwise gradient through the sampled discrete action:
 
 $$
-\nabla_\theta J(\theta)\approx\frac{1}{N}\sum_{i=1}^{N}\nabla_{\tilde a}\,Q_\phi(s_i,\tilde a)\;\frac{\partial\tilde a}{\partial\theta},\qquad\tilde a=\operatorname{STGS}_\tau\big(\ell_\theta(s_i)\big).
+\nabla_\theta J(\theta)\approx\frac{1}{N}\sum_{i=1}^{N}\nabla_{\tilde a}\,Q_\phi(s_i,\tilde a)\;\frac{\partial\tilde a}{\partial\theta},\qquad\tilde a=\operatorname{STGS}_\lambda\big(\ell_\theta(s_i)\big).
 $$
 
 This is the discrete-action analogue of DDPG/SAC-style actor updates. The same idea extends to a multi-step rollout through a learned or differentiable model. Every sampled action in the rollout is an STGS sample, so the return is differentiable with respect to $\theta$ through the entire trajectory, and we can backpropagate through time.
@@ -400,8 +400,8 @@ actor_loss.backward()                                   # gradients flow through
 
 > [!warning] What STGS does and does not buy you
 > - **A differentiable path is required.** STGS cannot differentiate through a black-box environment: `env.step()` breaks the graph. Without a learned or differentiable $Q$, reward or model after the action, the score-function estimator is still the only option.
-> - **It is biased.** The relaxation is biased for any $\tau>0$, and the straight-through step adds more bias, because the forward pass uses $y^{\text{hard}}$ while the gradient is that of $y$. You trade the *unbiased but high-variance* REINFORCE gradient for a *biased, low-variance* one. In practice this trade is often worth it, especially with many actions or long chains of discrete choices.
-> - **Temperature is a knob.** Small $\tau$ gives less bias but higher variance and exploding gradients. Large $\tau$ gives smoother but more biased gradients.
+> - **It is biased.** The relaxation is biased for any $\lambda>0$, and the straight-through step adds more bias, because the forward pass uses $y^{\text{hard}}$ while the gradient is that of $y$. You trade the *unbiased but high-variance* REINFORCE gradient for a *biased, low-variance* one. In practice this trade is often worth it, especially with many actions or long chains of discrete choices.
+> - **Temperature is a knob.** Small $\lambda$ gives less bias but higher variance and exploding gradients. Large $\lambda$ gives smoother but more biased gradients.
 > - **The two estimators combine well.** Score-function and pathwise estimators can be mixed: for example, use STGS for the parts of the graph that are differentiable, and REINFORCE with a baseline for the reward that comes from the real environment.
 
 ## Key takeaways

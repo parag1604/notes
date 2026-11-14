@@ -25,7 +25,7 @@ next: "[[Graph Neural Networks]]"
 > **Code:** [Word-Embeddings-and-Text-Classification](https://github.com/parag1604/Word-Embeddings-and-Text-Classification): fastText vectors, then AG News classification with LSTMs and a transformer encoder; [GPT-from-Scratch](https://github.com/parag1604/GPT-from-Scratch): bigram model to GPT on tiny Shakespeare, BPE, a KV cache, GPT-2 weights loaded into the same code, and LoRA fine-tuning; [modern_llms](https://github.com/paragduttaiisc/modern_llms): nanoGPT extended to a modern billion-parameter LLM (RoPE, RMSNorm, SwiGLU, multi-head latent attention, mixture of experts, multi-token prediction with self-speculative decoding); [Mamba-in-JAX](https://github.com/parag1604/Mamba-in-JAX): from a linear SSM to S4D, the selective SSM and the full Mamba block; [Image-Captioning](https://github.com/parag1604/Image-Captioning): a ViT encoder with LSTM, attention-LSTM and transformer decoders on Flickr8k; [improved-vision-encoders](https://github.com/paragduttaiisc/improved-vision-encoders): a ViT encoder trained self-supervised (JEPA-style masked latent prediction) on ImageNet, with switchable token mixers (attention or FFT), FFN activations and mixture-of-experts layers.
 
 > [!note] Local notation
-> In this lecture $n$ is the **number of tokens** in a sequence (not the number of samples), $d$ is the **width** of a token's representation, $h$ is the number of attention heads, and $d_{\text{ff}}$ is the hidden width of an MLP. In the ViT section $N$ is the number of image patches. Keys are the matrix $\mathbf{K}$; $K$ alone is still the number of classes.
+> In this lecture $n$ is the **number of tokens** in a sequence (not the number of samples; in the ViT section the tokens are image patches), $d$ is the **width** of a token's representation, $h$ is the number of attention heads, and $d_{\text{ff}}$ is the hidden width of an MLP. Keys, queries and values are $\mathbf{K}$, $\mathbf{Q}$, $\mathbf{V}$, and $\mathbf{P}$ is the matrix of attention weights; the vocabulary is $\mathcal{V}$, of size $|\mathcal{V}|$.
 
 ## Motivation
 
@@ -51,21 +51,21 @@ We start with the classical pipeline: turn words into vectors, then mix them wit
 
 **Tokenization.** Text is first split into **tokens**. The simplest choice is words: Parag's code lower-cases the text, keeps only letters, builds a vocabulary of the 20,000 most frequent words, and maps everything else to a special `<unk>` token. Modern language models use **subword** tokens instead (byte-pair encoding merges frequent character pairs repeatedly), so that rare words are spelled out from pieces and nothing is ever unknown.[^sennrich2016]
 
-**One-hot vectors and embeddings.** Token $w$ out of a vocabulary of size $V$ can be written as a one-hot vector $\mathbf{e}_w\in\{0,1\}^V$. One-hot vectors are huge, and all of them are equally far apart: "cat" is no closer to "kitten" than to "carburettor". An **embedding** maps each token to a dense vector, $\mathbf{x}_w=\mathbf{E}^\top\mathbf{e}_w$, which is simply row $w$ of a learned matrix $\mathbf{E}\in\mathbb{R}^{V\times d}$. In code this is a table lookup (`nn.Embedding`), never an actual matrix product.
+**One-hot vectors and embeddings.** Token $w$ out of a vocabulary $\mathcal{V}$ of size $|\mathcal{V}|$ can be written as a one-hot vector $\mathbf{e}_w\in\{0,1\}^{|\mathcal{V}|}$. One-hot vectors are huge, and all of them are equally far apart: "cat" is no closer to "kitten" than to "carburettor". An **embedding** maps each token to a dense vector, $\mathbf{x}_w=\mathbf{E}^\top\mathbf{e}_w$, which is simply row $w$ of a learned matrix $\mathbf{E}\in\mathbb{R}^{|\mathcal{V}|\times d}$. In code this is a table lookup (`nn.Embedding`), never an actual matrix product.
 
-**Pretrained embeddings and the distributional hypothesis.** "You shall know a word by the company it keeps": words that occur in similar contexts tend to have similar meanings. Word2vec turns this into a prediction task.[^mikolov2013] The skip-gram model predicts the words around each word $w_t$ within a window of size $c$,
-
-$$
-\max\ \sum_{t}\ \sum_{\substack{-c\le j\le c\\ j\ne0}}\log p(w_{t+j}\mid w_t),
-$$
-
-where each word has an input vector $\mathbf{v}_w$ and an output vector $\mathbf{u}_w$, and
+**Pretrained embeddings and the distributional hypothesis.** "You shall know a word by the company it keeps": words that occur in similar contexts tend to have similar meanings. Word2vec turns this into a prediction task.[^mikolov2013] The skip-gram model predicts the words around each word $w_t$ within a window of $\pm m$ positions,
 
 $$
-p(o\mid w)=\frac{\exp(\mathbf{u}_o^\top\mathbf{v}_w)}{\sum_{o'}\exp(\mathbf{u}_{o'}^\top\mathbf{v}_w)}.
+\max\ \sum_{t}\ \sum_{\substack{-m\le j\le m\\ j\ne0}}\log p(w_{t+j}\mid w_t),
 $$
 
-The softmax sums over the whole vocabulary, which is expensive; **negative sampling** replaces it by a binary task: tell the true context word apart from a few random ones.[^mikolov2013b] This is a contrastive loss of the kind derived in [[Energy-Based Models]]. GloVe fits word vectors to global co-occurrence counts $X_{ij}$ instead, by minimizing a weighted least-squares loss on $\mathbf{w}_i^\top\tilde{\mathbf{w}}_j+b_i+\tilde b_j-\log X_{ij}$.[^pennington2014] fastText represents a word as the sum of its character $n$-gram vectors, so it can build vectors for words it has never seen.[^bojanowski2017] [[Language Representations and Language Models]] studies these objectives, and the geometry of the vectors they produce, in more depth.
+where each word has an input vector $\mathbf{v}_w$ and an output vector $\mathbf{u}_w$, and for a centre word $w$ and context word $c$
+
+$$
+p(c\mid w)=\frac{\exp(\mathbf{u}_c^\top\mathbf{v}_w)}{\sum_{c'}\exp(\mathbf{u}_{c'}^\top\mathbf{v}_w)}.
+$$
+
+The softmax sums over the whole vocabulary, which is expensive; **negative sampling** replaces it by a binary task: tell the true context word apart from a few random ones.[^mikolov2013b] This is a binary contrastive loss, a simplified form of the [[Self-Supervised Representation Learning#NCE and InfoNCE|noise-contrastive estimation]] met later in the series. GloVe fits word vectors to global co-occurrence counts $X_{ij}$ instead, by minimizing a weighted least-squares loss on $\mathbf{w}_i^\top\tilde{\mathbf{w}}_j+b_i+\tilde b_j-\log X_{ij}$.[^pennington2014] fastText represents a word as the sum of its character $n$-gram vectors, so it can build vectors for words it has never seen.[^bojanowski2017] [[Language Representations and Language Models#Static word embeddings|Language Representations and Language Models]] derives these objectives in full (with the same notation), shows what they factorize, and studies the geometry of the vectors they produce.
 
 The resulting spaces have striking geometry. Notebook 1 of Parag's repository loads the fastText vectors and finds that the nearest neighbours of "Bangalore" are other Indian cities (Chennai, Bengaluru, Pune, …), and that $\text{King}-\text{Man}+\text{Woman}$ lands closest to "Queen".
 
@@ -84,7 +84,7 @@ The same weights are used at every step: this is weight sharing **in time**, jus
 **Backpropagation through time.** Unrolled over $n$ steps, an RNN is a deep network with tied weights, and the gradient of a late hidden state with respect to an early one is a product of Jacobians:
 
 $$
-\frac{\partial\mathbf{h}_n}{\partial\mathbf{h}_t}=\prod_{m=t+1}^{n}\operatorname{diag}\big(1-\mathbf{h}_m^2\big)\,\mathbf{U}.
+\frac{\partial\mathbf{h}_n}{\partial\mathbf{h}_t}=\prod_{t'=t+1}^{n}\operatorname{diag}\big(1-\mathbf{h}_{t'}^2\big)\,\mathbf{U}.
 $$
 
 Since $|\tanh'|\le1$, its norm is at most $\lVert\mathbf{U}\rVert^{\,n-t}$. If $\lVert\mathbf{U}\rVert<1$ the gradient **vanishes** exponentially with the distance $n-t$, so the network cannot learn long-range dependencies; if the largest singular value of $\mathbf{U}$ is large, the gradient can **explode**.[^bengio1994] Exploding gradients are tamed by **gradient clipping** (rescale the gradient when its norm exceeds a threshold). Vanishing gradients need a change of architecture.
@@ -115,10 +115,10 @@ The forget gate decides what to erase, the input gate what to write, and the out
 > $$
 > \frac{\partial\mathbf{c}_t}{\partial\mathbf{c}_{t-1}}\Big|_{\text{direct}}=\operatorname{diag}(\mathbf{f}_t),
 > \qquad
-> \frac{\partial\mathbf{c}_n}{\partial\mathbf{c}_t}\Big|_{\text{direct}}=\operatorname{diag}\Big(\prod_{m=t+1}^{n}\mathbf{f}_m\Big).
+> \frac{\partial\mathbf{c}_n}{\partial\mathbf{c}_t}\Big|_{\text{direct}}=\operatorname{diag}\Big(\prod_{t'=t+1}^{n}\mathbf{f}_{t'}\Big).
 > $$
 >
-> Compare with the vanilla RNN, where each step multiplies by $\operatorname{diag}(1-\mathbf{h}_m^2)\mathbf{U}$, a matrix the network cannot easily keep near the identity. Here each step multiplies by the forget gate, which the network *chooses*. When it keeps $\mathbf{f}_m\approx1$ on some coordinates, information and gradient pass along those coordinates almost unchanged for many steps. The full Jacobian also contains terms through the gates' dependence on $\mathbf{h}_{t-1}$, but the direct path is what prevents systematic vanishing. This is the same idea as the residual connection, $\mathbf{h}_{l+1}=\mathbf{h}_l+F(\mathbf{h}_l)$, applied in time, and it is why the forget-gate bias is often initialized to a positive value: the cell starts out remembering.
+> Compare with the vanilla RNN, where each step multiplies by $\operatorname{diag}(1-\mathbf{h}_{t'}^2)\mathbf{U}$, a matrix the network cannot easily keep near the identity. Here each step multiplies by the forget gate, which the network *chooses*. When it keeps $\mathbf{f}_{t'}\approx1$ on some coordinates, information and gradient pass along those coordinates almost unchanged for many steps. The full Jacobian also contains terms through the gates' dependence on $\mathbf{h}_{t-1}$, but the direct path is what prevents systematic vanishing. This is the same idea as the residual connection, $\mathbf{h}_{\ell+1}=\mathbf{h}_\ell+F(\mathbf{h}_\ell)$, applied in time, and it is why the forget-gate bias is often initialized to a positive value: the cell starts out remembering.
 
 > [!example]- Code: one LSTM step from the equations (checked against PyTorch)
 > ```python
@@ -143,7 +143,7 @@ The **gated recurrent unit** (GRU) is a lighter variant with two gates and no se
 Sentences have different lengths, but a batch is a rectangular tensor. Short sequences are **padded** with a special token up to a fixed length (Parag's code uses 64 tokens), and the padding must not change the answer.
 
 - **Where to pad for an RNN.** If the classifier reads the last hidden state, pad at the **front**, so the real tokens come last and the final state has just seen them. Notebook 2 does this. Padding at the end would make the network's last several steps read only padding.
-- **Pooling must ignore padding.** Mean pooling over all positions dilutes the representation with padding vectors, and by different amounts for short and long sentences. With a mask $m_t=1$ for real tokens and $0$ for padding, use $\bar{\mathbf{h}}=\sum_t m_t\mathbf{h}_t\big/\sum_t m_t$.
+- **Pooling must ignore padding.** Mean pooling over all positions dilutes the representation with padding vectors, and by different amounts for short and long sentences. With a mask $\chi_t=1$ for real tokens and $0$ for padding, use $\bar{\mathbf{h}}=\sum_t \chi_t\mathbf{h}_t\big/\sum_t \chi_t$.
 - **Attention must ignore padding.** In a transformer, a padding mask stops every token from attending to padding positions (next section).
 
 On AG News, Parag's LSTM on embeddings learned from scratch reached 91.3% test accuracy, and the same LSTM on frozen 100-dimensional GloVe embeddings 92.0% (both numbers from an earlier version of the notebooks that dropped unknown words instead of mapping them to `<unk>`). Pretrained embeddings help a little here because the training set is already large; they help much more when labelled data is scarce.
@@ -163,13 +163,13 @@ $$
 
 Every step is differentiable, so the network can learn what to store as keys and values and what to ask for.
 
-This is an old idea in new clothes. With $s(\mathbf{q},\mathbf{k})=-\lVert\mathbf{q}-\mathbf{k}\rVert^2/2h^2$ it is exactly the **Nadaraya–Watson** kernel regression of [[Non-parametric Models]], a locally weighted average of stored targets. Expanding the square,
+This is an old idea in new clothes. With $s(\mathbf{q},\mathbf{k})=-\lVert\mathbf{q}-\mathbf{k}\rVert^2/2\tau^2$ it is exactly the **Nadaraya–Watson** kernel regression of [[Non-parametric Models]], a locally weighted average of stored targets. Expanding the square,
 
 $$
--\frac{\lVert\mathbf{q}-\mathbf{k}_i\rVert^2}{2h^2}=\frac{\mathbf{q}^\top\mathbf{k}_i}{h^2}-\frac{\lVert\mathbf{k}_i\rVert^2}{2h^2}-\frac{\lVert\mathbf{q}\rVert^2}{2h^2}.
+-\frac{\lVert\mathbf{q}-\mathbf{k}_i\rVert^2}{2\tau^2}=\frac{\mathbf{q}^\top\mathbf{k}_i}{\tau^2}-\frac{\lVert\mathbf{k}_i\rVert^2}{2\tau^2}-\frac{\lVert\mathbf{q}\rVert^2}{2\tau^2}.
 $$
 
-The last term is the same for every $i$ and cancels in the softmax. If all keys have the same norm, the middle term cancels too, and what remains is a **dot-product score** with temperature $h^2$. The [[Energy-Based Models]] lecture shows the same update as one retrieval step of a modern Hopfield network.[^ramsauer2021] Bahdanau's original score was a small MLP, $s(\mathbf{q},\mathbf{k})=\mathbf{v}^\top\tanh(\mathbf{W}_1\mathbf{q}+\mathbf{W}_2\mathbf{k})$ ("additive" attention); the dot product is cheaper and maps onto fast matrix multiplication.
+The last term is the same for every $i$ and cancels in the softmax. If all keys have the same norm, the middle term cancels too, and what remains is a **dot-product score** with temperature $\tau^2$. The [[Energy-Based Models]] lecture shows the same update as one retrieval step of a modern Hopfield network.[^ramsauer2021] Bahdanau's original score was a small MLP, $s(\mathbf{q},\mathbf{k})=\boldsymbol\omega^\top\tanh(\mathbf{W}_1\mathbf{q}+\mathbf{W}_2\mathbf{k})$ ("additive" attention); the dot product is cheaper and maps onto fast matrix multiplication.
 
 ### Scaled dot-product attention
 
@@ -180,7 +180,7 @@ $$
 \tag{1}
 $$
 
-with the softmax applied to each row. Row $i$ of the $n_q\times n$ matrix $\mathbf{A}=\operatorname{softmax}(\cdot)$ holds the weights that query $i$ puts on each key, and it sums to 1.
+with the softmax applied to each row. Row $i$ of the $n_q\times n$ matrix $\mathbf{P}=\operatorname{softmax}(\cdot)$ holds the weights that query $i$ puts on each key, and it sums to 1.
 
 **Why divide by $\sqrt{d_k}$?** Suppose the entries of $\mathbf{q}$ and $\mathbf{k}$ are independent with mean 0 and variance 1 (roughly what normalization layers and a good initialization give). Then
 
@@ -191,7 +191,7 @@ $$
 So raw dot products have standard deviation $\sqrt{d_k}$, which grows with the width. Large scores push the softmax into **saturation**: one weight near 1, the rest near 0. A saturated softmax has a vanishing gradient, because its Jacobian
 
 $$
-\frac{\partial\alpha_i}{\partial z_j}=\alpha_i\,(\delta_{ij}-\alpha_j)
+\frac{\partial\alpha_i}{\partial z_j}=\alpha_i\,(\mathbb{1}\{i=j\}-\alpha_j)
 $$
 
 is zero when $\boldsymbol\alpha$ is one-hot. Dividing by $\sqrt{d_k}$ restores unit variance whatever the width. Figure 3 shows this numerically: with 32 keys and $d_k=512$, the largest unscaled attention weight averages 0.94 and the softmax Jacobian has a third of the norm it has with scaling.
@@ -240,10 +240,10 @@ with $\mathbf{W}_Q^{(r)},\mathbf{W}_K^{(r)},\mathbf{W}_V^{(r)}\in\mathbb{R}^{d\t
 
 ### Order: positional encodings
 
-Self-attention has no notion of order. Permute the input tokens with a permutation matrix $\mathbf{P}$: the queries, keys and values are permuted the same way, the score matrix becomes $\mathbf{P}\mathbf{Q}\mathbf{K}^\top\mathbf{P}^\top$, its row-wise softmax is $\mathbf{P}\mathbf{A}\mathbf{P}^\top$, and
+Self-attention has no notion of order. Permute the input tokens with a permutation matrix $\boldsymbol\Pi$: the queries, keys and values are permuted the same way, the score matrix becomes $\boldsymbol\Pi\mathbf{Q}\mathbf{K}^\top\boldsymbol\Pi^\top$, its row-wise softmax is $\boldsymbol\Pi\mathbf{P}\boldsymbol\Pi^\top$, and
 
 $$
-\operatorname{SA}(\mathbf{P}\mathbf{X})=\mathbf{P}\mathbf{A}\mathbf{P}^\top\mathbf{P}\mathbf{V}=\mathbf{P}\operatorname{SA}(\mathbf{X}).
+\operatorname{SA}(\boldsymbol\Pi\mathbf{X})=\boldsymbol\Pi\mathbf{P}\boldsymbol\Pi^\top\boldsymbol\Pi\mathbf{V}=\boldsymbol\Pi\operatorname{SA}(\mathbf{X}).
 $$
 
 Self-attention is **permutation-equivariant**: it treats its input as a set. For text we must therefore add the position of each token to its embedding.
@@ -265,26 +265,26 @@ Each pair of dimensions is a clock hand turning at its own frequency, from fast 
 
 Sinusoidal and learned encodings are **added** to the token embeddings, so position and content get mixed together before the queries and keys are even computed. The score between two tokens then contains cross terms between the content of one and the position of the other. What we would like is a score that depends on the two contents and on how far apart the tokens are, but not on where they sit in the sequence. **RoPE** achieves this by **rotating** queries and keys, instead of adding anything to them.[^su2021]
 
-Start with $d=2$. Write $\mathbf{R}(\alpha)$ for the rotation of the plane by angle $\alpha$. A query at position $m$ is rotated by $m\theta$ and a key at position $n$ by $n\theta$, for a fixed frequency $\theta$. Rotations are orthogonal, $\mathbf{R}(\alpha)^\top=\mathbf{R}(-\alpha)$, and they compose by adding angles, $\mathbf{R}(\alpha)\mathbf{R}(\beta)=\mathbf{R}(\alpha+\beta)$. So the score is
+Start with $d=2$. Write $\mathbf{R}(\psi)$ for the rotation of the plane by angle $\psi$. A query at position $t$ is rotated by $t\theta$ and a key at position $t'$ by $t'\theta$, for a fixed frequency $\theta$. Rotations are orthogonal, $\mathbf{R}(\psi)^\top=\mathbf{R}(-\psi)$, and they compose by adding angles, $\mathbf{R}(\psi)\mathbf{R}(\psi')=\mathbf{R}(\psi+\psi')$. So the score is
 
 $$
-\big(\mathbf{R}(m\theta)\,\mathbf{q}\big)^\top\big(\mathbf{R}(n\theta)\,\mathbf{k}\big)
-=\mathbf{q}^\top\mathbf{R}(-m\theta)\,\mathbf{R}(n\theta)\,\mathbf{k}
-=\mathbf{q}^\top\mathbf{R}\big((n-m)\theta\big)\,\mathbf{k}.
+\big(\mathbf{R}(t\theta)\,\mathbf{q}\big)^\top\big(\mathbf{R}(t'\theta)\,\mathbf{k}\big)
+=\mathbf{q}^\top\mathbf{R}(-t\theta)\,\mathbf{R}(t'\theta)\,\mathbf{k}
+=\mathbf{q}^\top\mathbf{R}\big((t'-t)\theta\big)\,\mathbf{k}.
 \tag{2}
 $$
 
-It depends on the positions only through the offset $n-m$ (Figure 4a). In $d$ dimensions, RoPE splits $\mathbf{q}$ and $\mathbf{k}$ into $d/2$ pairs and rotates pair $j$ with its own frequency $\theta_j=10000^{-2j/d}$, the same geometric ladder of clock speeds as the sinusoidal encoding. The score is a sum of terms like (2), so the whole score depends only on $n-m$ (Figure 4b). Fast pairs resolve nearby positions; slow pairs distinguish long distances.
+It depends on the positions only through the offset $t'-t$ (Figure 4a). In $d$ dimensions, RoPE splits $\mathbf{q}$ and $\mathbf{k}$ into $d/2$ pairs and rotates pair $j$ with its own frequency $\theta_j=10000^{-2j/d}$, the same geometric ladder of clock speeds as the sinusoidal encoding. The score is a sum of terms like (2), so the whole score depends only on $t'-t$ (Figure 4b). Fast pairs resolve nearby positions; slow pairs distinguish long distances.
 
 Three properties make RoPE the default in current language models (Llama, Mistral, and Parag's modern_llms):
 - It is applied inside every attention layer, to queries and keys only. Values are not rotated, and nothing is added to the residual stream.
 - Rotations preserve norms, so RoPE does not change the scale of the scores.
 - Each step of a cached decoder only needs the absolute position of the new token, yet the scores come out relative.
 
-**ALiBi** is a simpler relative scheme: no positional encoding at all, and a penalty proportional to distance added to every score, $s_{ij}-\lambda_r\,(i-j)$, with a fixed slope $\lambda_r$ per head forming a geometric sequence across heads.[^press2022] Distant tokens are down-weighted by design, which let models trained on short sequences run on longer ones.
+**ALiBi** is a simpler relative scheme: no positional encoding at all, and a penalty proportional to distance added to every score, $s_{ij}-\xi_r\,(i-j)$, with a fixed slope $\xi_r$ per head forming a geometric sequence across heads.[^press2022] Distant tokens are down-weighted by design, which let models trained on short sequences run on longer ones.
 
 ![[Machine Learning/images/sequence-models-rope.svg]]
-*Figure 4: rotary position embeddings. (a) In one pair of coordinates, the query at position $m=3$ is rotated by $3\theta$ and the key at $n=1$ by $\theta$; the angle between them, and with it their dot product, changes only by $(m-n)\theta$. (b) The score $\mathbf{q}_m^\top\mathbf{k}_n$ when the same random $\mathbf{q}$ and $\mathbf{k}$ ($d=64$) are placed at every position: it is constant along every diagonal (the largest spread along a diagonal is $3\times10^{-14}$, rounding error), so it depends only on $m-n$.*
+*Figure 4: rotary position embeddings. (a) In one pair of coordinates, the query at position $t=3$ is rotated by $3\theta$ and the key at $t'=1$ by $\theta$; the angle between them, and with it their dot product, changes only by $(t-t')\theta$. (b) The score $\mathbf{q}_t^\top\mathbf{k}_{t'}$ when the same random $\mathbf{q}$ and $\mathbf{k}$ ($d=64$) are placed at every position: it is constant along every diagonal (the largest spread along a diagonal is $3\times10^{-14}$, rounding error), so it depends only on $t-t'$.*
 
 > [!example]- Code: RoPE (checked numerically)
 > ```python
@@ -315,7 +315,7 @@ $$
 $$
 
 - The **FFN** is a two-layer MLP applied to every token separately, $\operatorname{FFN}(\mathbf{x})=\mathbf{W}_2\,\phi(\mathbf{W}_1\mathbf{x}+\mathbf{b}_1)+\mathbf{b}_2$, with a hidden width of typically $4d$ and a ReLU or GELU non-linearity $\phi$.
-- **LayerNorm** normalizes each token's vector over its $d$ features, $\operatorname{LN}(\mathbf{x})=\boldsymbol\gamma\odot(\mathbf{x}-\mu)/\sqrt{\sigma^2+\epsilon}+\boldsymbol\beta$, where $\mu$ and $\sigma^2$ are the mean and variance of the entries of $\mathbf{x}$.[^ba2016] Unlike batch norm it does not depend on the other examples in the batch or on the sequence length.
+- **LayerNorm** normalizes each token's vector over its $d$ features, $\operatorname{LN}(\mathbf{x})=\boldsymbol\gamma\odot(\mathbf{x}-\bar x)/\sqrt{\operatorname{Var}(\mathbf{x})+\epsilon}+\boldsymbol\beta$, where $\bar x$ and $\operatorname{Var}(\mathbf{x})$ are the mean and variance of the entries of $\mathbf{x}$.[^ba2016] Unlike batch norm it does not depend on the other examples in the batch or on the sequence length.
 - The **residual connections** form a "residual stream" that runs from the embeddings to the output; each sub-layer reads from it and adds its result back, exactly as in ResNet. The original transformer applied LayerNorm after the addition (post-norm); putting it before each sub-layer makes deep stacks easier to train without a careful learning-rate warm-up.
 
 A block has about $4d^2$ attention parameters and $8d^2$ FFN parameters, so roughly $12d^2$ in total.
@@ -336,7 +336,7 @@ The restriction to earlier tokens is a **causal mask** added to the scores befor
 $$
 M_{ij}=\begin{cases}0&\text{if }j\le i,\\-\infty&\text{if }j>i,\end{cases}
 \qquad
-\mathbf{A}=\operatorname{softmax}\!\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}+\mathbf{M}\right).
+\mathbf{P}=\operatorname{softmax}\!\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}+\mathbf{M}\right).
 $$
 
 A $-\infty$ score becomes a weight of exactly 0. A **padding mask** works the same way, with $-\infty$ in the columns of padding tokens. Because of the causal mask, a decoder can be trained on all positions of a sequence **in parallel**, feeding in the true previous tokens; an RNN must step through them one by one.
@@ -356,7 +356,7 @@ A $-\infty$ score becomes a weight of exactly 0. A **padding mask** works the sa
 >     return M                     # used as softmax(Q K^T / sqrt(d_k) + M), broadcast over heads
 >
 > def masked_mean(h, pad):
->     """Mean pooling over real tokens only: sum_t m_t h_t / sum_t m_t, with h of shape (batch, n, d)."""
+>     """Mean pooling over real tokens only: sum_t chi_t h_t / sum_t chi_t, with h of shape (batch, n, d)."""
 >     m = (~pad).float().unsqueeze(-1)
 >     return (h * m).sum(1) / m.sum(1)
 > ```
@@ -371,7 +371,7 @@ The block of Figure 5 is the 2017 design with pre-norm. A decoder-only language 
 **The residual stream view.** Unroll the residual connections of an $L$-block network. The final representation of a token is its embedding plus everything every sub-layer ever added:
 
 $$
-\mathbf{x}_L=\mathbf{x}_0+\sum_{l=1}^{L}\Big(\operatorname{Attn}_l(\cdot)+\operatorname{MLP}_l(\cdot)\Big).
+\mathbf{x}_L=\mathbf{x}_0+\sum_{\ell=1}^{L}\Big(\operatorname{Attn}_\ell(\cdot)+\operatorname{MLP}_\ell(\cdot)\Big).
 $$
 
 Elhage et al. suggest reading the network this way: the residual stream is a shared **communication channel**, a $d$-dimensional vector per token, that every layer **reads** from (through a linear projection after the norm) and **writes** to (by adding a linear projection of its output).[^elhage2021] Attention heads are the only components that move information between positions; MLPs read and write at a single position. A later layer can use anything an earlier layer wrote, which is why features computed early stay available to the end. This is the view behind Figure 1, and it is the frame in which the evidence of the next section is collected.
@@ -379,7 +379,7 @@ Elhage et al. suggest reading the network this way: the residual stream is a sha
 **RMSNorm instead of LayerNorm.** LayerNorm subtracts the mean of the token's features and divides by their standard deviation. RMSNorm skips the mean and the learned shift:[^zhang2019]
 
 $$
-\operatorname{RMSNorm}(\mathbf{x})=\mathbf{g}\odot\frac{\mathbf{x}}{\sqrt{\tfrac1d\sum_{i=1}^{d}x_i^2+\epsilon}}.
+\operatorname{RMSNorm}(\mathbf{x})=\boldsymbol\gamma\odot\frac{\mathbf{x}}{\sqrt{\tfrac1d\sum_{i=1}^{d}x_i^2+\epsilon}}.
 $$
 
 Zhang and Sennrich argued that the rescaling, which keeps activations at a controlled size, is what matters, and that re-centring adds computation without helping much. RMSNorm is cheaper and performed comparably in their experiments; most recent language models use it.
@@ -448,7 +448,7 @@ It has three matrices instead of two. To keep the parameter count of the standar
 - the MLP has $2\cdot d\cdot4d=8d^2$ (or $3\cdot d\cdot\tfrac83d=8d^2$ for SwiGLU);
 - the norms have a few $d$-vectors, which are negligible.
 
-So each block has about $12d^2$ parameters, **two thirds of them in the MLP**, and a model with $L$ blocks and a vocabulary of $V$ tokens has about $12Ld^2+Vd$. For GPT-2 small ($d=768$, $L=12$, $V=50{,}257$) this gives 85M parameters in the blocks and 124M in total; for Llama 2 7B ($d=4096$, $L=32$, $V=32{,}000$, untied embeddings) it gives 6.74B. In both, the MLPs hold 66.7% of the non-embedding parameters (Figure 6a). Grouped-query attention shrinks $\mathbf{W}_K$ and $\mathbf{W}_V$ and mixture-of-experts layers multiply the MLPs, so in Mixtral the share of the MLPs rises to 97% of the non-embedding parameters (89% of the active ones).
+So each block has about $12d^2$ parameters, **two thirds of them in the MLP**, and a model with $L$ blocks and a vocabulary of $|\mathcal{V}|$ tokens has about $12Ld^2+|\mathcal{V}|d$. For GPT-2 small ($d=768$, $L=12$, $|\mathcal{V}|=50{,}257$) this gives 85M parameters in the blocks and 124M in total; for Llama 2 7B ($d=4096$, $L=32$, $|\mathcal{V}|=32{,}000$, untied embeddings) it gives 6.74B. In both, the MLPs hold 66.7% of the non-embedding parameters (Figure 6a). Grouped-query attention shrinks $\mathbf{W}_K$ and $\mathbf{W}_V$ and mixture-of-experts layers multiply the MLPs, so in Mixtral the share of the MLPs rises to 97% of the non-embedding parameters (89% of the active ones).
 
 **Compute.** A matrix–vector product with an $a\times b$ matrix costs $2ab$ floating-point operations (a multiply and an add per entry), so the forward pass costs about **2 FLOPs per parameter per token**, and training (forward plus backward) about 6.[^kaplan2020] Attention adds work that does not involve parameters: at context length $n$, the new token's query is compared with $n$ keys ($2nd$ FLOPs) and the $n$ values are averaged ($2nd$ more). Per token and layer,
 
@@ -467,7 +467,7 @@ A decoder generates text one token at a time. Without care, each new token would
 
 The price is memory. Each token stores a key and a value of width $d$ in each of the $L$ layers: $2Ld$ numbers. For Llama 2 7B in 16-bit precision that is $2\cdot32\cdot4096\cdot2$ bytes $=512$ KiB **per token**, 2 GiB for a 4,096-token sequence, and 64 GiB for 128k tokens, far more than the 13.5 GB of weights (Figure 9b). Worse, each decode step does very little arithmetic per byte it reads: it must load all the weights and the whole cache to produce one token. Decoding is limited by **memory bandwidth**, not by compute, so a smaller cache is a faster model.
 
-**Multi-query attention** (MQA) keeps $h$ query heads but only **one** key head and one value head, shared by all of them.[^shazeer2019] The cache shrinks by a factor $h$. **Grouped-query attention** (GQA) interpolates: the $h$ query heads are split into $g$ groups, and each group shares one key head and one value head.[^ainslie2023] With $g=h$ it is multi-head attention, with $g=1$ multi-query. Ainslie et al. found that GQA with a few groups reaches quality close to multi-head attention at a speed close to MQA, and that an existing multi-head checkpoint can be converted by mean-pooling its key and value heads within each group and training briefly ("uptraining", about 5% of the original pre-training compute). Llama 2 70B and Mistral 7B, for example, use 8 KV heads for 64 and 32 query heads.[^touvron2023]<sup>,</sup>[^jiang2023] The decoder-block aside implements GQA with `repeat_interleave`.
+**Multi-query attention** (MQA) keeps $h$ query heads but only **one** key head and one value head, shared by all of them.[^shazeer2019] The cache shrinks by a factor $h$. **Grouped-query attention** (GQA) interpolates: the $h$ query heads are split into $G$ groups, and each group shares one key head and one value head.[^ainslie2023] With $G=h$ it is multi-head attention, with $G=1$ multi-query. Ainslie et al. found that GQA with a few groups reaches quality close to multi-head attention at a speed close to MQA, and that an existing multi-head checkpoint can be converted by mean-pooling its key and value heads within each group and training briefly ("uptraining", about 5% of the original pre-training compute). Llama 2 70B and Mistral 7B, for example, use 8 KV heads for 64 and 32 query heads.[^touvron2023]<sup>,</sup>[^jiang2023] The decoder-block aside implements GQA with `repeat_interleave`.
 
 DeepSeek's **multi-head latent attention** (MLA) goes further: it caches one low-dimensional latent vector per token per layer, from which all heads' keys and values are reconstructed by learned up-projections.[^deepseek2024] Parag's [modern_llms](https://github.com/paragduttaiisc/modern_llms/blob/main/model/attention.py) uses MLA, with RoPE applied to a separate slice of each head (one rotated key shared by all heads), since rotated keys cannot be rebuilt from a position-free latent.
 
@@ -475,7 +475,7 @@ DeepSeek's **multi-head latent attention** (MLA) goes further: it caches one low
 
 Written as three matrix operations, $\mathbf{S}=\mathbf{Q}\mathbf{K}^\top/\sqrt{d_k}$, $\mathbf{P}=\operatorname{softmax}(\mathbf{S})$, $\mathbf{O}=\mathbf{P}\mathbf{V}$, attention materializes two $n\times n$ matrices. On a GPU these are written to and read back from the large but slow main memory (HBM), and for long sequences this traffic, not the arithmetic, dominates the run time. **FlashAttention** is an **IO-aware** algorithm that computes exactly the same output without ever storing $\mathbf{S}$ or $\mathbf{P}$.[^dao2022]
 - **Tiling.** It loads blocks of $\mathbf{Q}$, $\mathbf{K}$ and $\mathbf{V}$ into the small, fast on-chip memory (SRAM), and computes the contribution of one block of keys to one block of queries there.
-- **Online softmax.** The softmax normalizer needs all scores of a row, which are not available block by block. The trick is to keep, for each query, a running maximum $m$, a running sum $s=\sum e^{z-m}$ and an unnormalized output $\mathbf{o}=\sum e^{z-m}\mathbf{v}$. When a new block raises the maximum to $m'$, the old $s$ and $\mathbf{o}$ are rescaled by $e^{m-m'}$, and the block's terms are added. Dividing $\mathbf{o}$ by $s$ at the end gives the exact softmax average.
+- **Online softmax.** The softmax normalizer needs all scores of a row, which are not available block by block. The trick is to keep, for each query, a running maximum $\bar s$ of its scores $s$, a running sum $Z=\sum e^{s-\bar s}$ and an unnormalized output $\mathbf{o}=\sum e^{s-\bar s}\mathbf{v}$. When a new block raises the maximum to $\bar s'$, the old $Z$ and $\mathbf{o}$ are rescaled by $e^{\bar s-\bar s'}$, and the block's terms are added. Dividing $\mathbf{o}$ by $Z$ at the end gives the exact softmax average.
 - **Recomputation.** The backward pass recomputes the blocks of $\mathbf{P}$ instead of storing them.
 
 The memory becomes linear in $n$, and the number of HBM accesses drops by a large factor. The paper reports, for example, a 3× faster GPT-2 training at sequence length 1K. It is not an approximation: the output is attention, up to floating-point rounding. PyTorch's `scaled_dot_product_attention`, which modern_llms calls, dispatches to a FlashAttention kernel when the hardware and inputs allow it.
@@ -554,14 +554,14 @@ $$
 (\hat{\mathbf{W}}\mathbf{K}-\mathbf{V})\mathbf{K}^\top=\boldsymbol\lambda\,\mathbf{k}_*^\top.
 $$
 
-Since $\mathbf{V}=\mathbf{W}\mathbf{K}$, this says $(\hat{\mathbf{W}}-\mathbf{W})\mathbf{C}=\boldsymbol\lambda\mathbf{k}_*^\top$ with $\mathbf{C}=\mathbf{K}\mathbf{K}^\top$, so $\hat{\mathbf{W}}=\mathbf{W}+\boldsymbol\lambda(\mathbf{C}^{-1}\mathbf{k}_*)^\top$. The constraint fixes $\boldsymbol\lambda$:
+Since $\mathbf{V}=\mathbf{W}\mathbf{K}$, this says $(\hat{\mathbf{W}}-\mathbf{W})\boldsymbol\Sigma=\boldsymbol\lambda\mathbf{k}_*^\top$ with $\boldsymbol\Sigma=\mathbf{K}\mathbf{K}^\top$, so $\hat{\mathbf{W}}=\mathbf{W}+\boldsymbol\lambda(\boldsymbol\Sigma^{-1}\mathbf{k}_*)^\top$. The constraint fixes $\boldsymbol\lambda$:
 
 $$
-\hat{\mathbf{W}}=\mathbf{W}+\frac{\big(\mathbf{v}_*-\mathbf{W}\mathbf{k}_*\big)\big(\mathbf{C}^{-1}\mathbf{k}_*\big)^\top}{\mathbf{k}_*^\top\mathbf{C}^{-1}\mathbf{k}_*}.
+\hat{\mathbf{W}}=\mathbf{W}+\frac{\big(\mathbf{v}_*-\mathbf{W}\mathbf{k}_*\big)\big(\boldsymbol\Sigma^{-1}\mathbf{k}_*\big)^\top}{\mathbf{k}_*^\top\boldsymbol\Sigma^{-1}\mathbf{k}_*}.
 \tag{5}
 $$
 
-The change is a **rank-one** matrix: **R**ank-**O**ne **M**odel **E**diting.[^meng2022] The numerator is the error the old memory makes on the new key; the direction $\mathbf{C}^{-1}\mathbf{k}_*$ is the key "whitened" by the statistics of normal keys, so the edit perturbs as little as possible the outputs for keys the model usually sees. In practice $\mathbf{C}$ is estimated from activations on a large text sample, $\mathbf{k}_*$ is averaged over several prompts that end in the subject, and $\mathbf{v}_*$ is found by a few steps of gradient descent on the probability of the new answer. ROME's edits generalized to paraphrases of the prompt ("The Space Needle is in…") while leaving unrelated facts mostly intact. MEMIT extends the same update to thousands of edits spread over several layers.[^meng2023]
+The change is a **rank-one** matrix: **R**ank-**O**ne **M**odel **E**diting.[^meng2022] The numerator is the error the old memory makes on the new key; the direction $\boldsymbol\Sigma^{-1}\mathbf{k}_*$ is the key "whitened" by the statistics of normal keys, so the edit perturbs as little as possible the outputs for keys the model usually sees. In practice $\boldsymbol\Sigma$ is estimated from activations on a large text sample, $\mathbf{k}_*$ is averaged over several prompts that end in the subject, and $\mathbf{v}_*$ is found by a few steps of gradient descent on the probability of the new answer. ROME's edits generalized to paraphrases of the prompt ("The Space Needle is in…") while leaving unrelated facts mostly intact. MEMIT extends the same update to thousands of edits spread over several layers.[^meng2023]
 
 ### Attention routes, MLPs store, with caveats
 
@@ -592,15 +592,15 @@ The top-$k$ selection is not differentiable, but the weights are: the router lea
 Left alone, routing collapses. Early in training a few experts happen to be slightly better; the router sends them more tokens; they improve faster; and the rest are starved. The model then wastes most of its parameters, and on parallel hardware the busy experts become a bottleneck. Every MoE therefore adds an **auxiliary load-balancing loss**. The Switch Transformer's version, for a batch of $T$ tokens, is[^fedus2022]
 
 $$
-\mathcal{L}_{\text{aux}}=\alpha\,E\sum_{e=1}^{E}f_e\,P_e,\qquad
+\mathcal{L}_{\text{aux}}=\nu\,E\sum_{e=1}^{E}f_e\,P_e,\qquad
 f_e=\frac{\#\{\text{tokens sent to }e\}}{T},\qquad
 P_e=\frac1T\sum_{\text{tokens}}p_e(\mathbf{x}).
 \tag{6}
 $$
 
-Here $f_e$ is the share of tokens expert $e$ actually receives (not differentiable) and $P_e$ the average probability the router gives it (differentiable). The loss is minimized when routing is uniform, where it equals $\alpha$; its gradient pushes down the router probability of experts that receive more than their share. A small weight such as $\alpha=0.01$ is typical.
+Here $f_e$ is the share of tokens expert $e$ actually receives (not differentiable) and $P_e$ the average probability the router gives it (differentiable). The loss is minimized when routing is uniform, where it equals $\nu$; its gradient pushes down the router probability of experts that receive more than their share. A small weight such as $\nu=0.01$ is typical.
 
-Figure 8b shows the collapse and its cure on a toy task: 8 linear experts, top-1 routing, and inputs from 8 clusters, each with its own linear target map. Without the balancing loss, 1 to 3 of the 8 experts end up receiving no tokens at all in every one of 5 runs, the busiest expert takes 25–37% of the tokens, and the test error is 0.119 (the targets have variance 4.0). With $\alpha=0.1$, every expert is used, the busiest takes at most 22%, and the error falls to 0.053 on average. One run found the ideal one-expert-per-cluster assignment (error 0.004); the others still share some clusters between experts.
+Figure 8b shows the collapse and its cure on a toy task: 8 linear experts, top-1 routing, and inputs from 8 clusters, each with its own linear target map. Without the balancing loss, 1 to 3 of the 8 experts end up receiving no tokens at all in every one of 5 runs, the busiest expert takes 25–37% of the tokens, and the test error is 0.119 (the targets have variance 4.0). With $\nu=0.1$, every expert is used, the busiest takes at most 22%, and the error falls to 0.053 on average. One run found the ideal one-expert-per-cluster assignment (error 0.004); the others still share some clusters between experts.
 
 **Capacity.** For efficient batched computation, each expert accepts at most
 
@@ -611,7 +611,7 @@ $$
 tokens. Tokens beyond an expert's capacity are **dropped**: they skip the layer and continue on the residual stream unchanged. A capacity factor slightly above 1 (for example 1.25) leaves room for imbalance at some memory cost.
 
 ![[Machine Learning/images/sequence-models-moe.svg]]
-*Figure 8: (a) top-2 routing: the router's softmax gives every expert a probability, only the two largest run, and their outputs are combined with the renormalized weights. (b) A top-1 mixture of 8 linear experts trained on a toy regression task with 8 input clusters (5 seeds, 2,000 Adam steps; bars show the mean and standard deviation of each sorted expert's share of 20,000 test tokens). Without the load-balancing loss (6), routing collapses onto a few experts and 1–3 experts are never used; with it ($\alpha=0.1$), all experts receive tokens and the test error halves.*
+*Figure 8: (a) top-2 routing: the router's softmax gives every expert a probability, only the two largest run, and their outputs are combined with the renormalized weights. (b) A top-1 mixture of 8 linear experts trained on a toy regression task with 8 input clusters (5 seeds, 2,000 Adam steps; bars show the mean and standard deviation of each sorted expert's share of 20,000 test tokens). Without the load-balancing loss (6), routing collapses onto a few experts and 1–3 experts are never used; with it ($\nu=0.1$), all experts receive tokens and the test error halves.*
 
 > [!example]- Code: a top-$k$ mixture-of-experts layer with the load-balancing loss (checked)
 > ```python
@@ -666,33 +666,33 @@ $$
 Katharopoulos et al. replaced the exponential by a dot product of feature maps, $\operatorname{sim}(\mathbf{q},\mathbf{k})=\phi(\mathbf{q})^\top\phi(\mathbf{k})$, with for example $\phi(\mathbf{z})=\operatorname{elu}(\mathbf{z})+1>0$.[^katharopoulos2020] Then $\phi(\mathbf{q}_i)$ can be pulled out of both sums:
 
 $$
-\mathbf{y}_i^\top=\frac{\phi(\mathbf{q}_i)^\top\mathbf{S}_i}{\phi(\mathbf{q}_i)^\top\mathbf{z}_i},\qquad
-\mathbf{S}_i=\mathbf{S}_{i-1}+\phi(\mathbf{k}_i)\,\mathbf{v}_i^\top,\qquad
-\mathbf{z}_i=\mathbf{z}_{i-1}+\phi(\mathbf{k}_i).
+\mathbf{y}_i^\top=\frac{\phi(\mathbf{q}_i)^\top\mathbf{H}_i}{\phi(\mathbf{q}_i)^\top\boldsymbol\zeta_i},\qquad
+\mathbf{H}_i=\mathbf{H}_{i-1}+\phi(\mathbf{k}_i)\,\mathbf{v}_i^\top,\qquad
+\boldsymbol\zeta_i=\boldsymbol\zeta_{i-1}+\phi(\mathbf{k}_i).
 \tag{7}
 $$
 
-This is an **RNN** whose state is the $d_k\times d_v$ matrix $\mathbf{S}_i$ (plus the normalizer $\mathbf{z}_i$): generation costs the same at every step, whatever the context length. During training, the same outputs can be computed in parallel as a masked matrix product, $(\mathbf{L}\odot\phi(\mathbf{Q})\phi(\mathbf{K})^\top)\mathbf{V}$ with the lower-triangular all-ones mask $\mathbf{L}$, followed by the normalization. Hence the paper's title, "Transformers are RNNs".
+This is an **RNN** whose state is the $d_k\times d_v$ matrix $\mathbf{H}_i$ (plus the normalizer $\boldsymbol\zeta_i$): generation costs the same at every step, whatever the context length. During training, the same outputs can be computed in parallel as a masked matrix product, $(\boldsymbol\Gamma\odot\phi(\mathbf{Q})\phi(\mathbf{K})^\top)\mathbf{V}$ with the lower-triangular all-ones mask $\boldsymbol\Gamma$, followed by the normalization. Hence the paper's title, "Transformers are RNNs".
 
-The catch is in the state. Softmax attention keeps every key and value and can retrieve any one of them exactly. A linear-attention state is a sum of outer products in a fixed space: it **compresses** the past, and new associations interfere with old ones, much as in the classical Hopfield network of [[Energy-Based Models]]. Plain linear attention was noticeably weaker than softmax attention on language. Its successors add **decay** or **gating**, so that the state can forget: RetNet multiplies $\mathbf{S}_{i-1}$ by a fixed factor $\gamma<1$,[^sun2023] and RWKV uses learned, channel-wise decays.[^peng2023] Making the decay depend on the input is exactly the step from S4 to Mamba below.
+The catch is in the state. Softmax attention keeps every key and value and can retrieve any one of them exactly. A linear-attention state is a sum of outer products in a fixed space: it **compresses** the past, and new associations interfere with old ones, much as in the classical Hopfield network of [[Energy-Based Models]]. Plain linear attention was noticeably weaker than softmax attention on language. Its successors add **decay** or **gating**, so that the state can forget: RetNet multiplies $\mathbf{H}_{i-1}$ by a fixed factor $\rho<1$,[^sun2023] and RWKV uses learned, channel-wise decays.[^peng2023] Making the decay depend on the input is exactly the step from S4 to Mamba below.
 
 ### State space models
 
-A **state space model** (SSM) comes from control theory. A continuous input signal $u(t)$ drives a hidden state $\mathbf{x}(t)\in\mathbb{R}^{d_s}$ through a linear differential equation, and the output reads the state:
+A **state space model** (SSM) comes from control theory. A continuous input signal $u(t)$ drives a hidden state $\mathbf{h}(t)\in\mathbb{R}^{d_s}$ through a linear differential equation, and the output reads the state:
 
 $$
-\dot{\mathbf{x}}(t)=\mathbf{A}\mathbf{x}(t)+\mathbf{B}u(t),\qquad y(t)=\mathbf{C}\mathbf{x}(t)+Du(t).
+\dot{\mathbf{h}}(t)=\mathbf{A}\mathbf{h}(t)+\mathbf{B}u(t),\qquad y(t)=\mathbf{C}\mathbf{h}(t)+Du(t).
 $$
 
 The [[Markov Chains#Towards diffusion models and state space models|Markov Chains]] lecture met this as the deterministic skeleton of a Kalman filter. To apply it to a sequence of tokens, take one channel of the token vectors as the samples $u_1,u_2,\dots$ of $u(t)$ at spacing $\Delta$. If $u$ is held constant over each step (**zero-order hold**), the solution of the linear ODE over one step involves the matrix exponential, and the **discretized** system is a linear recurrence:
 
 $$
-\mathbf{x}_t=\bar{\mathbf{A}}\,\mathbf{x}_{t-1}+\bar{\mathbf{B}}\,u_t,\qquad y_t=\mathbf{C}\mathbf{x}_t+Du_t,
+\mathbf{h}_t=\bar{\mathbf{A}}\,\mathbf{h}_{t-1}+\bar{\mathbf{B}}\,u_t,\qquad y_t=\mathbf{C}\mathbf{h}_t+Du_t,
 $$
 
 with $\bar{\mathbf{A}}=e^{\Delta\mathbf{A}}$ and $\bar{\mathbf{B}}=(\Delta\mathbf{A})^{-1}(e^{\Delta\mathbf{A}}-\mathbf{I})\,\Delta\mathbf{B}$. The step $\Delta$ is learned: it sets how fast the state evolves relative to the tokens. A deep SSM runs one such system per channel (all $d$ channels in parallel) and mixes channels with linear layers and MLPs between SSM layers.
 
-**Two faces of one model.** Unrolling the recurrence from $\mathbf{x}_0=\mathbf{0}$ gives $y_t=\sum_{s\le t}\mathbf{C}\bar{\mathbf{A}}^{\,t-s}\bar{\mathbf{B}}\,u_s+Du_t$. Since $\bar{\mathbf{A}}$, $\bar{\mathbf{B}}$ and $\mathbf{C}$ are the same at every step, this is a **convolution** of the input with the kernel
+**Two faces of one model.** Unrolling the recurrence from $\mathbf{h}_0=\mathbf{0}$ gives $y_t=\sum_{t'\le t}\mathbf{C}\bar{\mathbf{A}}^{\,t-t'}\bar{\mathbf{B}}\,u_{t'}+Du_t$. Since $\bar{\mathbf{A}}$, $\bar{\mathbf{B}}$ and $\mathbf{C}$ are the same at every step, this is a **convolution** of the input with the kernel
 
 $$
 \bar{\mathbf{K}}=\big(\mathbf{C}\bar{\mathbf{B}},\ \mathbf{C}\bar{\mathbf{A}}\bar{\mathbf{B}},\ \mathbf{C}\bar{\mathbf{A}}^2\bar{\mathbf{B}},\ \dots,\ \mathbf{C}\bar{\mathbf{A}}^{n-1}\bar{\mathbf{B}}\big).
@@ -714,11 +714,11 @@ $$
 \mathbf{C}_t=\mathbf{W}_C\mathbf{u}_t,
 $$
 
-and the recurrence becomes $\mathbf{x}_t=e^{\Delta_t\mathbf{A}}\mathbf{x}_{t-1}+\Delta_t\mathbf{B}_t u_t$, with a fixed diagonal $\mathbf{A}$ with negative entries. The step size is a gate:
+and the recurrence becomes $\mathbf{h}_t=e^{\Delta_t\mathbf{A}}\mathbf{h}_{t-1}+\Delta_t\mathbf{B}_t u_t$, with a fixed diagonal $\mathbf{A}$ with negative entries. The step size is a gate:
 - a **large** $\Delta_t$ makes $e^{\Delta_t\mathbf{A}}\approx\mathbf{0}$: the state is reset and overwritten by the current token ("remember this");
 - a **small** $\Delta_t$ makes $e^{\Delta_t\mathbf{A}}\approx\mathbf{I}$ and $\Delta_t\mathbf{B}_t u_t\approx\mathbf{0}$: the token is ignored and the state carries on ("skip this").
 
-This is the same idea as the LSTM's forget and input gates, now inside a linear recurrence. The price is that the system is no longer time-invariant, so there is no convolution kernel. Mamba trains with a **parallel scan** instead. One step is the affine map $\mathbf{x}\mapsto\mathbf{a}_t\odot\mathbf{x}+\mathbf{b}_t$ (diagonal $\bar{\mathbf{A}}_t$), and composing two steps gives another affine map, $(\mathbf{a}_1,\mathbf{b}_1)$ then $(\mathbf{a}_2,\mathbf{b}_2)$ equals $(\mathbf{a}_2\odot\mathbf{a}_1,\ \mathbf{a}_2\odot\mathbf{b}_1+\mathbf{b}_2)$. This composition is associative, so all $n$ prefix states can be computed in $O(\log n)$ parallel rounds, like a parallel prefix sum. Mamba's implementation keeps the large expanded state in on-chip memory, in the spirit of FlashAttention.
+This is the same idea as the LSTM's forget and input gates, now inside a linear recurrence. The price is that the system is no longer time-invariant, so there is no convolution kernel. Mamba trains with a **parallel scan** instead. One step is the affine map $\mathbf{h}\mapsto\mathbf{a}_t\odot\mathbf{h}+\mathbf{b}_t$ (diagonal $\bar{\mathbf{A}}_t$), and composing two steps gives another affine map, $(\mathbf{a}_1,\mathbf{b}_1)$ then $(\mathbf{a}_2,\mathbf{b}_2)$ equals $(\mathbf{a}_2\odot\mathbf{a}_1,\ \mathbf{a}_2\odot\mathbf{b}_1+\mathbf{b}_2)$. This composition is associative, so all $n$ prefix states can be computed in $O(\log n)$ parallel rounds, like a parallel prefix sum. Mamba's implementation keeps the large expanded state in on-chip memory, in the spirit of FlashAttention.
 
 **The Mamba block** merges the two halves of Figure 1. The input is projected to twice the width, passed through a short causal convolution and a SiLU, then through the selective SSM, multiplied by a SiLU gate computed from a second projection, and projected back. There is no separate MLP: the gated projections around the SSM, which hold almost all of the block's parameters, do the channel mixing. Two Mamba blocks have about as many parameters as one transformer block.
 
@@ -762,19 +762,19 @@ The $n=72$ models have 2 layers and width 64; the $n=264$ ones have 1 layer and 
 Unroll a selective SSM whose $\bar{\mathbf{A}}_t=a_t\mathbf{I}$ is a scalar times the identity, as in Mamba-2. The output is a linear function of all inputs so far:
 
 $$
-y_i=\sum_{j\le i}\Big(\mathbf{C}_i^\top\mathbf{B}_j\Big)\Big(\prod_{k=j+1}^{i}a_k\Big)\,u_j,
+y_i=\sum_{j\le i}\Big(\mathbf{C}_i^\top\mathbf{B}_j\Big)\Big(\prod_{t=j+1}^{i}a_t\Big)\,u_j,
 \qquad\text{that is}\qquad
-\mathbf{y}=\big(\mathbf{L}\odot\mathbf{C}\mathbf{B}^\top\big)\,\mathbf{u},
+\mathbf{y}=\big(\boldsymbol\Gamma\odot\mathbf{C}\mathbf{B}^\top\big)\,\mathbf{u},
 $$
 
-with $L_{ij}=\prod_{k=j+1}^{i}a_k$ for $j\le i$ and 0 otherwise. Compare with causal linear attention (7) without its normalizer: $(\mathbf{L}\odot\mathbf{Q}\mathbf{K}^\top)\mathbf{V}$ with an all-ones mask. The selective SSM **is** linear attention, with $\mathbf{C}$ in the role of the queries, $\mathbf{B}$ of the keys and the input of the values, and with a data-dependent **decay mask** $\mathbf{L}$ in place of the plain causal mask. Dao and Gu call this **state space duality**: the same layer can be computed as a recurrence (linear in $n$) or as a masked attention-like matrix product (quadratic, but made of matrix multiplications that GPUs execute very fast).[^dao2024] Mamba-2 computes it blockwise, attention-style inside chunks and recurrently between them, which made its core layer 2–8× faster than Mamba's and allowed a much larger state.
+with $\Gamma_{ij}=\prod_{t=j+1}^{i}a_t$ for $j\le i$ and 0 otherwise. Compare with causal linear attention (7) without its normalizer: $(\boldsymbol\Gamma\odot\mathbf{Q}\mathbf{K}^\top)\mathbf{V}$ with an all-ones mask. The selective SSM **is** linear attention, with $\mathbf{C}$ in the role of the queries, $\mathbf{B}$ of the keys and the input of the values, and with a data-dependent **decay mask** $\boldsymbol\Gamma$ in place of the plain causal mask. Dao and Gu call this **state space duality**: the same layer can be computed as a recurrence (linear in $n$) or as a masked attention-like matrix product (quadratic, but made of matrix multiplications that GPUs execute very fast).[^dao2024] Mamba-2 computes it blockwise, attention-style inside chunks and recurrently between them, which made its core layer 2–8× faster than Mamba's and allowed a much larger state.
 
 ### Hybrids and other recurrent models
 
 Since fixed-state models are cheap but forgetful and attention is precise but expensive, the natural compromise is to combine them. **Jamba** interleaves Mamba layers with a few attention layers (one attention layer per eight layers in the released model) and adds mixture-of-experts MLPs; the released model fits on a single 80 GB GPU and reports strong results with contexts up to 256K tokens.[^lieber2024] Several recent large models follow the same recipe of mostly linear-time layers plus a few attention layers; the roadmap of modern_llms plans exactly this. RetNet and RWKV, mentioned above, are recurrent models with decays, trained in parallel and run as RNNs.
 
 ![[Machine Learning/images/sequence-models-cost.svg]]
-*Figure 9: (a) forward FLOPs of one layer over a whole sequence, $d=4096$: causal attention mixing ($2n^2d$) against a selective SSM scan (about $9nEd\,d_s$ with expansion $E=2$ and state size $d_s=16$, a rough count) and the MLP ($16nd^2$) for scale. Attention's mixing cost overtakes the MLP at $n=8d$; the SSM's never does. (b) Memory per sequence during decoding, in 16-bit precision, for Llama 2 7B's shape (32 layers): the KV cache grows by 512 KiB per token with 32 KV heads, 128 KiB with 8 (GQA) and 16 KiB with 1 (MQA), while a Mamba-style model with 64 layers at the same width keeps a constant 19 MiB state.*
+*Figure 9: (a) forward FLOPs of one layer over a whole sequence, $d=4096$: causal attention mixing ($2n^2d$) against a selective SSM scan (about $18nd\,d_s$ with expansion factor 2 and state size $d_s=16$, a rough count) and the MLP ($16nd^2$) for scale. Attention's mixing cost overtakes the MLP at $n=8d$; the SSM's never does. (b) Memory per sequence during decoding, in 16-bit precision, for Llama 2 7B's shape (32 layers): the KV cache grows by 512 KiB per token with 32 KV heads, 128 KiB with 8 (GQA) and 16 KiB with 1 (MQA), while a Mamba-style model with 64 layers at the same width keeps a constant 19 MiB state.*
 
 ## Long context and efficient inference
 
@@ -784,7 +784,7 @@ Three more ideas recur in every long-context or fast-inference system.
 
 **Compressing the KV cache.** Besides sharing heads (MQA, GQA) and caching a latent (MLA), the cache can be **quantized** to fewer bits, or **evicted**: StreamingLLM observed that models put large attention weights on the first few tokens ("attention sinks"), and that keeping those few tokens plus a recent window lets a model run on streams far longer than its training context.[^xiao2024]
 
-**Speculative decoding.** Decoding is memory-bound, so checking several tokens in one forward pass costs about as much as generating one. A small **draft** model $q$ proposes $\gamma$ tokens cheaply; the large **target** model $p$ scores all of them in a single parallel pass; and each draft token $x$ is accepted with probability $\min\{1,p(x)/q(x)\}$. At the first rejection, a replacement is sampled from the normalized residual $\max\{0,p-q\}$, and the remaining drafts are discarded.[^leviathan2023]<sup>,</sup>[^chen2023] This produces **exactly** the target distribution: a token $x$ comes out either by being proposed and accepted, with probability $q(x)\min\{1,p(x)/q(x)\}=\min\{q(x),p(x)\}$, or through a rejection followed by resampling, with probability $\max\{0,p(x)-q(x)\}$; and the two add up to $p(x)$. The better the draft matches the target, the more tokens are accepted per pass; Leviathan et al. reported 2–3× faster decoding with identical outputs. Parag's [modern_llms](https://github.com/paragduttaiisc/modern_llms/blob/main/utils/spec_decode.py) trains extra heads that predict tokens $t+2,\dots,t+n$ (multi-token prediction)[^gloeckle2024] and uses them as a free draft model for **self-speculative** decoding.
+**Speculative decoding.** Decoding is memory-bound, so checking several tokens in one forward pass costs about as much as generating one. A small **draft** model $q$ proposes $J$ tokens cheaply; the large **target** model $p$ scores all of them in a single parallel pass; and each draft token $x$ is accepted with probability $\min\{1,p(x)/q(x)\}$. At the first rejection, a replacement is sampled from the normalized residual $\max\{0,p-q\}$, and the remaining drafts are discarded.[^leviathan2023]<sup>,</sup>[^chen2023] This produces **exactly** the target distribution: a token $x$ comes out either by being proposed and accepted, with probability $q(x)\min\{1,p(x)/q(x)\}=\min\{q(x),p(x)\}$, or through a rejection followed by resampling, with probability $\max\{0,p(x)-q(x)\}$; and the two add up to $p(x)$. The better the draft matches the target, the more tokens are accepted per pass; Leviathan et al. reported 2–3× faster decoding with identical outputs. Parag's [modern_llms](https://github.com/paragduttaiisc/modern_llms/blob/main/utils/spec_decode.py) trains extra heads that predict tokens $t+2,t+3,\dots$ (multi-token prediction)[^gloeckle2024] and uses them as a free draft model for **self-speculative** decoding.
 
 > [!example]- Code: one speculative sampling step (checked)
 > ```python
@@ -869,7 +869,7 @@ $$
 \operatorname{BP}=\min\big(1,\,e^{\,1-r/c}\big).
 $$
 
-The brevity penalty BP punishes captions that are too short to be judged by precision alone. BLEU is cheap and correlates with human judgment over a whole test set, but it rewards word overlap, not meaning: a correct caption phrased differently from all references scores poorly.
+The brevity penalty BP punishes captions that are too short to be judged by precision alone. BLEU is cheap and correlates with human judgement over a whole test set, but it rewards word overlap, not meaning: a correct caption phrased differently from all references scores poorly.
 
 ![[Machine Learning/images/applications-of-neural-networks-captioning-bleu.png]]
 *Figure 11: validation BLEU of the four decoders on Flickr8k during training (5-epoch moving average). The Bahdanau-attention LSTM and the transformer decoder score highest; the plain LSTM is lowest for most of training. Result from Parag's Image-Captioning repository.*
@@ -880,13 +880,13 @@ If transformers work so well on sequences of words, can they work on images dire
 
 ### Patches as tokens
 
-An image of size $C\times H\times W$ is split into $N=HW/P^2$ non-overlapping patches of $P\times P$ pixels (Figure 12). Each patch is flattened into a vector of length $P^2C$ and mapped to the model width $d$ by a learned matrix $\mathbf{E}\in\mathbb{R}^{P^2C\times d}$. A learnable [CLS] token is prepended, learned position embeddings are added, and the sequence goes through a standard transformer encoder:
+An image of size $C\times H\times W$ is split into $n=HW/P^2$ non-overlapping patches of $P\times P$ pixels (Figure 12). Each patch is flattened into a vector of length $P^2C$ and mapped to the model width $d$ by a learned matrix $\mathbf{E}\in\mathbb{R}^{P^2C\times d}$. A learnable [CLS] token is prepended, learned position embeddings are added, and the sequence goes through a standard transformer encoder:
 
 $$
 \begin{aligned}
-\mathbf{z}_0&=\big[\mathbf{x}_{\text{cls}};\ \mathbf{x}_1\mathbf{E};\ \dots;\ \mathbf{x}_N\mathbf{E}\big]+\mathbf{E}_{\text{pos}},\\
-\mathbf{z}_\ell&=\operatorname{Block}_\ell(\mathbf{z}_{\ell-1}),\qquad\ell=1,\dots,L,\\
-\hat{\mathbf{y}}&=\operatorname{softmax}\big(\operatorname{head}(\operatorname{LN}(\mathbf{z}_L^{\text{cls}}))\big).
+\mathbf{X}_0&=\big[\mathbf{x}_{\text{cls}};\ \mathbf{x}_1\mathbf{E};\ \dots;\ \mathbf{x}_n\mathbf{E}\big]+\mathbf{E}_{\text{pos}},\\
+\mathbf{X}_\ell&=\operatorname{Block}_\ell(\mathbf{X}_{\ell-1}),\qquad\ell=1,\dots,L,\\
+\hat{\mathbf{y}}&=\operatorname{softmax}\big(\operatorname{head}(\operatorname{LN}(\mathbf{X}_L^{\text{cls}}))\big).
 \end{aligned}
 $$
 
@@ -908,7 +908,7 @@ For ViT-B/16 on a $224\times224$ image, $P=16$ gives $14\times14=196$ patch toke
 >     return pe
 >
 > def patchify(img, P):
->     """img: (C, H, W) -> (N, P*P*C) with N = (H/P)(W/P), row-major patches."""
+>     """img: (C, H, W) -> (n, P*P*C) with n = (H/P)(W/P), row-major patches."""
 >     C, H, W = img.shape
 >     x = img.reshape(C, H // P, P, W // P, P)
 >     return x.transpose(1, 3, 2, 4, 0).reshape((H // P) * (W // P), P * P * C)
@@ -923,7 +923,7 @@ A ViT has much less built-in knowledge than a [[Convolutional Neural Networks|CN
 
 Parag's [improved-vision-encoders](https://github.com/paragduttaiisc/improved-vision-encoders) repository takes a different route to the same problem: instead of a heavy supervised recipe, the ViT encoder is pretrained **without labels**, by masking 75% of the patches and predicting the latent features of the masked patches from the visible ones (a joint-embedding predictive architecture). The quality of the learned features is then measured with a linear probe on ImageNet-1K. The repository also makes the encoder's parts swappable, such as attention versus an FFT-based token mixer, GELU versus SwiGLU, and dense versus mixture-of-experts feed-forward layers, so their effect on representation quality can be compared.
 
-**Cost.** The number of tokens is $N=HW/P^2$, and attention costs $O(N^2)$. Halving the patch size quadruples $N$ and multiplies the attention cost by 16, which is why ViTs use fairly large patches and why hierarchical variants that attend within local windows exist for high-resolution tasks such as detection and segmentation.
+**Cost.** The number of tokens is $n=HW/P^2$, and attention costs $O(n^2)$. Halving the patch size quadruples $n$ and multiplies the attention cost by 16, which is why ViTs use fairly large patches and why hierarchical variants that attend within local windows exist for high-resolution tasks such as detection and segmentation.
 
 ## Key takeaways
 
@@ -940,7 +940,7 @@ Parag's [improved-vision-encoders](https://github.com/paragduttaiisc/improved-vi
 ## Where this shows up next
 
 - [[Graph Neural Networks]], the next lecture: convolution and attention generalized from grids and chains to arbitrary graphs (a transformer is a GNN on the complete graph).
-- [[Self-Supervised Representation Learning]]: learning representations without labels, for images and text, with the encoders of this lecture and the contrastive loss derived in [[Energy-Based Models]]. CLIP, for instance, trains an image encoder and a text transformer so that matching image–caption pairs have high similarity.[^radford2021]
+- [[Self-Supervised Representation Learning]]: learning representations without labels, for images and text, with the encoders of this lecture and a contrastive loss derived there from an energy view. CLIP, for instance, trains an image encoder and a text transformer so that matching image–caption pairs have high similarity.[^radford2021]
 - [[Language Representations and Language Models]]: what the embeddings and the next-token objective learn: word-vector geometry, tokenization, masked and next-token prediction, scaling laws and in-context learning. A decoder-only transformer trained to predict the next token, scaled up, is a GPT.[^brown2020] [GPT-from-Scratch](https://github.com/parag1604/GPT-from-Scratch) builds one step by step, in the spirit of Karpathy's nanoGPT, then loads the real pretrained GPT-2 weights into the same code and fine-tunes them with LoRA.
 - [[Non-parametric Models]]: attention with a Gaussian score is Nadaraya–Watson kernel regression; [[Energy-Based Models]]: one attention step is one retrieval step of a modern Hopfield network.
 - **Generative models.** [[Denoising Diffusion Models]] embed the noise level with the sinusoidal encoding of this lecture and condition on text through cross-attention.

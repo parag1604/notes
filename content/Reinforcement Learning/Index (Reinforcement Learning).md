@@ -11,7 +11,7 @@ The series has two halves. The first is practical: after bandits and the MDP fra
 
 1. [[Multi-Armed Bandits]]: RL with a single state. Exploration vs exploitation, incremental estimates (a first stochastic-approximation algorithm), ε-greedy, UCB with a regret proof, gradient bandits and Thompson sampling.
 2. [[Introduction to Reinforcement Learning|Introduction to RL]]: sequential decisions, MDPs (routing, recycling robot, pole balancing), policies, returns and horizons, value functions, and the Bellman equations, with hand-checked gridworlds.
-3. [[Imitation Learning]]: behavior cloning as supervised learning, why errors compound ($O(\epsilon T^2)$), and DAgger.
+3. [[Imitation Learning]]: behaviour cloning as supervised learning, why errors compound ($O(\epsilon T^2)$), and DAgger.
 4. [[Policy Gradients]]: REINFORCE, reward-to-go and baselines, off-policy policy gradients, and straight-through Gumbel-softmax.
 5. [[Actor-Critic Algorithms]]: a learned critic for the policy gradient: advantage estimation, batch and online actor-critic, A2C/A3C, n-step returns and GAE, off-policy actor-critic (DDPG, TD3, SAC), and two-timescale convergence.
 6. [[Monte Carlo and Temporal-Difference Learning]]: learning value functions from samples: Monte Carlo prediction, TD(0), MC vs TD, n-step returns and TD(λ) with eligibility traces.
@@ -26,7 +26,7 @@ The series has two halves. The first is practical: after bandits and the MDP fra
 
 ## Coming soon
 
-- Deep Q-networks, and trust-region and proximal policy optimization (TRPO/PPO).
+- A fuller treatment of deep Q-networks (they are introduced in [[Q-Learning and SARSA#Beyond tables|Q-Learning and SARSA]]), and trust-region and proximal policy optimization (TRPO/PPO).
 - Exploration beyond bandits, offline RL and multi-agent RL.
 
 ---

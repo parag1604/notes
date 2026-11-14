@@ -12,7 +12,7 @@ prev: "[[Variational Autoencoders]]"
 next: "[[Energy-Based Models]]"
 ---
 
-> **Prerequisites:** [[Variational Autoencoders]] (latent-variable generators, forward vs reverse KL) and the Lagrangian/duality aside in [[Support Vector Machines]] (conjugates and lower bounds are the same idea).
+> **Prerequisites:** [[Variational Autoencoders]] (latent-variable generators, forward vs reverse KL) and [[Multivariable Calculus#The Lagrangian and duality|the Lagrangian and duality]] (conjugates and lower bounds are the same idea).
 >
 > **TL;DR:**
 > - Instead of maximizing likelihood, a GAN trains a **sampler** $G_\theta$ to minimize a divergence between the data and its samples. It never evaluates a density.
@@ -42,8 +42,8 @@ D_{\mathrm{KL}}(p_X\,\|\,p_\theta)=\int p_X(\mathbf{x})\log\frac{p_X(\mathbf{x})
 $$
 
 Look at the two kinds of mistakes the model can make.
-- **Case 1:** on a region $X_1$ where $p_X(\mathbf{x})\gg p_\theta(\mathbf{x})$ (real data the model misses), the log ratio is large and positive, so $D_{\mathrm{KL}}$ is high. This is good: missing data is penalized.
-- **Case 2:** on a region $X_2$ where $p_X(\mathbf{x})\ll p_\theta(\mathbf{x})$ (the model generates things that never occur in the data), the integrand is weighted by $p_X\approx0$, so the contribution is low. This is not desirable.
+- **Case 1:** on a region $\mathcal{R}_1$ where $p_X(\mathbf{x})\gg p_\theta(\mathbf{x})$ (real data the model misses), the log ratio is large and positive, so $D_{\mathrm{KL}}$ is high. This is good: missing data is penalized.
+- **Case 2:** on a region $\mathcal{R}_2$ where $p_X(\mathbf{x})\ll p_\theta(\mathbf{x})$ (the model generates things that never occur in the data), the integrand is weighted by $p_X\approx0$, so the contribution is low. This is not desirable.
 
 So $D_{\mathrm{KL}}(p_X\,\|\,p_\theta)$ has no "mechanism" to discourage the model from sampling in regions of low data density. Figure 1 shows the consequence for a model that is too simple: the forward KL covers both modes and puts much of its mass in the empty valley between them.
 
@@ -122,7 +122,7 @@ $$
 
 This is the key step. The right-hand side contains **no densities**, only expectations: one over real data and one over model samples. Both can be estimated by Monte Carlo.
 
-**When is the bound tight?** Suppose $\mathcal{T}$ contains all functions. The integrand of (2) is $L\big(T(\mathbf{x})\big)=p(\mathbf{x})T(\mathbf{x})-q(\mathbf{x})f^*\big(T(\mathbf{x})\big)$. It involves no derivative of $T$, so the variational problem decouples into independent scalar problems, one per $\mathbf{x}$. (The Euler–Lagrange equation reduces to $\partial L/\partial T=0$.) Setting the derivative to zero:
+**When is the bound tight?** Suppose $\mathcal{T}$ contains all functions. The integrand of (2) is $\ell\big(T(\mathbf{x})\big)=p(\mathbf{x})T(\mathbf{x})-q(\mathbf{x})f^*\big(T(\mathbf{x})\big)$. It involves no derivative of $T$, so the variational problem decouples into independent scalar problems, one per $\mathbf{x}$. (The Euler–Lagrange equation reduces to $\partial\ell/\partial T=0$.) Setting the derivative to zero:
 
 $$
 \begin{aligned}
@@ -147,20 +147,20 @@ We now have a lower bound on the divergence, and want a sampler that **minimizes
 Plugging both into (2) gives the f-GAN objective:
 
 $$
-F(\theta,\omega)=\mathbb{E}_{\mathbf{x}\sim P_X}\Big[g_f\big(V_\omega(\mathbf{x})\big)\Big]-\mathbb{E}_{\mathbf{z}\sim p(\mathbf{z})}\Big[f^*\Big(g_f\big(V_\omega(G_\theta(\mathbf{z}))\big)\Big)\Big].
+J(\theta,\omega)=\mathbb{E}_{\mathbf{x}\sim P_X}\Big[g_f\big(V_\omega(\mathbf{x})\big)\Big]-\mathbb{E}_{\mathbf{z}\sim p(\mathbf{z})}\Big[f^*\Big(g_f\big(V_\omega(G_\theta(\mathbf{z}))\big)\Big)\Big].
 $$
 
 The optimal parameters solve the saddle-point problem
 
 $$
-\theta^*,\omega^*=\arg\min_\theta\max_\omega F(\theta,\omega).
+\theta^*,\omega^*=\arg\min_\theta\max_\omega J(\theta,\omega).
 \tag{3}
 $$
 
-The critic maximizes $F$ to make the bound as tight as possible, i.e. to *estimate* the divergence. The generator minimizes $F$ to *reduce* the estimated divergence. Since the two networks respectively minimize and maximize the same objective, the procedure is called **adversarial learning**, and the pair is a **generative adversarial network**. The critic is traditionally called the **discriminator**.
+The critic maximizes $J$ to make the bound as tight as possible, i.e. to *estimate* the divergence. The generator minimizes $J$ to *reduce* the estimated divergence. Since the two networks respectively minimize and maximize the same objective, the procedure is called **adversarial learning**, and the pair is a **generative adversarial network**. The critic is traditionally called the **discriminator**.
 
 ![[Machine Learning/images/gan-architecture.svg]]
-*Figure 3: the f-GAN. The generator turns noise into fake samples. The critic $V_\omega$ scores real and fake samples with a real number, and $g_f$ maps that score into the domain of $f^*$. Both networks play the same objective $F(\theta,\omega)$ with opposite goals.*
+*Figure 3: the f-GAN. The generator turns noise into fake samples. The critic $V_\omega$ scores real and fake samples with a real number, and $g_f$ maps that score into the domain of $f^*$. Both networks play the same objective $J(\theta,\omega)$ with opposite goals.*
 
 A few divergences and their activations:[^nowozin2016]
 
@@ -183,8 +183,8 @@ A few divergences and their activations:[^nowozin2016]
 >                lambda t: -torch.log1p(-t.exp())),
 > }
 > g_f, f_star = fgan["GAN"]
-> # F(theta, omega): critic ascends, generator descends
-> F_obj = g_f(v_real).mean() - f_star(g_f(v_fake)).mean()
+> # J(theta, omega): critic ascends, generator descends
+> J_obj = g_f(v_real).mean() - f_star(g_f(v_fake)).mean()
 > ```
 > `F.softplus(-v)` is $\log(1+e^{-v})$, computed stably. Switching the divergence changes only the pair of functions, not the networks.
 
@@ -218,7 +218,7 @@ $$
 - $T_\omega(\mathbf{x})=\log D_\omega(\mathbf{x})$;
 - $-f^*\big(T_\omega(\mathbf{x})\big)=\log\big(1-e^{\log D_\omega(\mathbf{x})}\big)=\log\big(1-D_\omega(\mathbf{x})\big)$.
 
-**Step 4: the objective.** Substituting into $F$:
+**Step 4: the objective.** Substituting into $J$:
 
 $$
 \min_\theta\max_\omega\;\mathbb{E}_{\mathbf{x}\sim P_X}\big[\log D_\omega(\mathbf{x})\big]+\mathbb{E}_{\mathbf{z}\sim p(\mathbf{z})}\Big[\log\Big(1-D_\omega\big(G_\theta(\mathbf{z})\big)\Big)\Big].
@@ -242,7 +242,7 @@ This is the Bayes-optimal classifier for "real or fake" with equal priors. Where
 
 $$
 \begin{aligned}
-\max_\omega F
+\max_\omega J
 &=\int p\log\frac{p}{p+q}\,d\mathbf{x}+\int q\log\frac{q}{p+q}\,d\mathbf{x}\\
 &=D_{\mathrm{KL}}\!\left(P\,\Big\|\,\tfrac{P+Q}{2}\right)+D_{\mathrm{KL}}\!\left(Q\,\Big\|\,\tfrac{P+Q}{2}\right)-2\log2\\
 &=2\,\mathrm{JSD}(P\,\|\,Q_\theta)-\log4.
@@ -309,7 +309,7 @@ Both losses push $D(G(\mathbf{z}))$ up. But $-\log D$ is steep near $D=0$, so a 
 
 ## The Wasserstein GAN
 
-**Arjovsky's example.** Let $Z\sim U[0,1]$. Let the data be $P=(0,Z)$, a vertical line segment at $x=0$, and the model $Q_\theta=(\theta,Z)$, the same segment shifted to $x=\theta$.[^arjovsky2017] For every $\theta\ne0$ the supports are disjoint, so:
+**Arjovsky's example.** Let $S\sim U[0,1]$. Let the data be $P=(0,S)$, a vertical line segment at $x=0$, and the model $Q_\theta=(\theta,S)$, the same segment shifted to $x=\theta$.[^arjovsky2017] For every $\theta\ne0$ the supports are disjoint, so:
 - $D_{\mathrm{KL}}(P\,\|\,Q_\theta)=\infty$;
 - $\mathrm{JSD}(P\,\|\,Q_\theta)=\log2$, a constant with zero gradient in $\theta$.
 
@@ -318,7 +318,7 @@ Yet the model is clearly getting better as $\theta\to0$. A useful distance shoul
 The **Wasserstein-1** (earth mover's) distance measures how much mass must be moved, and how far:
 
 $$
-W_1(P,Q)=\inf_{\gamma\in\Pi(P,Q)}\mathbb{E}_{(\mathbf{x},\mathbf{y})\sim\gamma}\big[\lVert\mathbf{x}-\mathbf{y}\rVert\big],
+W_1(P,Q)=\inf_{\pi\in\Pi(P,Q)}\mathbb{E}_{(\mathbf{x},\mathbf{y})\sim\pi}\big[\lVert\mathbf{x}-\mathbf{y}\rVert\big],
 $$
 
 where $\Pi(P,Q)$ is the set of joint distributions (couplings) with marginals $P$ and $Q$. In the example, $W_1(P,Q_\theta)=|\theta|$, which is continuous and has a useful gradient everywhere.
@@ -333,13 +333,13 @@ W_1(P,Q)=\sup_{\lVert T\rVert_L\le1}\Big(\mathbb{E}_{\mathbf{x}\sim P}\big[T(\ma
 $$
 
 where the supremum is over **1-Lipschitz** functions. Compare with (2): there is no $f^*$, and the constraint on $T$ is smoothness, not a range. The WGAN trains a critic network subject to this constraint, and the generator minimizes the estimated $W_1$. Two ways to enforce the Lipschitz constraint:
-- **weight clipping** (the original WGAN): clamp every critic weight to $[-c,c]$. It is crude, and can make the critic too simple;
-- **gradient penalty** (WGAN-GP): add $\lambda\,\mathbb{E}_{\hat{\mathbf{x}}}\big[(\lVert\nabla_{\hat{\mathbf{x}}}T(\hat{\mathbf{x}})\rVert-1)^2\big]$ at points $\hat{\mathbf{x}}$ interpolated between real and fake samples.[^gulrajani2017]
+- **weight clipping** (the original WGAN): clamp every critic weight to $[-\delta,\delta]$. It is crude, and can make the critic too simple;
+- **gradient penalty** (WGAN-GP): add $\lambda_{\mathrm{GP}}\,\mathbb{E}_{\hat{\mathbf{x}}}\big[(\lVert\nabla_{\hat{\mathbf{x}}}T(\hat{\mathbf{x}})\rVert-1)^2\big]$ at points $\hat{\mathbf{x}}$ interpolated between real and fake samples.[^gulrajani2017]
 
 > [!example]- Code: WGAN-GP critic and generator losses (PyTorch)
 > ```python
 > # assumes: critic T with an unbounded scalar output; real x and
-> #   fake x_f = G(z), both (B, D); lam = 10
+> #   fake x_f = G(z), both (B, dim); lam = lambda_GP = 10
 > # (B, 1, 1, 1) for images
 > eps = torch.rand(B, 1)
 > x_hat = (eps * x + (1 - eps) * x_f.detach()).requires_grad_(True)
@@ -361,7 +361,7 @@ $W_1$ is an **integral probability metric**, not an f-divergence. It is a genuin
 So far $G_\theta(\mathbf{z})$ samples from the whole data distribution. Often we want control: an image of a given class, or the photo that goes with a given sketch. The conditional variants differ in *where* the condition enters and *what* the discriminator is asked (Figure 7).
 
 ![[Machine Learning/images/gan-conditional-variants.svg]]
-*Figure 7: three ways to condition a GAN. cGAN: both players see the label $y$, and the discriminator judges whether a sample is real **and** matches $y$. AC-GAN: the discriminator sees only the image, and a second head predicts its class. InfoGAN: there are no labels; the generator receives a code $c$, and a head $Q$ on the discriminator's body must recover $c$ from the fake.*
+*Figure 7: three ways to condition a GAN. cGAN: both players see the label $y$, and the discriminator judges whether a sample is real **and** matches $y$. AC-GAN: the discriminator sees only the image, and a second head predicts its class. InfoGAN: there are no labels; the generator receives a code $c$, and a head $R$ on the discriminator's body must recover $c$ from the fake.*
 
 ### cGAN: condition both players
 
@@ -371,7 +371,7 @@ $$
 \min_\theta\max_\omega\;\mathbb{E}_{(\mathbf{x},y)\sim P_X}\big[\log D_\omega(\mathbf{x},y)\big]+\mathbb{E}_{\mathbf{z},\,y}\Big[\log\Big(1-D_\omega\big(G_\theta(\mathbf{z},y),y\big)\Big)\Big].
 $$
 
-Repeating Steps 5–6 for each value of $y$ gives $D^*(\mathbf{x},y)=\frac{p(\mathbf{x}\mid y)}{p(\mathbf{x}\mid y)+q_\theta(\mathbf{x}\mid y)}$, and the generator minimizes the Jensen–Shannon divergence between the class-conditional distributions, averaged over $y$. A realistic "3" presented with the label 7 counts as fake, so the generator must respect the label. The simplest way to feed $y$ in is to concatenate an embedding of it to the inputs (below). The **projection discriminator** of Miyato and Koyama instead adds an inner product between a label embedding and the image features to the discriminator's logit, $V(\mathbf{x},y)=\psi(\phi(\mathbf{x}))+\mathbf{e}_y^\top\phi(\mathbf{x})$, a form suggested by the density-ratio view of the optimal critic; it is the standard choice in large class-conditional GANs.[^miyato2018proj]
+Repeating Steps 5–6 for each value of $y$ gives $D^*(\mathbf{x},y)=\frac{p(\mathbf{x}\mid y)}{p(\mathbf{x}\mid y)+q_\theta(\mathbf{x}\mid y)}$, and the generator minimizes the Jensen–Shannon divergence between the class-conditional distributions, averaged over $y$. A realistic "3" presented with the label 7 counts as fake, so the generator must respect the label. The simplest way to feed $y$ in is to concatenate an embedding of it to the inputs (below). The **projection discriminator** of Miyato and Koyama instead adds an inner product between a label embedding and the image features to the discriminator's logit, $V(\mathbf{x},y)=\rho(\phi(\mathbf{x}))+\mathbf{e}_y^\top\phi(\mathbf{x})$, a form suggested by the density-ratio view of the optimal critic; it is the standard choice in large class-conditional GANs.[^miyato2018proj]
 
 > [!example]- Code: conditioning G and D on a label (PyTorch)
 > ```python
@@ -394,39 +394,39 @@ In the **auxiliary-classifier GAN** (Odena et al.) the generator still receives 
 
 **InfoGAN** (Chen et al.) asks for control without any labels.[^chen2016] The noise is split into an incompressible part $\mathbf{z}$ and a **latent code** $c$, for example a 10-way categorical variable plus a few uniform continuous ones. Nothing in the GAN objective forces the generator to use $c$; it could ignore it. So InfoGAN adds a regularizer that rewards a high **mutual information** $I\big(c;G(\mathbf{z},c)\big)$: it must be possible to read $c$ back off the image.
 
-The mutual information needs the posterior $P(c\mid\mathbf{x})$, which is intractable. As in the [[Variational Autoencoders|VAE]], an auxiliary distribution $Q(c\mid\mathbf{x})$ gives a lower bound. Writing $\mathbf{x}=G(\mathbf{z},c)$:
+The mutual information needs the posterior $p(c\mid\mathbf{x})$, which is intractable. As in the [[Variational Autoencoders|VAE]], an auxiliary distribution $R(c\mid\mathbf{x})$ gives a lower bound. Writing $\mathbf{x}=G(\mathbf{z},c)$:
 
 $$
 \begin{aligned}
-I(c;\mathbf{x})&=H(c)-H(c\mid\mathbf{x})=H(c)+\mathbb{E}_{\mathbf{x}}\Big[\mathbb{E}_{c'\sim P(c\mid\mathbf{x})}\big[\log P(c'\mid\mathbf{x})\big]\Big]\\
-&=H(c)+\mathbb{E}_{\mathbf{x}}\Big[D_{\mathrm{KL}}\big(P(\cdot\mid\mathbf{x})\,\|\,Q(\cdot\mid\mathbf{x})\big)\Big]+\mathbb{E}_{\mathbf{x}}\Big[\mathbb{E}_{c'\sim P(c\mid\mathbf{x})}\big[\log Q(c'\mid\mathbf{x})\big]\Big]\\
-&\ge H(c)+\mathbb{E}_{c\sim p(c),\,\mathbf{z}}\Big[\log Q\big(c\mid G(\mathbf{z},c)\big)\Big]=:L_I(G,Q).
+I(c;\mathbf{x})&=H(c)-H(c\mid\mathbf{x})=H(c)+\mathbb{E}_{\mathbf{x}}\Big[\mathbb{E}_{c'\sim p(c\mid\mathbf{x})}\big[\log p(c'\mid\mathbf{x})\big]\Big]\\
+&=H(c)+\mathbb{E}_{\mathbf{x}}\Big[D_{\mathrm{KL}}\big(p(\cdot\mid\mathbf{x})\,\|\,R(\cdot\mid\mathbf{x})\big)\Big]+\mathbb{E}_{\mathbf{x}}\Big[\mathbb{E}_{c'\sim p(c\mid\mathbf{x})}\big[\log R(c'\mid\mathbf{x})\big]\Big]\\
+&\ge H(c)+\mathbb{E}_{c\sim p(c),\,\mathbf{z}}\Big[\log R\big(c\mid G(\mathbf{z},c)\big)\Big]=:L_I(G,R).
 \end{aligned}
 \tag{5}
 $$
 
-The last step drops the non-negative KL and uses the fact that sampling $c$ and then $\mathbf{x}=G(\mathbf{z},c)$ produces exactly the joint distribution of $(c,\mathbf{x})$, so no posterior sample is needed. The bound is tight when $Q$ equals the true posterior. InfoGAN solves
+The last step drops the non-negative KL and uses the fact that sampling $c$ and then $\mathbf{x}=G(\mathbf{z},c)$ produces exactly the joint distribution of $(c,\mathbf{x})$, so no posterior sample is needed. The bound is tight when $R$ equals the true posterior. InfoGAN solves
 
 $$
-\min_{G,Q}\max_D\;V(D,G)-\lambda\,L_I(G,Q),
+\min_{G,R}\max_D\;J(D,G)-\lambda_I\,L_I(G,R),
 $$
 
-where $V$ is the GAN objective (4). $Q$ is a small head on the discriminator's body, so the extra cost is negligible. For a categorical code, $-L_I+H(c)$ is just the cross-entropy of $Q$'s prediction of $c$; for a continuous code with a Gaussian $Q$, it is a squared error. On MNIST, the 10-way code learned to represent the digit class without supervision, and the continuous codes captured rotation and stroke width. The same bound-by-a-classifier idea reappears in the InfoNCE bound of [[Self-Supervised Representation Learning]].
+where $J$ is the GAN objective (4). $R$ is a small head on the discriminator's body, so the extra cost is negligible. For a categorical code, $-L_I+H(c)$ is just the cross-entropy of $R$'s prediction of $c$; for a continuous code with a Gaussian $R$, it is a squared error. On MNIST, the 10-way code learned to represent the digit class without supervision, and the continuous codes captured rotation and stroke width. The same bound-by-a-classifier idea reappears in the InfoNCE bound of [[Self-Supervised Representation Learning]].
 
 > [!example]- Code: the InfoGAN information loss (PyTorch)
 > ```python
 > # assumes: G(z, c_onehot) generator; D_body(x) -> features h;
-> #   heads D_head(h) -> logit, Q_head(h) -> K logits
+> #   heads D_head(h) -> logit, R_head(h) -> K logits
 > # c ~ p(c), uniform categorical
 > c = torch.randint(K, (B,))
 > c1 = F.one_hot(c, K).float()
 > fake = G(torch.cat([torch.randn(B, nz), c1], dim=1))
 > h = D_body(fake)
-> # -E[log Q(c | G(z, c))] = H(c) - L_I
-> info_loss = F.cross_entropy(Q_head(h), c)
-> # non-saturating GAN loss + lambda * info
+> # -E[log R(c | G(z, c))] = H(c) - L_I
+> info_loss = F.cross_entropy(R_head(h), c)
+> # non-saturating GAN loss + lambda_I * info
 > lossG = bce(D_head(h), ones) + lam * info_loss
-> # Q_head and D_body also minimize info_loss; lam = 1 (discrete c)
+> # R_head and D_body also minimize info_loss; lam = lambda_I = 1 (discrete c)
 > ```
 > AC-GAN uses the same cross-entropy, but with the true labels $y$ in place of the sampled code $c$, and applies it to real images as well.
 
@@ -437,7 +437,7 @@ When the condition is itself an image, a conditional GAN becomes a learned image
 **pix2pix** (Isola et al.) uses **paired** data $(\mathbf{x}_i,\mathbf{y}_i)$.[^isola2017] The generator maps an input image $\mathbf{x}$ to an output $G(\mathbf{x})$, and the discriminator judges pairs $(\mathbf{x},\mathbf{y})$. An L1 term is added:
 
 $$
-G^*=\arg\min_G\max_D\;\mathcal{L}_{\mathrm{cGAN}}(G,D)+\lambda\,\mathbb{E}_{\mathbf{x},\mathbf{y}}\big[\lVert\mathbf{y}-G(\mathbf{x})\rVert_1\big],\qquad\lambda=100.
+G^*=\arg\min_G\max_D\;\mathcal{L}_{\mathrm{cGAN}}(G,D)+\lambda_{\mathrm{L1}}\,\mathbb{E}_{\mathbf{x},\mathbf{y}}\big[\lVert\mathbf{y}-G(\mathbf{x})\rVert_1\big],\qquad\lambda_{\mathrm{L1}}=100.
 $$
 
 The two terms split the work. L1 alone gives the blurry average of all plausible outputs (the same effect as the [[Variational Autoencoders#VAEs in practice|Gaussian VAE decoder]]); it gets the low frequencies right. The adversarial term supplies sharp, realistic high-frequency detail, so the discriminator only needs to judge local **patches** (the "PatchGAN" discriminator).
@@ -449,7 +449,7 @@ $$
 \tag{6}
 $$
 
-and the full objective is $\mathcal{L}_{\mathrm{GAN}}(G,D_Y)+\mathcal{L}_{\mathrm{GAN}}(F,D_X)+\lambda\,\mathcal{L}_{\mathrm{cyc}}(G,F)$ with $\lambda=10$. The paper uses the least-squares GAN loss for stability,[^mao2017] and an optional identity loss that keeps colours unchanged when the input already looks like the target domain.
+and the full objective is $\mathcal{L}_{\mathrm{GAN}}(G,D_Y)+\mathcal{L}_{\mathrm{GAN}}(F,D_X)+\lambda_{\mathrm{cyc}}\,\mathcal{L}_{\mathrm{cyc}}(G,F)$ with $\lambda_{\mathrm{cyc}}=10$. The paper uses the least-squares GAN loss for stability,[^mao2017] and an optional identity loss that keeps colours unchanged when the input already looks like the target domain.
 
 ![[Machine Learning/images/gan-cyclegan.svg]]
 *Figure 8: CycleGAN. $G$ translates $X\to Y$ and $F$ translates $Y\to X$, each judged by a discriminator in its target domain. The cycle-consistency loss (6) asks that $F(G(\mathbf{x}))$ return to $\mathbf{x}$ and $G(F(\mathbf{y}))$ return to $\mathbf{y}$, which rules out translations that forget the content of the input.*
@@ -457,7 +457,7 @@ and the full objective is $\mathcal{L}_{\mathrm{GAN}}(G,D_Y)+\mathcal{L}_{\mathr
 > [!example]- Code: the CycleGAN generator loss (PyTorch)
 > ```python
 > # assumes: G: X -> Y and Fy: Y -> X generators; D_X, D_Y return
-> #   logits; batches x (from X), y (from Y); lam = 10
+> #   logits; batches x (from X), y (from Y); lam = lambda_cyc = 10
 > fake_y, fake_x = G(x), Fy(y)
 > # fool both discriminators
 > adv = bce(D_Y(fake_y), ones) + bce(D_X(fake_x), ones)
@@ -488,7 +488,7 @@ DCGAN also showed that the latent space has linear structure: averaging the $\ma
 
 ### Spectral normalization
 
-The WGAN needs a 1-Lipschitz critic, and even standard GANs train more stably with a smooth discriminator. For a network $f=\mathbf{W}_L\circ a\circ\dots\circ a\circ\mathbf{W}_1$ with 1-Lipschitz activations (ReLU, LeakyReLU), the Lipschitz constant is at most the product of the layers' largest singular values, $\prod_l\sigma_{\max}(\mathbf{W}_l)$. **Spectral normalization** (Miyato et al.) divides each weight matrix by an estimate of its $\sigma_{\max}$, so every layer, and hence the discriminator, is at most 1-Lipschitz.[^miyato2018sn] The estimate comes from one step of [[Eigenvalues and Eigenvectors#Power iteration and the QR algorithm|power iteration]] per training step, with the vector $\mathbf{u}$ kept between steps, so it is almost free. There is no second backward pass, unlike the gradient penalty, and it works with any loss. Convolution kernels are reshaped into a matrix (out channels by everything else) first, which approximates the true operator norm of the convolution. Spectral normalization, usually with the **hinge loss**,[^lim2017] became standard in SAGAN and BigGAN.[^zhang2019]<sup>,</sup>[^brock2019]
+The WGAN needs a 1-Lipschitz critic, and even standard GANs train more stably with a smooth discriminator. For a critic $V=\mathbf{W}^{(M)}\circ a\circ\dots\circ a\circ\mathbf{W}^{(1)}$ with 1-Lipschitz activations $a$ (ReLU, LeakyReLU), the Lipschitz constant is at most the product of the layers' spectral norms (largest singular values), $\prod_m\lVert\mathbf{W}^{(m)}\rVert_2$. **Spectral normalization** (Miyato et al.) divides each weight matrix by an estimate of its spectral norm, so every layer, and hence the discriminator, is at most 1-Lipschitz.[^miyato2018sn] The estimate comes from one step of [[Eigenvalues and Eigenvectors#Power iteration and the QR algorithm|power iteration]] per training step, with the singular-vector estimate kept between steps, so it is almost free. There is no second backward pass, unlike the gradient penalty, and it works with any loss. Convolution kernels are reshaped into a matrix (out channels by everything else) first, which approximates the true operator norm of the convolution. Spectral normalization, usually with the **hinge loss**,[^lim2017] became standard in SAGAN and BigGAN.[^zhang2019]<sup>,</sup>[^brock2019]
 
 > [!example]- Code: spectral normalization by power iteration (PyTorch)
 > ```python
@@ -498,7 +498,7 @@ The WGAN needs a 1-Lipschitz critic, and even standard GANs train more stably wi
 >     # one power-iteration step
 >     v = F.normalize(W.T @ u, dim=0)
 >     u = F.normalize(W @ v, dim=0)
-> # estimate of sigma_max(W), differentiable in W
+> # estimate of ||W||_2 (largest singular value), differentiable in W
 > sigma = u @ W @ v
 > # largest singular value about 1: the layer is 1-Lipschitz
 > W_sn = W / sigma
@@ -514,9 +514,9 @@ The WGAN needs a 1-Lipschitz critic, and even standard GANs train more stably wi
 
 **StyleGAN** (Karras et al.) redesigned the generator.[^karras2019]
 - A **mapping network**, an 8-layer MLP, sends $\mathbf{z}$ to an intermediate latent $\mathbf{w}$. Because $\mathbf{w}$ does not have to follow a fixed density, its space is less entangled than that of $\mathbf{z}$.
-- The **synthesis network** starts from a learned constant. At every layer, $\mathbf{w}$ sets per-channel scales and biases through **adaptive instance normalization** (AdaIN),[^huang2017] $\mathrm{AdaIN}(\mathbf{h},\mathbf{y})=\mathbf{y}_s\odot\frac{\mathbf{h}-\mu(\mathbf{h})}{\sigma(\mathbf{h})}+\mathbf{y}_b$, where $\mu$ and $\sigma$ are per-channel statistics over the spatial positions and $(\mathbf{y}_s,\mathbf{y}_b)$ is a learned affine function of $\mathbf{w}$.
+- The **synthesis network** starts from a learned constant. At every layer, $\mathbf{w}$ sets per-channel scales and biases through **adaptive instance normalization** (AdaIN),[^huang2017] $\mathrm{AdaIN}(\mathbf{h};\mathbf{s},\mathbf{b})=\mathbf{s}\odot\frac{\mathbf{h}-\mu(\mathbf{h})}{\mathrm{sd}(\mathbf{h})}+\mathbf{b}$, where $\mu$ and $\mathrm{sd}$ are the per-channel mean and standard deviation over the spatial positions, and the style $(\mathbf{s},\mathbf{b})$ (scale and bias) is a learned affine function of $\mathbf{w}$.
 - Per-pixel **noise inputs** add stochastic detail (hair, freckles). Feeding different $\mathbf{w}$'s to different layers (**style mixing**) shows that the coarse layers control pose and shape, and the fine layers control colour and texture.
-- StyleGAN2 replaced AdaIN by weight demodulation, which removed characteristic "droplet" artifacts, and dropped progressive growing.[^karras2020]
+- StyleGAN2 replaced AdaIN by weight demodulation, which removed characteristic "droplet" artefacts, and dropped progressive growing.[^karras2020]
 
 **The truncation trick** trades diversity for quality at sampling time. BigGAN samples $\mathbf{z}$ from a truncated normal, resampling entries whose magnitude exceeds a threshold.[^brock2019] StyleGAN pulls $\mathbf{w}$ towards its average, $\mathbf{w}'=\bar{\mathbf{w}}+\psi(\mathbf{w}-\bar{\mathbf{w}})$ with $\psi<1$. Both avoid the sparsely trained edges of the latent distribution, where samples are worst.
 
@@ -527,11 +527,11 @@ The WGAN needs a 1-Lipschitz critic, and even standard GANs train more stably wi
 > # intermediate latent w = f(z)
 > w = mapping(z)
 > # style: per-channel scale and bias, each (B, C)
-> y_s, y_b = A(w).chunk(2, dim=1)
+> s, b = A(w).chunk(2, dim=1)
 > mu = h.mean(dim=(2, 3), keepdim=True)
 > sd = h.std(dim=(2, 3), keepdim=True) + 1e-8
-> # AdaIN(h, y)
-> h = y_s[:, :, None, None] * (h - mu) / sd + y_b[:, :, None, None]
+> # AdaIN(h; s, b)
+> h = s[:, :, None, None] * (h - mu) / sd + b[:, :, None, None]
 > # truncation: psi = 1 off, psi = 0 the "average" image
 > w_trunc = w_bar + psi * (w - w_bar)
 > ```
@@ -563,7 +563,7 @@ Sample quality is usually judged by the Inception Score[^salimans2016] or the Fr
 - [[Unsupervised Domain Adaptation]]: DANN and ADDA play this game on *features* instead of images, so that a domain discriminator cannot tell source from target and a classifier trained on the source transfers. CycleGAN translations give the pixel-level version.
 - [[Variational Autoencoders]]: the likelihood-based alternative, and the forward-vs-reverse KL picture used here. Its conditional VAE parallels the cGAN, and VQGAN puts an adversarial loss on a VQ-VAE's decoder.
 - [[Linear Models]]: the discriminator is a logistic-regression classifier on learned features, trained with cross-entropy.
-- [[Support Vector Machines]]: the Lagrangian aside there is the same convex duality that gives the variational bound here.
+- [[Multivariable Calculus#The Lagrangian and duality|The Lagrangian and duality]] and its application in [[Support Vector Machines]]: the same convex duality that gives the variational bound here.
 - [[Policy Gradients]]: the generator gets *pathwise* gradients through the critic, while RL with a non-differentiable reward needs the score function. Adversarial imitation learning (GAIL) combines the two, using a GAN discriminator as the reward for [[Imitation Learning|imitation]].
 - [[Energy-Based Models]]: noise-contrastive estimation trains an unnormalized density with a GAN-like classifier against fixed noise.
 - [[Denoising Diffusion Models]] reach GAN-level sample quality with a plain regression loss and no adversary, at the price of many network passes per sample. [[Normalizing Flows]] trade the adversary for exact likelihoods; [[Flow Matching]] gives simulation-free training of continuous flows.

@@ -20,7 +20,7 @@ next: "[[Flow Matching]]"
 > - **Guidance** steers sampling towards a condition $y$ by adding a classifier's gradient, or, without a classifier, by extrapolating from an unconditional to a conditional prediction.
 > - **DDIM** reuses a trained DDPM with a family of non-Markovian forward processes that have the same marginals. Its deterministic member samples in tens of steps instead of a thousand and can be run backwards to encode data.
 >
-> **Notation in this lecture:** time runs $t=0,1,\dots,T$ with $\mathbf{x}_0$ the data and $\mathbf{x}_1,\dots,\mathbf{x}_T$ the latents. This differs from the series convention ($t=0..T-1$ for an RL horizon) and is the standard indexing in the diffusion literature. The schedule is $\alpha_t\in(0,1)$, $\beta_t=1-\alpha_t$, $\bar\alpha_t=\prod_{s=1}^{t}\alpha_s$, with $\bar\alpha_0=1$. The ELBO is $F$, as in the VAE lecture; losses to be minimized are $\mathcal{L}$; the learning rate is $\eta$, because $\alpha$ and $\beta$ are taken by the schedule. Networks take the time step as an explicit input: $\boldsymbol\epsilon_\theta(\mathbf{x}_t,t)$, $\hat{\mathbf{x}}_\theta(\mathbf{x}_t,t)$, $\mathbf{s}_\theta(\mathbf{x}_t,t)$.
+> **Notation in this lecture:** time runs $t=0,1,\dots,T$ with $\mathbf{x}_0$ the data and $\mathbf{x}_1,\dots,\mathbf{x}_T$ the latents. This differs from the series convention ($t=0..T-1$ for an RL horizon) and is the standard indexing in the diffusion literature. The schedule is $\alpha_t\in(0,1)$, $\beta_t=1-\alpha_t$, $\bar\alpha_t=\prod_{j=1}^{t}\alpha_j$, with $\bar\alpha_0=1$. The ELBO is $F$, as in the VAE lecture; losses to be minimized are $\mathcal{L}$; the learning rate is $\rho$, because $\alpha$ and $\beta$ are taken by the schedule and $\eta$ is Song et al.'s DDIM stochasticity parameter (23). Networks take the time step as an explicit input: $\boldsymbol\epsilon_\theta(\mathbf{x}_t,t)$, $\hat{\mathbf{x}}_\theta(\mathbf{x}_t,t)$, $\mathbf{s}_\theta(\mathbf{x}_t,t)$.
 >
 > **Code:** [Image-Based-Generative-Models](https://github.com/parag1604/Image-Based-Generative-Models): a DDPM on 64×64 Stanford Cars images, with a small U-Net noise predictor (residual blocks, GroupNorm, sinusoidal time embeddings), the linear schedule, EMA weights, and both the 1000-step ancestral sampler and 50-step DDIM sampling.
 
@@ -90,7 +90,7 @@ $$
 $$
 q(\mathbf{x}_t\mid\mathbf{x}_0)=\mathcal{N}\big(\mathbf{x}_t;\ \sqrt{\bar\alpha_t}\,\mathbf{x}_0,\ (1-\bar\alpha_t)\mathbf{I}\big),
 \qquad
-\bar\alpha_t=\prod_{s=1}^{t}\alpha_s,
+\bar\alpha_t=\prod_{j=1}^{t}\alpha_j,
 \tag{3}
 $$
 
@@ -223,7 +223,7 @@ $$
 \tag{10}
 $$
 
-Both the mean and the variance are computable, so $q(\mathbf{x}_{t-1}\mid\mathbf{x}_t,\mathbf{x}_0)$ is completely known. (The handwritten notes call the variance $\sigma_q^2$; we use Ho et al.'s $\tilde\beta_t$, because $\sigma_t$ is needed for the decoder's variance below.)
+Both the mean and the variance are computable, so $q(\mathbf{x}_{t-1}\mid\mathbf{x}_t,\mathbf{x}_0)$ is completely known. (We write this variance as Ho et al.'s $\tilde\beta_t$, because $\sigma_t$ is needed for the decoder's variance below.)
 
 > [!proof]- Proof: completing the square
 > The denominator $q(\mathbf{x}_t\mid\mathbf{x}_0)$ does not involve $\mathbf{x}_{t-1}$, so it is a normalizing constant. Up to terms that do not depend on $\mathbf{x}_{t-1}$, the log of the numerator is
@@ -331,8 +331,8 @@ $$
 The weight of step $t$ is the amount of signal-to-noise ratio that step destroys.[^kingma2021] The first step fits the same pattern: at $t=1$, (12) gives $\boldsymbol\mu_\theta(\mathbf{x}_1,1)=\hat{\mathbf{x}}_\theta(\mathbf{x}_1,1)$, because $1-\bar\alpha_1=1-\alpha_1$. So **every term of the ELBO is a weighted regression of $\hat{\mathbf{x}}_\theta(\mathbf{x}_t,t)$ onto $\mathbf{x}_0$**:
 
 $$
-F(\theta;\mathbf{x}_0)=-\sum_{t=1}^{T}w_t\,\mathbb{E}_{q(\mathbf{x}_t\mid\mathbf{x}_0)}\big\lVert\hat{\mathbf{x}}_\theta(\mathbf{x}_t,t)-\mathbf{x}_0\big\rVert^2+\text{const},
-\qquad w_1=\frac{1}{2\sigma_1^2}.
+F(\theta;\mathbf{x}_0)=-\sum_{t=1}^{T}\nu_t\,\mathbb{E}_{q(\mathbf{x}_t\mid\mathbf{x}_0)}\big\lVert\hat{\mathbf{x}}_\theta(\mathbf{x}_t,t)-\mathbf{x}_0\big\rVert^2+\text{const},
+\qquad \nu_1=\frac{1}{2\sigma_1^2}.
 $$
 
 The network is a **denoiser** for the data point $\mathbf{x}_0$, at every noise level $t$. Unlike the decoder of a VAE or the generator of a GAN, it does **not** output a new sample from $p_{\text{data}}$. Its output is the best guess of the clean data, which for squared error is the [[Joint Distributions#The best predictor|conditional mean]] $\mathbb{E}[\mathbf{x}_0\mid\mathbf{x}_t]$. At large $t$ that is a blurry average of everything the noise could have hidden. New samples come from chaining many of its small steps.
@@ -357,14 +357,14 @@ The network is a **denoiser** for the data point $\mathbf{x}_0$, at every noise 
 
 ### Training
 
-Training needs no simulation of the chain: by (4), a noisy $\mathbf{x}_t$ at any step is one line of code away. Instead of summing over all $T$ terms for every data point, sample one term at random. Ho et al. also found that **dropping the weights** $w_t$ gives better samples (more in the next section).[^ho2020]
+Training needs no simulation of the chain: by (4), a noisy $\mathbf{x}_t$ at any step is one line of code away. Instead of summing over all $T$ terms for every data point, sample one term at random. Ho et al. also found that **dropping the weights** $\nu_t$ gives better samples (more in the next section).[^ho2020]
 
 > [!example] Algorithm: training a DDPM ($\mathbf{x}_0$-prediction)
 > Repeat until convergence, for a minibatch of data points:
 > 1. Draw $\mathbf{x}_0$ from the data, a time step $t\sim\operatorname{Uniform}\{1,\dots,T\}$, and noise $\boldsymbol\epsilon\sim\mathcal{N}(\mathbf{0},\mathbf{I})$.
 > 2. Form $\mathbf{x}_t=\sqrt{\bar\alpha_t}\,\mathbf{x}_0+\sqrt{1-\bar\alpha_t}\,\boldsymbol\epsilon$, a sample of $q(\mathbf{x}_t\mid\mathbf{x}_0)$.
 > 3. Forward pass: compute $\hat{\mathbf{x}}_\theta(\mathbf{x}_t,t)$.
-> 4. Backward pass: take a gradient step $\theta\leftarrow\theta-\eta\,\nabla_\theta\big\lVert\hat{\mathbf{x}}_\theta(\mathbf{x}_t,t)-\mathbf{x}_0\big\rVert^2$, averaged over the minibatch.
+> 4. Backward pass: take a gradient step $\theta\leftarrow\theta-\rho\,\nabla_\theta\big\lVert\hat{\mathbf{x}}_\theta(\mathbf{x}_t,t)-\mathbf{x}_0\big\rVert^2$, averaged over the minibatch.
 
 Each data point is used at a different random $t$ every time it is seen, so over training the network learns to denoise at every noise level.
 
@@ -375,7 +375,7 @@ To get a new sample we traverse the decoder (5): draw $\mathbf{x}_T\sim\mathcal{
 > [!example] Algorithm: sampling from a DDPM ($\mathbf{x}_0$-prediction)
 > 1. Draw $\mathbf{x}_T\sim\mathcal{N}(\mathbf{0},\mathbf{I})$.
 > 2. For $t=T,T-1,\dots,1$: a forward pass gives $\hat{\mathbf{x}}_\theta(\mathbf{x}_t,t)$, and (12) gives the mean $\boldsymbol\mu_\theta(\mathbf{x}_t,t)$.
-> 3. Set $\mathbf{x}_{t-1}=\boldsymbol\mu_\theta(\mathbf{x}_t,t)+\sigma_t\,\mathbf{z}$, with $\mathbf{z}\sim\mathcal{N}(\mathbf{0},\mathbf{I})$ if $t>1$ and $\mathbf{z}=\mathbf{0}$ if $t=1$; go back to step 2 until $t=1$ is done.
+> 3. Set $\mathbf{x}_{t-1}=\boldsymbol\mu_\theta(\mathbf{x}_t,t)+\sigma_t\,\boldsymbol\xi$, with $\boldsymbol\xi\sim\mathcal{N}(\mathbf{0},\mathbf{I})$ if $t>1$ and $\boldsymbol\xi=\mathbf{0}$ if $t=1$; go back to step 2 until $t=1$ is done.
 > 4. Return $\mathbf{x}_0$, a new sample.
 
 Two details. The noise is scaled by the **standard deviation** $\sigma_t$, not the variance, since $p_\theta(\mathbf{x}_{t-1}\mid\mathbf{x}_t)$ has covariance $\sigma_t^2\mathbf{I}$. And the last step returns the mean without noise, as in Ho et al.'s algorithm. Sampling needs $T$ forward passes through the network, against one for a VAE or a GAN. Figure 5 shows the process on the running example.
@@ -425,10 +425,10 @@ Look at a noisy point and guess the noise that was added: exactly the [[Score-Ba
 > [!example] Algorithm: DDPM with noise prediction (Ho et al., Algorithms 1 and 2)
 > **Training.** Repeat: draw $\mathbf{x}_0$, $t\sim\operatorname{Uniform}\{1,\dots,T\}$ and $\boldsymbol\epsilon\sim\mathcal{N}(\mathbf{0},\mathbf{I})$; take a gradient step on $\big\lVert\boldsymbol\epsilon-\boldsymbol\epsilon_\theta(\sqrt{\bar\alpha_t}\,\mathbf{x}_0+\sqrt{1-\bar\alpha_t}\,\boldsymbol\epsilon,\,t)\big\rVert^2$.
 >
-> **Sampling.** Draw $\mathbf{x}_T\sim\mathcal{N}(\mathbf{0},\mathbf{I})$. For $t=T,\dots,1$, draw $\mathbf{z}\sim\mathcal{N}(\mathbf{0},\mathbf{I})$ if $t>1$ (else $\mathbf{z}=\mathbf{0}$) and set
+> **Sampling.** Draw $\mathbf{x}_T\sim\mathcal{N}(\mathbf{0},\mathbf{I})$. For $t=T,\dots,1$, draw $\boldsymbol\xi\sim\mathcal{N}(\mathbf{0},\mathbf{I})$ if $t>1$ (else $\boldsymbol\xi=\mathbf{0}$) and set
 >
 > $$
-> \mathbf{x}_{t-1}=\frac{1}{\sqrt{\alpha_t}}\left(\mathbf{x}_t-\frac{1-\alpha_t}{\sqrt{1-\bar\alpha_t}}\,\boldsymbol\epsilon_\theta(\mathbf{x}_t,t)\right)+\sigma_t\mathbf{z}.
+> \mathbf{x}_{t-1}=\frac{1}{\sqrt{\alpha_t}}\left(\mathbf{x}_t-\frac{1-\alpha_t}{\sqrt{1-\bar\alpha_t}}\,\boldsymbol\epsilon_\theta(\mathbf{x}_t,t)\right)+\sigma_t\boldsymbol\xi.
 > $$
 >
 > Return $\mathbf{x}_0$.
@@ -483,7 +483,7 @@ Look at a noisy point and guess the noise that was added: exactly the [[Score-Ba
 
 ### (b) Predicting the score
 
-[[Score-Based Models#Tweedie's formula: the score is the optimal denoiser|Tweedie's formula]] connects denoising to the score. In its general form: if $\mathbf{z}\mid\boldsymbol\mu\sim\mathcal{N}(\boldsymbol\mu,\boldsymbol\Sigma)$ for a random $\boldsymbol\mu$ with any prior, and $p(\mathbf{z})$ is the marginal density of $\mathbf{z}$, then $\mathbb{E}[\boldsymbol\mu\mid\mathbf{z}]=\mathbf{z}+\boldsymbol\Sigma\nabla_{\mathbf{z}}\log p(\mathbf{z})$. In a DDPM, (3) says $\mathbf{x}_t$ is Gaussian around $\boldsymbol\mu=\sqrt{\bar\alpha_t}\,\mathbf{x}_0$ with covariance $(1-\bar\alpha_t)\mathbf{I}$, and the prior on $\mathbf{x}_0$ is the data distribution. Write $q_t(\mathbf{x}_t)=\int p_{\text{data}}(\mathbf{x}_0)\,q(\mathbf{x}_t\mid\mathbf{x}_0)\,d\mathbf{x}_0$ for the **marginal** density of the noisy data. Tweedie gives the posterior mean of the clean data:
+[[Score-Based Models#Tweedie's formula: the score is the optimal denoiser|Tweedie's formula]] connects denoising to the score. In its general form: if $\mathbf{u}\mid\boldsymbol\mu\sim\mathcal{N}(\boldsymbol\mu,\boldsymbol\Sigma)$ for a random $\boldsymbol\mu$ with any prior, and $p(\mathbf{u})$ is the marginal density of $\mathbf{u}$, then $\mathbb{E}[\boldsymbol\mu\mid\mathbf{u}]=\mathbf{u}+\boldsymbol\Sigma\nabla_{\mathbf{u}}\log p(\mathbf{u})$. In a DDPM, (3) says $\mathbf{x}_t$ is Gaussian around $\boldsymbol\mu=\sqrt{\bar\alpha_t}\,\mathbf{x}_0$ with covariance $(1-\bar\alpha_t)\mathbf{I}$, and the prior on $\mathbf{x}_0$ is the data distribution. Write $q_t(\mathbf{x}_t)=\int p_{\text{data}}(\mathbf{x}_0)\,q(\mathbf{x}_t\mid\mathbf{x}_0)\,d\mathbf{x}_0$ for the **marginal** density of the noisy data. Tweedie gives the posterior mean of the clean data:
 
 $$
 \mathbb{E}[\mathbf{x}_0\mid\mathbf{x}_t]=\frac{\mathbf{x}_t+(1-\bar\alpha_t)\,\nabla_{\mathbf{x}_t}\log q_t(\mathbf{x}_t)}{\sqrt{\bar\alpha_t}}.
@@ -537,19 +537,19 @@ At the optimum all three are posterior means: $\mathbb{E}[\mathbf{x}_0\mid\mathb
 Divide (4) by $\sqrt{\bar\alpha_t}$:
 
 $$
-\tilde{\mathbf{x}}=\frac{\mathbf{x}_t}{\sqrt{\bar\alpha_t}}=\mathbf{x}_0+\sigma\,\boldsymbol\epsilon,
+\tilde{\mathbf{x}}=\frac{\mathbf{x}_t}{\sqrt{\bar\alpha_t}}=\mathbf{x}_0+\bar\sigma\,\boldsymbol\epsilon,
 \qquad
-\sigma=\sqrt{\frac{1-\bar\alpha_t}{\bar\alpha_t}}=\frac{1}{\sqrt{\mathrm{SNR}(t)}}.
+\bar\sigma=\sqrt{\frac{1-\bar\alpha_t}{\bar\alpha_t}}=\frac{1}{\sqrt{\mathrm{SNR}(t)}}.
 $$
 
-(In this subsection $\sigma$ is the noise level of the [[Score-Based Models#Noise-conditional score networks|noise-conditional score network]], not the decoder's $\sigma_t$.) The rescaled DDPM latent is exactly the noisy data $\tilde{\mathbf{x}}$ of the score-based lecture, at noise level $\sigma$. A DDPM step $t$ **is** an NCSN noise level, and the linear schedule spans $\sigma$ from about 0.01 at $t=1$ to about 157 at $t=T$. The scores agree up to the change of variables, $\nabla_{\mathbf{x}_t}\log q_t(\mathbf{x}_t)=\nabla_{\tilde{\mathbf{x}}}\log q_\sigma(\tilde{\mathbf{x}})/\sqrt{\bar\alpha_t}$, so by (19) the DDPM noise predictor and the NCSN noise predictor $-\sigma\,\mathbf{s}_\theta(\tilde{\mathbf{x}},\sigma)$ are the same function. And each term of the DDPM loss (16) is the NCSN loss at one noise level, with the weighting $\lambda(\sigma)=\sigma^2$ of [[Score-Based Models#Noise-conditional score networks|that lecture's (6)]]; only the distribution of noise levels differs. So DDPM and NCSN learn the same thing, up to parameterization. They differ in the coordinates (DDPM shrinks the data so the variance is preserved, NCSN lets it explode), in the spacing of the noise levels, and in the sampler (ancestral sampling against annealed Langevin dynamics). The [[#The SDE view|SDE view]] below puts both in one framework.
+Here $\bar\sigma$ is the noise level of the [[Score-Based Models#Noise-conditional score networks|noise-conditional score network]] (written $\sigma$ in that lecture). The rescaled DDPM latent is exactly the noisy data $\tilde{\mathbf{x}}$ of the score-based lecture, at noise level $\bar\sigma$. A DDPM step $t$ **is** an NCSN noise level, and the linear schedule spans $\bar\sigma$ from about 0.01 at $t=1$ to about 157 at $t=T$. The scores agree up to the change of variables, $\nabla_{\mathbf{x}_t}\log q_t(\mathbf{x}_t)=\nabla_{\tilde{\mathbf{x}}}\log q_{\bar\sigma}(\tilde{\mathbf{x}})/\sqrt{\bar\alpha_t}$, so by (19) the DDPM noise predictor and the NCSN noise predictor $-\bar\sigma\,\mathbf{s}_\theta(\tilde{\mathbf{x}},\bar\sigma)$ are the same function. And each term of the DDPM loss (16) is the NCSN loss at one noise level, with the weighting $\bar\sigma^2$ of [[Score-Based Models#Noise-conditional score networks|that lecture's (6)]]; only the distribution of noise levels differs. So DDPM and NCSN learn the same thing, up to parameterization. They differ in the coordinates (DDPM shrinks the data so the variance is preserved, NCSN lets it explode), in the spacing of the noise levels, and in the sampler (ancestral sampling against annealed Langevin dynamics). The [[#The SDE view|SDE view]] below puts both in one framework.
 
 ## Noise schedules and variances
 
 The schedule $\alpha_1,\dots,\alpha_T$ decides how fast the data are destroyed, and so which noise levels the network spends its effort on. Ho et al. used a **linear** schedule, $\beta_t$ from $10^{-4}$ to $0.02$ over $T=1000$ steps. Nichol and Dhariwal noticed that it destroys information too fast: the last part of the chain is nearly pure noise, and those steps are wasted.[^nichol2021] Their **cosine** schedule defines $\bar\alpha_t$ directly,
 
 $$
-\bar\alpha_t=\frac{f(t)}{f(0)},\qquad f(t)=\cos^2\left(\frac{t/T+s}{1+s}\cdot\frac{\pi}{2}\right),\qquad s=0.008,
+\bar\alpha_t=\frac{h(t)}{h(0)},\qquad h(t)=\cos^2\left(\frac{t/T+s}{1+s}\cdot\frac{\pi}{2}\right),\qquad s=0.008,
 $$
 
 with $\beta_t=1-\bar\alpha_t/\bar\alpha_{t-1}$ clipped at $0.999$ to avoid a singular last step. It decreases $\bar\alpha_t$ roughly linearly in the middle and slowly at both ends (Figure 6).
@@ -592,23 +592,23 @@ $$
 \end{aligned}
 $$
 
-since $p(y)$ does not depend on $\mathbf{x}_t$. So train a classifier (or regressor) $p_\phi(y\mid\mathbf{x}_t,t)$ separately, and add its input gradient to the diffusion model's score at every sampling step.[^dhariwal2021] In noise units, by (19),
+since $p(y)$ does not depend on $\mathbf{x}_t$. So train a classifier (or regressor) $p_\psi(y\mid\mathbf{x}_t,t)$ separately, and add its input gradient to the diffusion model's score at every sampling step.[^dhariwal2021] In noise units, by (19),
 
 $$
-\tilde{\boldsymbol\epsilon}(\mathbf{x}_t,t)=\boldsymbol\epsilon_\theta(\mathbf{x}_t,t)-\gamma\sqrt{1-\bar\alpha_t}\,\nabla_{\mathbf{x}_t}\log p_\phi(y\mid\mathbf{x}_t,t),
+\tilde{\boldsymbol\epsilon}(\mathbf{x}_t,t)=\boldsymbol\epsilon_\theta(\mathbf{x}_t,t)-\gamma\sqrt{1-\bar\alpha_t}\,\nabla_{\mathbf{x}_t}\log p_\psi(y\mid\mathbf{x}_t,t),
 $$
 
-which replaces $\boldsymbol\epsilon_\theta$ in the sampling update. The **guidance scale** $\gamma\ge0$ was introduced by Dhariwal and Nichol: $\gamma=1$ is the conditional score, and $\gamma>1$ samples from a sharpened distribution proportional to $q_t(\mathbf{x}_t)\,p_\phi(y\mid\mathbf{x}_t)^\gamma$. Larger $\gamma$ gives samples that are more clearly of class $y$, and less diverse.
+which replaces $\boldsymbol\epsilon_\theta$ in the sampling update. The **guidance scale** $\gamma\ge0$ was introduced by Dhariwal and Nichol: $\gamma=1$ is the conditional score, and $\gamma>1$ samples from a sharpened distribution proportional to $q_t(\mathbf{x}_t)\,p_\psi(y\mid\mathbf{x}_t)^\gamma$. Larger $\gamma$ gives samples that are more clearly of class $y$, and less diverse.
 
 > [!example]- Code: classifier guidance
 > ```python
-> # assumes: model(x, t) -> eps_theta; classifier(x, t) -> (B, K) logits of p_phi(y | x_t, t);
+> # assumes: model(x, t) -> eps_theta; classifier(x, t) -> (B, K) logits of p_psi(y | x_t, t);
 > #          abar from the DDPM code above; t (B,) integer times; y (B,) target labels
 > def guided_eps(x, t, y, gamma):
 >     with torch.enable_grad():                        # the samplers run under no_grad
 >         x_in = x.detach().requires_grad_(True)
 >         logp = torch.log_softmax(classifier(x_in, t), -1)[torch.arange(len(y)), y]
->         grad, = torch.autograd.grad(logp.sum(), x_in)   # grad_x log p_phi(y | x_t, t)
+>         grad, = torch.autograd.grad(logp.sum(), x_in)   # grad_x log p_psi(y | x_t, t)
 >     return model(x, t) - gamma * (1 - abar[t - 1, None]).sqrt() * grad
 > ```
 > Use `guided_eps` in place of `model(x, t)` in `sample_ddpm` (or `sample_ddim` below). The gradient is taken with respect to the input only; neither network is updated.
@@ -668,9 +668,9 @@ $$
 ## Latent diffusion models
 
 Running a diffusion model on high-resolution images is expensive: every one of the many sampling steps processes every pixel. Most of those bits are imperceptible detail that a good autoencoder can reproduce cheaply. **Latent diffusion** builds the diffusion model on the latent space of another encoder–decoder model:[^rombach2022]
-1. **Learn a latent representation.** Train an autoencoder with encoder $E_\phi$ and decoder $D_\psi$ on the data (or on similar data), so that $D_\psi(E_\phi(\mathbf{x}_0))\approx\mathbf{x}_0$. Its latent $\mathbf{z}_0=E_\phi(\mathbf{x}_0)$ is much smaller than the image, but still spatial: an $h\times w\times c$ grid, typically 4 to 8 times smaller per side. The latent space is kept well behaved by a small KL penalty towards $\mathcal{N}(\mathbf{0},\mathbf{I})$, as in a [[Variational Autoencoders|VAE]], or by vector quantization, as in a VQ-VAE.[^vandenoord2017]
+1. **Learn a latent representation.** Train an autoencoder with encoder $E_\phi$ and decoder $D_\phi$ (parameters $\phi$, trained jointly) on the data (or on similar data), so that $D_\phi(E_\phi(\mathbf{x}_0))\approx\mathbf{x}_0$. Its latent $\mathbf{z}_0=E_\phi(\mathbf{x}_0)$ is much smaller than the image, but still spatial: an $H_z\times W_z\times C_z$ grid, typically 4 to 8 times smaller per side. The latent space is kept well behaved by a small KL penalty towards $\mathcal{N}(\mathbf{0},\mathbf{I})$, as in a [[Variational Autoencoders|VAE]], or by vector quantization, as in a VQ-VAE.[^vandenoord2017]
 2. **Train a DDPM on the latents.** Encode the whole dataset, $\mathbf{z}_0=E_\phi(\mathbf{x}_0)$, and train $\boldsymbol\epsilon_\theta(\mathbf{z}_t,t,y)$ on these exactly as before. Conditions such as text enter the U-Net through cross-attention layers, with the text embeddings as keys and values.
-3. **Generate.** Sample a new latent $\mathbf{z}_0$ with reverse diffusion (and guidance), then decode it: $\mathbf{x}_{\text{new}}=D_\psi(\mathbf{z}_0)$.
+3. **Generate.** Sample a new latent $\mathbf{z}_0$ with reverse diffusion (and guidance), then decode it: $\mathbf{x}_{\text{new}}=D_\phi(\mathbf{z}_0)$.
 
 The new image is a sample from (approximately) $p_{\text{data}}$, to the extent that the autoencoder is accurate and the latent diffusion model fits the encoded data. The decoder carries the perceptual detail and the diffusion model the content. This split is what makes text-to-image models such as Stable Diffusion affordable to train and run.
 
@@ -722,17 +722,17 @@ The mean in (21) was chosen to make one thing true.
 > By backward induction on $t$. For $t=T$ it holds by definition. Suppose it holds for $t$, so $\mathbf{x}_t=\sqrt{\bar\alpha_t}\,\mathbf{x}_0+\sqrt{1-\bar\alpha_t}\,\boldsymbol\epsilon$ with $\boldsymbol\epsilon\sim\mathcal{N}(\mathbf{0},\mathbf{I})$ given $\mathbf{x}_0$. Sampling from (21) means
 >
 > $$
-> \mathbf{x}_{t-1}=\sqrt{\bar\alpha_{t-1}}\,\mathbf{x}_0+\sqrt{1-\bar\alpha_{t-1}-\sigma_t^2}\;\boldsymbol\epsilon+\sigma_t\,\mathbf{z},
+> \mathbf{x}_{t-1}=\sqrt{\bar\alpha_{t-1}}\,\mathbf{x}_0+\sqrt{1-\bar\alpha_{t-1}-\sigma_t^2}\;\boldsymbol\epsilon+\sigma_t\,\boldsymbol\xi,
 > $$
 >
-> with $\mathbf{z}\sim\mathcal{N}(\mathbf{0},\mathbf{I})$ independent of $\boldsymbol\epsilon$, because the fraction in (21) equals $\boldsymbol\epsilon$. Given $\mathbf{x}_0$, the last two terms are independent zero-mean Gaussians, so their [[Joint Distributions#Sums of independent random variables|sum]] is Gaussian with covariance $(1-\bar\alpha_{t-1}-\sigma_t^2)\mathbf{I}+\sigma_t^2\mathbf{I}=(1-\bar\alpha_{t-1})\mathbf{I}$. Hence $q_{\boldsymbol\sigma}(\mathbf{x}_{t-1}\mid\mathbf{x}_0)=\mathcal{N}\big(\sqrt{\bar\alpha_{t-1}}\,\mathbf{x}_0,(1-\bar\alpha_{t-1})\mathbf{I}\big)$.
+> with $\boldsymbol\xi\sim\mathcal{N}(\mathbf{0},\mathbf{I})$ independent of $\boldsymbol\epsilon$, because the fraction in (21) equals $\boldsymbol\epsilon$. Given $\mathbf{x}_0$, the last two terms are independent zero-mean Gaussians, so their [[Joint Distributions#Sums of independent random variables|sum]] is Gaussian with covariance $(1-\bar\alpha_{t-1}-\sigma_t^2)\mathbf{I}+\sigma_t^2\mathbf{I}=(1-\bar\alpha_{t-1})\mathbf{I}$. Hence $q_{\boldsymbol\sigma}(\mathbf{x}_{t-1}\mid\mathbf{x}_0)=\mathcal{N}\big(\sqrt{\bar\alpha_{t-1}}\,\mathbf{x}_0,(1-\bar\alpha_{t-1})\mathbf{I}\big)$.
 
 ### The same training objective
 
-Each $q_{\boldsymbol\sigma}$ has its own ELBO, and the ELBO does depend on $\boldsymbol\sigma$, through the posteriors (21). The precise statement is Song et al.'s Theorem 1. Use a decoder of the form below, with $\hat{\mathbf{x}}_\theta$ written through a noise predictor as in (14). Then for every $\boldsymbol\sigma$ with all $\sigma_t>0$ there are weights $\gamma_1,\dots,\gamma_T>0$ (depending on $\boldsymbol\sigma$) and a constant $C$ such that
+Each $q_{\boldsymbol\sigma}$ has its own ELBO, and the ELBO does depend on $\boldsymbol\sigma$, through the posteriors (21). The precise statement is Song et al.'s Theorem 1. Use a decoder of the form below, with $\hat{\mathbf{x}}_\theta$ written through a noise predictor as in (14). Then for every $\boldsymbol\sigma$ with all $\sigma_t>0$ there are weights $\zeta_1,\dots,\zeta_T>0$ (depending on $\boldsymbol\sigma$) and a constant $C$ such that
 
 $$
--F_{\boldsymbol\sigma}(\theta)=\sum_{t=1}^{T}\gamma_t\,\mathbb{E}\big\lVert\boldsymbol\epsilon-\boldsymbol\epsilon_\theta(\mathbf{x}_t,t)\big\rVert^2+C.
+-F_{\boldsymbol\sigma}(\theta)=\sum_{t=1}^{T}\zeta_t\,\mathbb{E}\big\lVert\boldsymbol\epsilon-\boldsymbol\epsilon_\theta(\mathbf{x}_t,t)\big\rVert^2+C.
 $$
 
 Every member of the family is trained by a weighted noise-prediction loss, differing from (16) only in the weights. If the network had separate parameters for each $t$, the minimizer of each term would not depend on its weight, so the minimizer of $\mathcal{L}_{\text{simple}}$ would be optimal for every $\boldsymbol\sigma$ at once. With shared parameters this holds approximately. **Training the regression network of a DDPM implicitly trains all of these non-Markovian models.** Training is the same; only sampling differs.
@@ -749,10 +749,10 @@ q_{\boldsymbol\sigma}\big(\mathbf{x}_{t-1}\mid\mathbf{x}_t,\hat{\mathbf{x}}_\the
 \end{cases}
 $$
 
-Putting it together, one sampling step with $\mathbf{z}\sim\mathcal{N}(\mathbf{0},\mathbf{I})$ is
+Putting it together, one sampling step with $\boldsymbol\xi\sim\mathcal{N}(\mathbf{0},\mathbf{I})$ is
 
 $$
-\mathbf{x}_{t-1}=\underbrace{\sqrt{\bar\alpha_{t-1}}\left(\frac{\mathbf{x}_t-\sqrt{1-\bar\alpha_t}\,\boldsymbol\epsilon_\theta(\mathbf{x}_t,t)}{\sqrt{\bar\alpha_t}}\right)}_{\text{predicted }\mathbf{x}_0\text{, rescaled}}+\underbrace{\sqrt{1-\bar\alpha_{t-1}-\sigma_t^2}\;\boldsymbol\epsilon_\theta(\mathbf{x}_t,t)}_{\text{direction pointing to }\mathbf{x}_t}+\underbrace{\sigma_t\mathbf{z}}_{\text{fresh noise}}.
+\mathbf{x}_{t-1}=\underbrace{\sqrt{\bar\alpha_{t-1}}\left(\frac{\mathbf{x}_t-\sqrt{1-\bar\alpha_t}\,\boldsymbol\epsilon_\theta(\mathbf{x}_t,t)}{\sqrt{\bar\alpha_t}}\right)}_{\text{predicted }\mathbf{x}_0\text{, rescaled}}+\underbrace{\sqrt{1-\bar\alpha_{t-1}-\sigma_t^2}\;\boldsymbol\epsilon_\theta(\mathbf{x}_t,t)}_{\text{direction pointing to }\mathbf{x}_t}+\underbrace{\sigma_t\boldsymbol\xi}_{\text{fresh noise}}.
 \tag{22}
 $$
 
@@ -819,13 +819,13 @@ With few steps, quality drops for both samplers (Figure 9). On this easy 2-D exa
 
 ### DDIM inversion
 
-Rearrange (24) by dividing by $\sqrt{\bar\alpha_{t-1}}$, and write $\bar{\mathbf{x}}_t=\mathbf{x}_t/\sqrt{\bar\alpha_t}$ and $\sigma(t)=\sqrt{(1-\bar\alpha_t)/\bar\alpha_t}$ (the NCSN noise level from before):
+Rearrange (24) by dividing by $\sqrt{\bar\alpha_{t-1}}$, and write $\bar{\mathbf{x}}_t=\mathbf{x}_t/\sqrt{\bar\alpha_t}$ and $\bar\sigma_t=\sqrt{(1-\bar\alpha_t)/\bar\alpha_t}$ (the NCSN noise level from before):
 
 $$
-\bar{\mathbf{x}}_{t-1}=\bar{\mathbf{x}}_t+\big(\sigma(t-1)-\sigma(t)\big)\,\boldsymbol\epsilon_\theta(\mathbf{x}_t,t).
+\bar{\mathbf{x}}_{t-1}=\bar{\mathbf{x}}_t+\big(\bar\sigma_{t-1}-\bar\sigma_t\big)\,\boldsymbol\epsilon_\theta(\mathbf{x}_t,t).
 $$
 
-This is one **Euler step** of the ordinary differential equation $d\bar{\mathbf{x}}/d\sigma=\boldsymbol\epsilon_\theta$, from noise level $\sigma(t)$ down to $\sigma(t-1)$.[^song2021ddim] An ODE can be integrated in either direction, so a DDIM can be run **backwards**: starting from a data point $\mathbf{x}_0$, apply the same steps with increasing $\sigma$ to get a latent $\mathbf{x}_T$ that maps back to (nearly) $\mathbf{x}_0$. This is **DDIM inversion**, a deterministic encoder that DDPM sampling lacks. It enables image editing: invert a real image, then regenerate it with a modified condition, or interpolate between two images by interpolating their latents.
+This is one **Euler step** of the ordinary differential equation $d\bar{\mathbf{x}}/d\bar\sigma=\boldsymbol\epsilon_\theta$, from noise level $\bar\sigma_t$ down to $\bar\sigma_{t-1}$.[^song2021ddim] An ODE can be integrated in either direction, so a DDIM can be run **backwards**: starting from a data point $\mathbf{x}_0$, apply the same steps with increasing $\sigma$ to get a latent $\mathbf{x}_T$ that maps back to (nearly) $\mathbf{x}_0$. This is **DDIM inversion**, a deterministic encoder that DDPM sampling lacks. It enables image editing: invert a real image, then regenerate it with a modified condition, or interpolate between two images by interpolating their latents.
 
 The inversion is only **approximate**. Each backward step must use $\boldsymbol\epsilon_\theta$ evaluated at the point it starts from, $\mathbf{x}_{t-1}$, instead of the unknown end point $\mathbf{x}_t$ that the forward step used. The two agree only in the limit of small steps. On the running example, inverting and regenerating 2000 data points returns them with a mean error of 0.003 with 1000 steps, 0.07 with 50 and 0.34 with 10 (the data have unit scale). With large guidance weights the errors are much larger, and editing methods add corrections.[^mokady2023]
 
@@ -834,12 +834,12 @@ The inversion is only **approximate**. Each backward step must use $\boldsymbol\
 The [[Score-Based Models#Infinitely many noise levels: the SDE view|score-based lecture]] took the number of noise levels to infinity and got a stochastic differential equation. The same limit for the DDPM gives the **variance-preserving SDE**.[^song2021sde] Let $T\to\infty$ with $\beta_t=\beta(t/T)/T$ for a smooth function $\beta(\cdot)$ on $[0,1]$. Since $\sqrt{1-\beta_t}\approx1-\tfrac12\beta_t$, the forward step (1) becomes $\mathbf{x}_t-\mathbf{x}_{t-1}\approx-\tfrac12\beta_t\mathbf{x}_{t-1}+\sqrt{\beta_t}\,\boldsymbol\epsilon_t$, which in the limit is
 
 $$
-d\mathbf{x}=-\frac12\beta(t)\,\mathbf{x}\,dt+\sqrt{\beta(t)}\,d\mathbf{w},\qquad t\in[0,1].
+d\mathbf{x}=-\frac12\beta(t)\,\mathbf{x}\,dt+\sqrt{\beta(t)}\,d\mathbf{W},\qquad t\in[0,1].
 $$
 
 This is a mean-reverting (Ornstein–Uhlenbeck) diffusion, the continuous-time version of the chain in [[Markov Chains#Towards diffusion models and state space models|Markov Chains]]. With $\mathbf{f}(\mathbf{x},t)=-\tfrac12\beta(t)\mathbf{x}$ and $g(t)=\sqrt{\beta(t)}$ in the general SDE of the score-based lecture, the two results from there apply:
-- **The reverse-time SDE**, $d\mathbf{x}=\big[-\tfrac12\beta(t)\mathbf{x}-\beta(t)\nabla_{\mathbf{x}}\log q_t(\mathbf{x})\big]dt+\sqrt{\beta(t)}\,d\bar{\mathbf{w}}$, run from $t=1$ to $0$. DDPM ancestral sampling is a discretization of it, with the score supplied by (19).
-- **The probability flow ODE**, $\dfrac{d\mathbf{x}}{dt}=-\dfrac12\beta(t)\big[\mathbf{x}+\nabla_{\mathbf{x}}\log q_t(\mathbf{x})\big]$, has the same marginals $q_t$ and no randomness. DDIM with $\eta=0$ is a discretization of it: the Euler step in $(\sigma,\bar{\mathbf{x}})$ coordinates of the previous section. The ODE also gives an exact likelihood, through the change-of-variables formula of continuous normalizing flows.
+- **The reverse-time SDE**, $d\mathbf{x}=\big[-\tfrac12\beta(t)\mathbf{x}-\beta(t)\nabla_{\mathbf{x}}\log q_t(\mathbf{x})\big]dt+\sqrt{\beta(t)}\,d\bar{\mathbf{W}}$, run from $t=1$ to $0$. DDPM ancestral sampling is a discretization of it, with the score supplied by (19).
+- **The probability flow ODE**, $\dfrac{d\mathbf{x}}{dt}=-\dfrac12\beta(t)\big[\mathbf{x}+\nabla_{\mathbf{x}}\log q_t(\mathbf{x})\big]$, has the same marginals $q_t$ and no randomness. DDIM with $\eta=0$ is a discretization of it: the Euler step in $(\bar\sigma,\bar{\mathbf{x}})$ coordinates of the previous section. The ODE also gives an exact likelihood, through the change-of-variables formula of continuous normalizing flows.
 
 So all the samplers in this lecture are numerical solvers for one of two equations whose only unknown is the score. That viewpoint has two consequences. First, better ODE solvers give good samples in far fewer steps: higher-order solvers designed for this ODE need around 10 to 20 network evaluations.[^lu2022]<sup>,</sup>[^karras2022] Second, if the goal is a deterministic map from noise to data, one can learn the ODE's velocity field directly, without a diffusion process. That is [[Flow Matching|flow matching]], the subject of the next lecture. Its usual convention runs time the other way, with $t=0$ noise and $t=1$ data.[^lipman2023]
 

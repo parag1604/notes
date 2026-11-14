@@ -28,8 +28,8 @@ next: "[[Denoising Diffusion Models]]"
 The [[Energy-Based Models|EBM lecture]] ended with an observation. Langevin dynamics,
 
 $$
-\mathbf{x}_{k+1}=\mathbf{x}_k+\frac{\eta}{2}\nabla_{\mathbf{x}}\log p(\mathbf{x}_k)+\sqrt{\eta}\,\mathbf{z}_k,
-\qquad \mathbf{z}_k\sim\mathcal{N}(\mathbf{0},\mathbf{I}),
+\mathbf{x}_{j+1}=\mathbf{x}_j+\frac{\eta}{2}\nabla_{\mathbf{x}}\log p(\mathbf{x}_j)+\sqrt{\eta}\,\mathbf{z}_j,
+\qquad \mathbf{z}_j\sim\mathcal{N}(\mathbf{0},\mathbf{I}),
 \tag{1}
 $$
 
@@ -93,7 +93,7 @@ Here $\nabla_{\mathbf{x}}\mathbf{s}_\theta$ is the $D\times D$ Jacobian of the s
 > =-\mathbb{E}_p\big[s_\theta'\big],
 > $$
 >
-> assuming $s_\theta(x)p(x)\to0$ as $|x|\to\infty$. Hence $J_{\text{ESM}}=\mathbb{E}_p\big[\tfrac12s_\theta^2+s_\theta'\big]+\text{const}$. In $D$ dimensions, apply the same step to each coordinate $\int s_{\theta,i}\,\partial_ip\,d\mathbf{x}$; the derivatives $\partial_is_{\theta,i}$ sum to the trace of the Jacobian, giving (3).
+> assuming $s_\theta(x)p(x)\to0$ as $|x|\to\infty$. Hence $J_{\text{ESM}}=\mathbb{E}_p\big[\tfrac12s_\theta^2+s_\theta'\big]+\text{const}$. In $D$ dimensions, apply the same step to each coordinate $\int s_{\theta,m}\,\partial_mp\,d\mathbf{x}$; the derivatives $\partial_ms_{\theta,m}$ sum to the trace of the Jacobian, giving (3).
 
 > [!tip] Intuition
 > Minimizing (3) asks for two things. The $\tfrac12\lVert\mathbf{s}_\theta\rVert^2$ term wants the score to be **small at the data**, so data points sit at stationary points of $\log p$. The trace term wants the divergence of the field to be **negative at the data**, so the arrows converge on the data points, which makes them peaks rather than valleys. For an EBM, $\mathbf{s}_\theta=-\nabla E_\theta$ and the trace is $-\Delta E_\theta$, minus the Laplacian: (3) asks for flat, sharply convex energy minima at the data.
@@ -215,7 +215,7 @@ $$
 Read (5) three ways:
 - **Score = denoising direction.** The score at a noisy point, scaled by $\sigma^2$, is the step from $\tilde{\mathbf{x}}$ to the best guess of the clean point. The minimum-MSE denoiser is a gradient step on $\log q_\sigma$.
 - **DSM is consistent.** The minimizer of (4) is the conditional mean of its target, $\mathbb{E}[-\boldsymbol\epsilon/\sigma\mid\tilde{\mathbf{x}}]=\nabla\log q_\sigma(\tilde{\mathbf{x}})$, by (5). This is a second proof of Vincent's theorem.
-- **Denoising autoencoders learn scores.** An autoencoder $r$ trained to map $\tilde{\mathbf{x}}$ back to $\mathbf{x}$ with squared error learns $r(\tilde{\mathbf{x}})=\mathbb{E}[\mathbf{x}\mid\tilde{\mathbf{x}}]$, so $(r(\tilde{\mathbf{x}})-\tilde{\mathbf{x}})/\sigma^2$ is a score estimate.[^alain2014]
+- **Denoising autoencoders learn scores.** An autoencoder $\hat{\mathbf{x}}(\cdot)$ trained to map $\tilde{\mathbf{x}}$ back to $\mathbf{x}$ with squared error learns $\hat{\mathbf{x}}(\tilde{\mathbf{x}})=\mathbb{E}[\mathbf{x}\mid\tilde{\mathbf{x}}]$, so $(\hat{\mathbf{x}}(\tilde{\mathbf{x}})-\tilde{\mathbf{x}})/\sigma^2$ is a score estimate.[^alain2014]
 
 ![[Machine Learning/images/score-based-models-tweedie.svg]]
 *Figure 3. The optimal denoiser $\mathbb{E}[x\mid\tilde x]$ for a 1-D mixture with modes at $-2$ and $1.5$, from Tweedie's formula. With little noise it stays near the identity and only shrinks towards the nearer mode; with $\sigma=2$ it pulls everything towards the modes. A Monte Carlo check of $\mathbb{E}[x\mid\tilde x=0.5]$ agrees with (5) to within sampling error (e.g. 0.994 vs 0.986 at $\sigma=0.5$).*
@@ -355,7 +355,7 @@ with time flowing from $1$ to $0$ and $\bar{\mathbf{w}}$ a reverse-time Brownian
 
 Two further results from the SDE view set up the next two lectures:
 - A different choice of $\mathbf{f}$ and $g$, which shrinks the data while adding noise so that the total variance stays fixed, gives the **variance-preserving** SDE. Its discretization is the denoising diffusion probabilistic model ([[Denoising Diffusion Models|DDPM]]).
-- There is a **deterministic** process with the same marginal densities $p_t$, the **probability flow ODE** (9) below. It maps noise to data along smooth paths, with no randomness at all. It is a continuous normalizing flow, and learning such flows directly is the subject of flow matching.
+- There is a **deterministic** process with the same marginal densities $p_t$, the **probability flow ODE** (9) below. It maps noise to data along smooth paths, with no randomness at all. It is a continuous normalizing flow ([[Normalizing Flows#Continuous normalizing flows|Normalizing Flows]]), and learning such flows directly is the subject of [[Flow Matching|flow matching]].
 
 $$
 \frac{d\mathbf{x}}{dt}=\mathbf{f}(\mathbf{x},t)-\frac12\,g(t)^2\,\nabla_{\mathbf{x}}\log p_t(\mathbf{x}).
@@ -376,7 +376,7 @@ $$
 - [[Non-parametric Models#Kernel density estimation|Kernel density estimation]]: the noisy data distribution $q_\sigma$ of a finite dataset is a Gaussian KDE, and its exact score is a responsibility-weighted pull towards the training points.
 - [[Clustering and Expectation Maximization]]: the score of a mixture is a responsibility-weighted average of component scores.
 - [[Variational Autoencoders]]: denoising diffusion models are also very deep VAEs with a fixed noising encoder; the next lecture shows that their ELBO reduces to the noise-prediction loss (6).
-- [[Denoising Diffusion Models]]: the next lecture, where the VAE route and the score route meet. Then [[Flow Matching]], which learns the probability-flow ODE's velocity field directly.
+- [[Denoising Diffusion Models]]: the next lecture, where the VAE route and the score route meet. Then [[Flow Matching]], which regresses a velocity field directly; with the variance-preserving path, that field is exactly this lecture's probability-flow ODE.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

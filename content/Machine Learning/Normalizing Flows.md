@@ -124,7 +124,7 @@ $$
 \log\lvert\det\mathbf{J}_f(\mathbf{z})\rvert=\log\big\lvert 1+\mathbf{u}^\top\boldsymbol\psi(\mathbf{z})\big\rvert ,
 $$
 
-in $O(D)$. With $h=\tanh$, the map is invertible when $\mathbf{w}^\top\mathbf{u}\ge-1$; in practice $\mathbf{u}$ is reparameterized to enforce it. A **radial flow** instead contracts or expands around a centre $\mathbf{z}_0$: $f(\mathbf{z})=\mathbf{z}+\beta h(\alpha,r)(\mathbf{z}-\mathbf{z}_0)$ with $r=\lVert\mathbf{z}-\mathbf{z}_0\rVert$ and $h=1/(\alpha+r)$. Its Jacobian is identity plus rank one again, and $\det\mathbf{J}_f=\big[1+\beta h\big]^{D-1}\big[1+\beta h+\beta h'(r)\,r\big]$, where $h'$ is the derivative with respect to $r$; it is invertible when $\beta\ge-\alpha$.
+in $O(D)$. With $h=\tanh$, the map is invertible when $\mathbf{w}^\top\mathbf{u}\ge-1$; in practice $\mathbf{u}$ is reparameterized to enforce it. A **radial flow** instead contracts or expands around a centre $\mathbf{z}_0$: $f(\mathbf{z})=\mathbf{z}+\beta\rho(r)(\mathbf{z}-\mathbf{z}_0)$ with $r=\lVert\mathbf{z}-\mathbf{z}_0\rVert$ and $\rho(r)=1/(\lambda+r)$, $\lambda>0$. Its Jacobian is identity plus rank one again, and $\det\mathbf{J}_f=\big[1+\beta\rho\big]^{D-1}\big[1+\beta\rho+\beta\rho'(r)\,r\big]$; it is invertible when $\beta\ge-\lambda$.
 
 Two limitations follow from the construction:
 - There is **no closed-form inverse**. We can sample and score our own samples, but we cannot evaluate the density of a given data point cheaply. Planar and radial flows suit variational inference, not density estimation.
@@ -133,10 +133,10 @@ Two limitations follow from the construction:
 Figure 3 trains planar flows the way they are used in variational inference: towards an unnormalized target $p^*\propto e^{-U}$, by minimizing the **reverse** KL divergence
 
 $$
-D_{\mathrm{KL}}(q\,\|\,p^*)=\mathbb{E}_{\mathbf{x}\sim q}\big[\log q(\mathbf{x})+U(\mathbf{x})\big]+\log Z .
+D_{\mathrm{KL}}(q\,\|\,p^*)=\mathbb{E}_{\mathbf{x}\sim q}\big[\log q(\mathbf{x})+U(\mathbf{x})\big]+\log\mathcal{Z} .
 $$
 
-The expectation needs only samples from the flow and their densities, from the second line of (1); the unknown $\log Z$ is a constant. Two observations:
+The expectation needs only samples from the flow and their densities, from the second line of (1); the unknown $\log\mathcal{Z}$ is a constant. Two observations:
 - **Capacity.** On a curved ridge, two layers capture the bend only roughly (KL 0.21 nats), while eight layers fit it closely (0.02 nats).
 - **Mode seeking.** The second target has two equal, separated lobes. Reverse KL punishes $q$ for putting mass where $p^*$ has none, but not for missing mass ([[Variational Autoencoders#Which way does the KL point?|the VAE lecture]] explains why). Even 32 layers trained directly settle on one lobe, with KL $0.70\approx\ln2$, exactly the price of covering half of the mass. **Annealing**, multiplying $U$ by a factor that grows from 0.01 to 1 over the first half of training (as Rezende and Mohamed did), lets the flow spread over both lobes while the target is still nearly flat, before the low-density gap between them becomes a barrier: KL 0.05 nats.
 
@@ -290,13 +290,13 @@ The **multi-scale architecture** then factors out half of the variables after ea
 ### Glow: activation normalization and invertible 1×1 convolutions
 
 Glow replaces two parts of RealNVP's recipe with learned, invertible layers.[^kingma2018] Each step of flow is **actnorm**, then an **invertible $1\times1$ convolution**, then an affine coupling.
-- **Actnorm** is a per-channel affine map $\mathbf{x}=\mathbf{s}\odot\mathbf{z}+\mathbf{b}$, initialized from the first minibatch so that every channel has zero mean and unit variance, and then trained freely. On an $H\times W$ feature map, $\log\lvert\det\rvert=HW\sum_c\log\lvert s_c\rvert$. It plays the role of batch normalization without depending on the batch.
+- **Actnorm** is a per-channel affine map $\mathbf{x}=\mathbf{c}\odot\mathbf{z}+\mathbf{b}$, initialized from the first minibatch so that every channel has zero mean and unit variance, and then trained freely. On an $H\times W$ feature map, $\log\lvert\det\rvert=HW\sum_j\log\lvert c_j\rvert$. It plays the role of batch normalization without depending on the batch.
 - **Invertible 1×1 convolution.** RealNVP fixes the permutation that decides which channels condition which. Glow learns it: a $C\times C$ matrix $\mathbf{W}$ applied at every pixel, with $\log\lvert\det\rvert=HW\log\lvert\det\mathbf{W}\rvert$. To make the determinant $O(C)$ rather than $O(C^3)$, $\mathbf{W}$ is parameterized through its LU factorization,
 
 $$
-\mathbf{W}=\mathbf{P}\,\mathbf{L}\,\big(\mathbf{U}+\operatorname{diag}(\mathbf{s})\big),
+\mathbf{W}=\mathbf{P}\,\mathbf{L}\,\big(\mathbf{U}+\operatorname{diag}(\mathbf{d})\big),
 \qquad
-\log\lvert\det\mathbf{W}\rvert=\sum_c\log\lvert s_c\rvert,
+\log\lvert\det\mathbf{W}\rvert=\sum_j\log\lvert d_j\rvert,
 $$
 
 with $\mathbf{P}$ a fixed permutation, $\mathbf{L}$ unit lower-triangular and $\mathbf{U}$ strictly upper-triangular. This is the [[Five Factorizations of a Matrix#A = LU: elimination|LU factorization]], used here as a parameterization: the determinant is the product of the pivots.
@@ -314,7 +314,7 @@ with $\mathbf{P}$ a fixed permutation, $\mathbf{L}$ unit lower-triangular and $\
 >         self.register_buffer("sign_s", torch.sign(torch.diagonal(U)))
 >         self.log_s = nn.Parameter(torch.diagonal(U).abs().log())
 >
->     def weight(self):                                         # W = P L (U + diag(s))
+>     def weight(self):                                         # W = P L (U + diag(d))
 >         C = len(self.log_s)
 >         L = torch.tril(self.L, -1) + torch.eye(C)
 >         U = torch.triu(self.U, 1) + torch.diag(self.sign_s * self.log_s.exp())
@@ -323,14 +323,14 @@ with $\mathbf{P}$ a fixed permutation, $\mathbf{L}$ unit lower-triangular and $\
 >     def forward(self, z):                                     # z (B, C, H, W) -> x, log|det J|
 >         x = torch.einsum("ij,bjhw->bihw", self.weight(), z)   # the same C x C matrix at every pixel
 >         H, W = z.shape[2:]
->         return x, H * W * self.log_s.sum().expand(len(z))     # HW sum_c log|s_c|, no determinant
+>         return x, H * W * self.log_s.sum().expand(len(z))     # HW sum_j log|d_j|, no determinant
 >
 >     def inverse(self, x):
 >         return torch.einsum("ij,bjhw->bihw", torch.linalg.inv(self.weight()), x)
 > ```
-> Actnorm is simpler still: `x = s[:, None, None] * z + b[:, None, None]` with log-determinant `H * W * s.abs().log().sum()`.
+> Actnorm is simpler still: `x = c[:, None, None] * z + b[:, None, None]` with log-determinant `H * W * c.abs().log().sum()`.
 
-Glow produced sharp $256\times256$ faces, meaningful latent interpolations, and a useful trick: sampling from a **reduced temperature**, $\mathbf{z}\sim\mathcal{N}(\mathbf{0},T^2\mathbf{I})$ with $T\approx0.7$, trades diversity for quality. On CIFAR-10 it reported 3.35 bits per dimension against RealNVP's 3.49 (bits per dimension are defined [[#Discrete data: dequantization and bits per dimension|below]]).
+Glow produced sharp $256\times256$ faces, meaningful latent interpolations, and a useful trick: sampling from a **reduced temperature**, $\mathbf{z}\sim\mathcal{N}(\mathbf{0},\tau^2\mathbf{I})$ with $\tau\approx0.7$, trades diversity for quality. On CIFAR-10 it reported 3.35 bits per dimension against RealNVP's 3.49 (bits per dimension are defined [[#Discrete data: dequantization and bits per dimension|below]]).
 
 ## Autoregressive flows
 
@@ -420,27 +420,27 @@ Two honest remarks:
 
 ### Spline flows
 
-An affine coupling or autoregressive layer transforms each coordinate by $z\mapsto e^{s}z+t$, a straight line. Any **monotone** one-dimensional function would do, as long as it is invertible and its derivative is cheap. Neural spline flows use **monotone rational-quadratic splines**: the conditioner outputs the widths, heights and knot derivatives of $K$ bins on an interval $[-B,B]$, with the identity outside.[^durkan2019] Each piece is a ratio of quadratics, so the derivative is closed-form and the inverse is the root of a quadratic. One spline layer can turn a unimodal coordinate into a multimodal one, which an affine layer cannot, so far fewer layers are needed.
+An affine coupling or autoregressive layer transforms each coordinate by an affine map, a scale and a shift: a straight line. Any **monotone** one-dimensional function would do, as long as it is invertible and its derivative is cheap. Neural spline flows use **monotone rational-quadratic splines**: the conditioner outputs the widths, heights and knot derivatives of $M$ bins on an interval $[-R,R]$, with the identity outside.[^durkan2019] Each piece is a ratio of quadratics, so the derivative is closed-form and the inverse is the root of a quadratic. One spline layer can turn a unimodal coordinate into a multimodal one, which an affine layer cannot, so far fewer layers are needed.
 
 ### Residual flows
 
-A residual block $f(\mathbf{z})=\mathbf{z}+r(\mathbf{z})$ is invertible whenever $r$ is a contraction, $\operatorname{Lip}(r)<1$. Then $\mathbf{z}$ is the unique fixed point of $\mathbf{z}\mapsto\mathbf{x}-r(\mathbf{z})$, which iteration finds by the Banach fixed-point theorem (the same argument as for the [[Dynamic Programming#The foundation: Bellman operators are contractions|Bellman operators]]). Spectral normalization keeps the Lipschitz constant below 1. The log-determinant has a power series,
+A residual block $f(\mathbf{z})=\mathbf{z}+\phi(\mathbf{z})$ is invertible whenever $\phi$ is a contraction, $\operatorname{Lip}(\phi)<1$. Then $\mathbf{z}$ is the unique fixed point of $\mathbf{z}\mapsto\mathbf{x}-\phi(\mathbf{z})$, which iteration finds by the Banach fixed-point theorem (the same argument as for the [[Dynamic Programming#The foundation: Bellman operators are contractions|Bellman operators]]). Spectral normalization keeps the Lipschitz constant below 1. The log-determinant has a power series,
 
 $$
-\log\det\big(\mathbf{I}+\mathbf{J}_r\big)=\sum_{k=1}^{\infty}\frac{(-1)^{k+1}}{k}\operatorname{tr}\big(\mathbf{J}_r^k\big),
+\log\det\big(\mathbf{I}+\mathbf{J}_\phi\big)=\sum_{k=1}^{\infty}\frac{(-1)^{k+1}}{k}\operatorname{tr}\big(\mathbf{J}_\phi^k\big),
 $$
 
 and each trace is estimated with Hutchinson's trick ([[#Hutchinson's trace estimator|below]]). Invertible ResNets truncate the series, which biases the estimate;[^behrmann2019] Residual Flows use a randomized "Russian roulette" truncation that is unbiased.[^chen2019resflow] These flows keep an unconstrained, free-form Jacobian, like the continuous flows that follow.
 
 ## Discrete data: dequantization and bits per dimension
 
-Images are stored as integers, $x_i\in\{0,\dots,255\}$. A continuous density fitted to integer data can put arbitrarily tall spikes on the grid points and drive the log-likelihood to $+\infty$ without learning anything. The standard fix is **dequantization**: add uniform noise, $\mathbf{y}=\mathbf{x}+\mathbf{u}$ with $\mathbf{u}\sim\mathcal{U}[0,1)^D$, and fit the continuous model to $\mathbf{y}$. The discrete model $P(\mathbf{x})=\int_{[0,1)^D}p(\mathbf{x}+\mathbf{u})\,d\mathbf{u}$ is a proper distribution on the integers, and by Jensen's inequality
+Images are stored as integers, $x_i\in\{0,\dots,255\}$. A continuous density fitted to integer data can put arbitrarily tall spikes on the grid points and drive the log-likelihood to $+\infty$ without learning anything. The standard fix is **dequantization**: add uniform noise, $\mathbf{y}=\mathbf{x}+\boldsymbol\xi$ with $\boldsymbol\xi\sim\mathcal{U}[0,1)^D$, and fit the continuous model to $\mathbf{y}$. The discrete model $P(\mathbf{x})=\int_{[0,1)^D}p(\mathbf{x}+\boldsymbol\xi)\,d\boldsymbol\xi$ is a proper distribution on the integers, and by Jensen's inequality
 
 $$
-\log P(\mathbf{x})\ \ge\ \mathbb{E}_{\mathbf{u}}\big[\log p(\mathbf{x}+\mathbf{u})\big],
+\log P(\mathbf{x})\ \ge\ \mathbb{E}_{\boldsymbol\xi}\big[\log p(\mathbf{x}+\boldsymbol\xi)\big],
 $$
 
-so the continuous log-likelihood is a lower bound on the discrete one and can no longer diverge.[^theis2016] Flow++ replaces the uniform noise by a learned noise distribution $q(\mathbf{u}\mid\mathbf{x})$, a variational bound that is tighter.[^ho2019]
+so the continuous log-likelihood is a lower bound on the discrete one and can no longer diverge.[^theis2016] Flow++ replaces the uniform noise by a learned noise distribution $q(\boldsymbol\xi\mid\mathbf{x})$, a variational bound that is tighter.[^ho2019]
 
 Likelihoods of images are reported in **bits per dimension**, $-\log_2P(\mathbf{x})/D$: the average number of bits an ideal compressor built on the model would need per subpixel. If the dequantized data are rescaled to $[0,1)^D$, the rescaling contributes $\log_2256=8$ bits per dimension, so
 
@@ -537,16 +537,16 @@ Rademacher probes ($\pm1$ with equal probability) have lower variance than Gauss
 
 The loss is defined by the ODE's endpoint, so its gradient must flow back through the solver. The direct way is to backpropagate through every solver step, which stores every intermediate state: memory grows with the number of steps. The **adjoint method** instead solves a second ODE backwards in time, and needs memory independent of the number of steps.[^chen2018]
 
-The idea is backpropagation in continuous time. Define the **adjoint** $\mathbf{a}(t)=\partial L/\partial\mathbf{x}(t)$, the gradient of the loss with respect to the state at time $t$: what backprop would carry at "layer" $t$. It obeys its own ODE, and the parameter gradient is an integral along the path:
+The idea is backpropagation in continuous time. Define the **adjoint** $\mathbf{a}(t)=\partial\mathcal{L}/\partial\mathbf{x}(t)$, the gradient of the loss with respect to the state at time $t$: what backprop would carry at "layer" $t$. It obeys its own ODE, and the parameter gradient is an integral along the path:
 
 $$
 \frac{d\mathbf{a}}{dt}=-\mathbf{a}(t)^\top\frac{\partial\mathbf{v}_\theta}{\partial\mathbf{x}},
 \qquad
-\frac{dL}{d\theta}=\int_{t_a}^{t_b}\mathbf{a}(t)^\top\frac{\partial\mathbf{v}_\theta}{\partial\theta}\,dt,
+\frac{d\mathcal{L}}{d\theta}=\int_{t_a}^{t_b}\mathbf{a}(t)^\top\frac{\partial\mathbf{v}_\theta}{\partial\theta}\,dt,
 \tag{8}
 $$
 
-for an ODE solved from $t_a$ to $t_b$, with $L$ a function of $\mathbf{x}(t_b)$. Both right-hand sides are vector-Jacobian products, one backward pass each. In practice $\mathbf{x}$, $\mathbf{a}$ and the running integral are solved together, backwards from $t_b$, with $\mathbf{x}(t)$ reconstructed by running the original ODE in reverse instead of being stored.
+for an ODE solved from $t_a$ to $t_b$, with $\mathcal{L}$ a function of $\mathbf{x}(t_b)$. Both right-hand sides are vector-Jacobian products, one backward pass each. In practice $\mathbf{x}$, $\mathbf{a}$ and the running integral are solved together, backwards from $t_b$, with $\mathbf{x}(t)$ reconstructed by running the original ODE in reverse instead of being stored.
 
 > [!proof]- Derivation sketch of the adjoint equations (8)
 > **The adjoint ODE.** Over a short step, $\mathbf{x}(t+\varepsilon)=\mathbf{x}(t)+\varepsilon\mathbf{v}(\mathbf{x}(t),t)+O(\varepsilon^2)$. The loss depends on $\mathbf{x}(t)$ only through $\mathbf{x}(t+\varepsilon)$, so the chain rule gives
@@ -559,7 +559,7 @@ for an ODE solved from $t_a$ to $t_b$, with $L$ a function of $\mathbf{x}(t_b)$.
 >
 > **The parameter gradient.** Treat $\theta$ as if it were a separate copy $\theta_s$ in each short step $[s,s+\varepsilon]$. Changing $\theta_s$ moves $\mathbf{x}(s+\varepsilon)$ by $\varepsilon\,\partial\mathbf{v}/\partial\theta$ and hence the loss by $\varepsilon\,\mathbf{a}(s+\varepsilon)^\top\partial\mathbf{v}/\partial\theta$. The true $\theta$ is shared by all steps, so its gradient is the sum of these contributions, which becomes the integral in (8) as $\varepsilon\to0$. When the ODE runs backwards in time ($t_b<t_a$, as when we evaluate $\log p$ of data), each step has length $-\varepsilon$; the sign flips and the integral's limits flip with it, so (8) holds as an oriented integral in both cases.
 >
-> **The algorithm.** Set $\mathbf{a}(t_b)=\partial L/\partial\mathbf{x}(t_b)$ and $\mathbf{g}(t_b)=\mathbf{0}$. Solve $[\mathbf{x},\mathbf{a},\mathbf{g}]$ from $t_b$ back to $t_a$, with $d\mathbf{x}/dt=\mathbf{v}$, $d\mathbf{a}/dt=-\mathbf{a}^\top\partial\mathbf{v}/\partial\mathbf{x}$ and $d\mathbf{g}/dt=-\mathbf{a}^\top\partial\mathbf{v}/\partial\theta$. Then $\mathbf{g}(t_a)=\int_{t_a}^{t_b}\mathbf{a}^\top\partial\mathbf{v}/\partial\theta\,dt=dL/d\theta$. For a CNF the state also includes the accumulated divergence, which is handled the same way. Reconstructing $\mathbf{x}(t)$ backwards is cheap in memory but can be numerically inaccurate when the dynamics are stiff, which is why many implementations checkpoint instead.
+> **The algorithm.** Set $\mathbf{a}(t_b)=\partial\mathcal{L}/\partial\mathbf{x}(t_b)$ and $\mathbf{m}(t_b)=\mathbf{0}$. Solve $[\mathbf{x},\mathbf{a},\mathbf{m}]$ from $t_b$ back to $t_a$, with $d\mathbf{x}/dt=\mathbf{v}$, $d\mathbf{a}/dt=-\mathbf{a}^\top\partial\mathbf{v}/\partial\mathbf{x}$ and $d\mathbf{m}/dt=-\mathbf{a}^\top\partial\mathbf{v}/\partial\theta$. Then $\mathbf{m}(t_a)=\int_{t_a}^{t_b}\mathbf{a}^\top\partial\mathbf{v}/\partial\theta\,dt=d\mathcal{L}/d\theta$. For a CNF the state also includes the accumulated divergence, which is handled the same way. Reconstructing $\mathbf{x}(t)$ backwards is cheap in memory but can be numerically inaccurate when the dynamics are stiff, which is why many implementations checkpoint instead.
 
 Our demo is small enough that we simply backpropagated through 8 fixed RK4 steps with the exact trace. Evaluating the trained model with 64 steps instead of 8 changed its test log-likelihood by less than 0.001 nats, so the discretization was not the bottleneck.
 
@@ -579,7 +579,7 @@ The root cause is that the maximum-likelihood loss is only defined through the e
 |---|---|---|---|---|---|
 | [[Variational Autoencoders\|VAE]] | lower bound (ELBO) | one pass | none (encoder + decoder) | low-dimensional, approximate encoder | blurry unless very large |
 | [[Generative Adversarial Networks\|GAN]] | none | one pass | none, but unstable training | low-dimensional, no encoder | sharp; mode dropping |
-| [[Energy-Based Models\|EBM]] | unnormalized ($Z$ unknown) | MCMC, many steps | scalar energy | none | moderate |
+| [[Energy-Based Models\|EBM]] | unnormalized (normalizer unknown) | MCMC, many steps | scalar energy | none | moderate |
 | Coupling / autoregressive flow | **exact** | one pass (coupling, IAF) or $D$ passes (MAF) | invertible, equal dimension, cheap log-det | same dimension, **exact** encoder | good, below the state of the art |
 | CNF trained by max. likelihood | exact up to solver error | ODE solve | none (Lipschitz) | same dimension, exact encoder | good; costly training |
 | [[Denoising Diffusion Models\|Diffusion]] / [[Score-Based Models\|score]] | bound, or exact via the probability flow ODE | many steps | none | same dimension, via the ODE | state of the art |
@@ -605,7 +605,7 @@ For the highest-fidelity images, audio and video, diffusion and flow matching ha
 - [[Flow Matching]]: the simulation-free way to train the continuous flows of this lecture, with straight paths for fast sampling.
 - [[Denoising Diffusion Models]] and [[Score-Based Models]]: their probability flow ODE is a CNF, and its exact likelihood uses the instantaneous change of variables (6).
 - [[Variational Autoencoders]]: planar flows and IAF make the approximate posterior $q(\mathbf{z}\mid\mathbf{x})$ more flexible, tightening the ELBO.
-- [[Energy-Based Models]]: a flow trained by reverse KL towards $e^{-E}$ is a fast sampler for an energy, with exact densities for importance reweighting.
+- [[Energy-Based Models]]: a flow trained by reverse KL towards $e^{-U}$ is a fast sampler for an energy, with exact densities for importance reweighting.
 - [[Multivariable Calculus#Densities under a change of variables|Change of variables]] and [[Five Factorizations of a Matrix|LU]]: the two pieces of linear algebra and calculus that every flow is built on.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->

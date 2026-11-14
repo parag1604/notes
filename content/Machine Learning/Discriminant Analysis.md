@@ -9,7 +9,7 @@ prev: "[[Linear Models]]"
 next: "[[Support Vector Machines]]"
 ---
 
-> **Prerequisites:** [[Linear Models]] (logistic regression, maximum likelihood), [[Probability Basics#Bayes' theorem|Bayes' rule]], and [[Joint Distributions#The multivariate Gaussian|the multivariate Gaussian]].
+> **Prerequisites:** [[Bayesian Decision Theory]] (the Bayes classifier and Gaussian discriminants), [[Linear Models]] (logistic regression, maximum likelihood), [[Probability Basics#Bayes' theorem|Bayes' rule]], and [[Joint Distributions#The multivariate Gaussian|the multivariate Gaussian]].
 >
 > **TL;DR:**
 > - **Fisher's discriminant** looks for the projection direction that separates two classes best: large spread *between* the projected class means, small spread *within* each class. The answer is $\mathbf{w}^*\propto\mathbf{S}_W^{-1}(\boldsymbol{\mu}_1-\boldsymbol{\mu}_0)$.
@@ -23,7 +23,7 @@ Given labelled data $\{(\mathbf{x}_i,y_i)\}_{i=1}^N$ with $\mathbf{x}_i\in\mathb
 - **Discriminative:** model $p(y\mid\mathbf{x})$ directly. [[Linear Models#Logistic Regression|Logistic regression]] does this: it never asks what the inputs of each class look like.
 - **Generative:** model how each class *generates* its data, $p(\mathbf{x}\mid y=k)$, together with the class frequencies $p(y=k)$. Then invert with Bayes' rule. If the model is correct, this gives the Bayes-optimal classifier.
 
-Both are **parametric**: we extract a few useful quantities from the data (means, covariances, weights) and can then forget the dataset itself. This lecture follows the generative road. It starts with the simplest classifier, builds up Fisher's projection idea, and ends with Gaussian discriminant analysis, where the two roads meet. For simplicity we mostly consider two classes, $y\in\{0,1\}$. Hastie et al.[^esl] and Bishop[^bishop2006] cover the same material in more depth.
+Both are **parametric**: we extract a few useful quantities from the data (means, covariances, weights) and can then forget the dataset itself. This lecture follows the generative road. It starts with the simplest classifier, builds up Fisher's projection idea, and ends with Gaussian discriminant analysis, where the two roads meet. [[Bayesian Decision Theory#Gaussian class-conditionals|Bayesian Decision Theory]] derived the optimal Gaussian boundaries when the distributions are known; here we estimate them from data. For simplicity we mostly consider two classes, $y\in\{0,1\}$. Hastie et al.[^esl] and Bishop[^bishop2006] cover the same material in more depth.
 
 **Notation.** $N_k$ is the number of points in class $k$, and $\boldsymbol{\mu}_k=\frac{1}{N_k}\sum_{i:y_i=k}\mathbf{x}_i$ is the class mean. Sums written $\sum_{i:y_i=k}$ run **only over class $k$**.
 
@@ -44,7 +44,7 @@ The second form comes from expanding the square and dropping $\lVert\mathbf{x}\r
 
 For two classes the rule is a hyperplane in explicit form: decide class 1 when $\mathbf{w}^\top\mathbf{x}+b>0$ with $\mathbf{w}=\boldsymbol\mu_1-\boldsymbol\mu_0$ and $b=\frac12\big(\lVert\boldsymbol\mu_0\rVert^2-\lVert\boldsymbol\mu_1\rVert^2\big)$. The rule uses the data only through inner products $\langle\mathbf{x},\mathbf{x}_i\rangle$, since $\langle\boldsymbol\mu_k,\mathbf{x}\rangle=\frac1{N_k}\sum_{i:y_i=k}\langle\mathbf{x}_i,\mathbf{x}\rangle$ and $\lVert\boldsymbol\mu_k\rVert^2=\frac1{N_k^2}\sum_{i,j:y_i=y_j=k}\langle\mathbf{x}_i,\mathbf{x}_j\rangle$. Replacing every inner product by a [[Support Vector Machines#Kernels|kernel]] $\kappa(\mathbf{x},\mathbf{x}')$ gives a **kernel nearest-mean classifier**, which compares $\mathbf{x}$ with the class means in a feature space and so produces curved boundaries in the input space, at no extra cost in theory.
 
-Nearest-mean ignores the **shape** of each class: how spread out it is, and in which directions. Fisher's idea, and later LDA, fix exactly that. (In fact nearest-mean is the special case of LDA with isotropic covariance $\sigma^2\mathbf{I}$ and equal priors.)
+Nearest-mean ignores the **shape** of each class: how spread out it is, and in which directions. Fisher's idea, and later LDA, fix exactly that. (In fact nearest-mean is the special case of LDA with isotropic covariance $\boldsymbol{\Sigma}\propto\mathbf{I}$ and equal priors.)
 
 ---
 
@@ -149,7 +149,7 @@ $$
 \delta_k(\mathbf{x})=\log\pi_k-\frac12\log\lvert\boldsymbol{\Sigma}_k\rvert-\frac12(\mathbf{x}-\boldsymbol{\mu}_k)^\top\boldsymbol{\Sigma}_k^{-1}(\mathbf{x}-\boldsymbol{\mu}_k).
 $$
 
-$\delta_k(\mathbf{x})$ is the log of $\pi_k\,p(\mathbf{x}\mid y=k)$, up to a constant shared by both classes. The **QDA rule** is
+$\delta_k(\mathbf{x})$ is the log of $\pi_k\,p(\mathbf{x}\mid y=k)$, up to a constant shared by both classes: the discriminant $g_k$ of [[Bayesian Decision Theory#Gaussian class-conditionals|Bayesian Decision Theory]], now with estimated parameters. The **QDA rule** is
 
 $$
 \hat y=1\quad\text{if}\quad\delta_1(\mathbf{x})-\delta_0(\mathbf{x})>0,\qquad\text{and }\hat y=0\text{ otherwise}.
@@ -250,7 +250,7 @@ Ng and Jordan made this precise, comparing logistic regression with [[Bayesian D
 
 ## Where this shows up next
 
-- [[Linear Models]]: logistic regression, the discriminative counterpart of LDA.
+- [[Linear Models]] (the previous lecture): logistic regression, the discriminative counterpart of LDA.
 - [[Support Vector Machines]]: a third route to a separating hyperplane, the one with maximum margin.
 - [[Non-parametric Models]]: classifiers that keep the data instead of summarizing it.
 - [[Clustering and Expectation Maximization#Gaussian mixture models|Gaussian mixture models]]: QDA with *unknown* labels, fitted by EM with soft, probabilistic class assignments.

@@ -25,7 +25,7 @@ next: "[[Sequence Models]]"
 
 ## Motivation
 
-The [[Neural Networks]] lecture ended with the universal approximation theorem: a wide enough MLP can approximate any continuous function. So why not feed raw pixels into an MLP and be done?
+The [[Neural Networks#Universal approximation|universal approximation theorem]] says that a wide enough MLP can approximate any continuous function. So why not feed raw pixels into an MLP and be done?
 
 Take a modest $224\times224$ colour image. It has $3\cdot224\cdot224=150{,}528$ inputs. A single fully connected layer that maps it to a hidden layer of the same spatial size with 64 channels has about $150{,}528\times3{,}211{,}264\approx4.8\times10^{11}$ weights. That is hopeless to store, and hopeless to learn from any realistic dataset. And it ignores everything we know about images:
 
@@ -42,13 +42,13 @@ The theme of this lecture and the next is that **an architecture is a set of ass
 A convolutional layer slides a small **kernel** (filter) over the input. At each position it takes the dot product between the kernel and the window of the input underneath it (Figure 1a). For an input with $C_{\text{in}}$ channels, a layer with $C_{\text{out}}$ kernels of size $k\times k$, stride $s$ and bias $b_o$ computes
 
 $$
-y_{o,i,j}=b_o+\sum_{c=1}^{C_{\text{in}}}\sum_{u=0}^{k-1}\sum_{v=0}^{k-1}w_{o,c,u,v}\,x_{c,\,si+u,\,sj+v}.
+z_{o,i,j}=b_o+\sum_{c=1}^{C_{\text{in}}}\sum_{u=0}^{k-1}\sum_{v=0}^{k-1}w_{o,c,u,v}\,x_{c,\,si+u,\,sj+v}.
 \tag{1}
 $$
 
 Strictly speaking this is a **cross-correlation**; a mathematical convolution would flip the kernel. Since the kernel is learned, the flip makes no difference, and every deep-learning library computes (1) under the name "convolution".
 
-Equation (1) is still a **linear** map from $\mathbf{x}$ to $\mathbf{y}$, so it could be written as a (huge) matrix. That matrix is special:
+Equation (1) is still a **linear** map from $\mathbf{x}$ to $\mathbf{z}$, so it could be written as a (huge) matrix. That matrix is special:
 
 - **Sparse:** each output depends only on a $k\times k$ window (locality).
 - **Weight-shared:** the same $k^2C_{\text{in}}$ numbers are reused at every position (translation).
@@ -58,14 +58,14 @@ A $3\times3$ convolution from 3 to 64 channels has $64\cdot(3\cdot9+1)=1{,}792$ 
 ![[Machine Learning/images/applications-of-neural-networks-convolution.svg]]
 *Figure 1: (a) a $3\times3$ kernel slides over a $6\times6$ input; each output is the dot product of the kernel with one window (here the highlighted window gives $-2$). (b) Stacking stride-1, 3-wide layers grows the receptive field: a unit in layer 3 sees 7 input pixels.*
 
-**Padding and stride.** Zero-padding the input by $p$ pixels on each side controls the output size, and the stride $s$ is the step between windows. Along each spatial dimension,
+**Padding and stride.** Zero-padding the input by $P$ pixels on each side controls the output size, and the stride $s$ is the step between windows. Along each spatial dimension,
 
 $$
-H_{\text{out}}=\left\lfloor\frac{H+2p-k}{s}\right\rfloor+1.
+H_{\text{out}}=\left\lfloor\frac{H+2P-k}{s}\right\rfloor+1.
 \tag{2}
 $$
 
-With $k=3$, $p=1$, $s=1$ the size is preserved ("same" padding); with $s=2$ it is halved.[^dumoulin2016]
+With $k=3$, $P=1$, $s=1$ the size is preserved ("same" padding); with $s=2$ it is halved.[^dumoulin2016]
 
 **Channels.** Each of the $C_{\text{out}}$ kernels produces one **feature map**. The output is again a $C\times H\times W$ tensor, so layers stack. A $1\times1$ convolution mixes channels at each pixel without looking at neighbours: it is a per-pixel linear layer.
 
@@ -131,7 +131,7 @@ pixels per side (Figure 1b), and every pooling or stride-2 layer doubles the gro
 This also explains the design of VGG:[^simonyan2014] two stacked $3\times3$ layers have the same $5\times5$ receptive field as one $5\times5$ layer but use $2\cdot9C^2=18C^2$ weights instead of $25C^2$ (for $C$ channels in and out), and they add an extra non-linearity. Three $3\times3$ layers replace a $7\times7$ one with $27C^2$ instead of $49C^2$ weights.
 
 > [!proof]- Backpropagation through a convolution is a convolution with the flipped kernel
-> Take one channel, stride 1, no padding: $y_{i,j}=\sum_{u,v}w_{u,v}\,x_{i+u,\,j+v}$. Let $g_{i,j}=\partial\mathcal{L}/\partial y_{i,j}$ be the gradient arriving from above.
+> Take one channel, stride 1, no padding: $z_{i,j}=\sum_{u,v}w_{u,v}\,x_{i+u,\,j+v}$. Let $g_{i,j}=\partial\mathcal{L}/\partial z_{i,j}$ be the gradient arriving from above.
 >
 > **Gradient with respect to the weights.** Each $w_{u,v}$ is used at every output position, so the chain rule sums over all of them:
 >
@@ -141,10 +141,10 @@ This also explains the design of VGG:[^simonyan2014] two stacked $3\times3$ laye
 >
 > This is the cross-correlation of the input with the gradient map. Weight sharing means the gradients of all positions add up.
 >
-> **Gradient with respect to the input.** Pixel $x_{a,b}$ influences every output $y_{i,j}$ with $i+u=a$ and $j+v=b$, that is, with weight $w_{a-i,\,b-j}$:
+> **Gradient with respect to the input.** Pixel $x_{i',j'}$ influences every output $z_{i,j}$ with $i+u=i'$ and $j+v=j'$, that is, with weight $w_{i'-i,\,j'-j}$:
 >
 > $$
-> \frac{\partial\mathcal{L}}{\partial x_{a,b}}=\sum_{i,j}g_{i,j}\,w_{a-i,\,b-j}.
+> \frac{\partial\mathcal{L}}{\partial x_{i',j'}}=\sum_{i,j}g_{i,j}\,w_{i'-i,\,j'-j}.
 > $$
 >
 > The indices of $\mathbf{w}$ run backwards, so this is a cross-correlation of the (zero-padded) gradient map with the kernel **rotated by 180°**, a "full" convolution. With several channels the roles of $C_{\text{in}}$ and $C_{\text{out}}$ swap. This backward map is exactly the **transposed convolution** we will use for upsampling in segmentation. We checked both identities numerically against PyTorch's autograd and `conv_transpose2d`.
@@ -161,22 +161,22 @@ The history of CNNs for image classification is a story of going deeper while ke
 **Why residual connections help.** He et al. observed that simply stacking more layers made *training* error worse (a 56-layer plain network fit CIFAR-10 worse than a 20-layer one), so the problem was optimization, not overfitting. A residual block computes
 
 $$
-\mathbf{h}_{l+1}=\mathbf{h}_l+F_l(\mathbf{h}_l),
+\mathbf{h}_{\ell+1}=\mathbf{h}_\ell+F_\ell(\mathbf{h}_\ell),
 $$
 
-where $F_l$ is a small stack of convolutions. If the best thing a block can do is nothing, it only has to learn $F_l\approx0$, which is easy, instead of learning an identity map through several non-linear layers. Unrolling the recursion from layer $l$ to the last layer $L$ gives
+where $F_\ell$ is a small stack of convolutions. If the best thing a block can do is nothing, it only has to learn $F_\ell\approx0$, which is easy, instead of learning an identity map through several non-linear layers. Unrolling the recursion from layer $\ell$ to the last layer $L$ gives
 
 $$
-\mathbf{h}_L=\mathbf{h}_l+\sum_{m=l}^{L-1}F_m(\mathbf{h}_m),
+\mathbf{h}_L=\mathbf{h}_\ell+\sum_{m=\ell}^{L-1}F_m(\mathbf{h}_m),
 $$
 
 and therefore
 
 $$
 \begin{aligned}
-\frac{\partial\mathcal{L}}{\partial\mathbf{h}_l}
-&=\frac{\partial\mathcal{L}}{\partial\mathbf{h}_L}\,\frac{\partial\mathbf{h}_L}{\partial\mathbf{h}_l}\\
-&=\frac{\partial\mathcal{L}}{\partial\mathbf{h}_L}\left(\mathbf{I}+\frac{\partial}{\partial\mathbf{h}_l}\sum_{m=l}^{L-1}F_m(\mathbf{h}_m)\right).
+\frac{\partial\mathcal{L}}{\partial\mathbf{h}_\ell}
+&=\frac{\partial\mathcal{L}}{\partial\mathbf{h}_L}\,\frac{\partial\mathbf{h}_L}{\partial\mathbf{h}_\ell}\\
+&=\frac{\partial\mathcal{L}}{\partial\mathbf{h}_L}\left(\mathbf{I}+\frac{\partial}{\partial\mathbf{h}_\ell}\sum_{m=\ell}^{L-1}F_m(\mathbf{h}_m)\right).
 \end{aligned}
 $$
 
@@ -203,7 +203,7 @@ The identity term carries the gradient from the loss straight to every layer, ho
 
 ### Image classification in practice
 
-The classifier itself is the familiar one from [[Linear Models]]: the last layer produces $K$ logits, a softmax turns them into class probabilities, and training minimizes the cross-entropy. A typical network is a stack of `conv → batch norm → ReLU` blocks with occasional pooling, followed by global average pooling and a linear layer. **Accuracy** counts how often the top class is correct. With many similar classes, **top-$k$ accuracy** (is the true class among the $k$ highest-scoring ones?) is also reported; ImageNet results usually quote top-1 and top-5.
+The classifier itself is the familiar one from [[Linear Models]]: the last layer produces $K$ logits, a softmax turns them into class probabilities, and training minimizes the cross-entropy. A typical network is a stack of `conv → batch norm → ReLU` blocks with occasional pooling, followed by global average pooling and a linear layer. **Accuracy** counts how often the top class is correct. With many similar classes, **top-$n$ accuracy** (is the true class among the $n$ highest-scoring ones?) is also reported; ImageNet results usually quote top-1 and top-5.
 
 Parag's [Basic-Image-Classification](https://github.com/parag1604/Basic-Image-Classification) repository walks through this one idea at a time. Selected rows of its results table:
 
@@ -229,14 +229,14 @@ Classification answers "what". The next question is "where".
 
 ### Single-object localization
 
-If every image contains exactly one object of interest, localization is just classification plus **regression**: the network outputs four numbers describing a box. A common parameterization is the corners $(x_1,y_1,x_2,y_2)$ as fractions of the image size, so a sigmoid output layer keeps them in $[0,1]$.
+If every image contains exactly one object of interest, localization is just classification plus **regression**: the network outputs four numbers describing a box. A common parameterization is the coordinates of the top-left and bottom-right corners as fractions of the image size, so a sigmoid output layer keeps them in $[0,1]$.
 
 This is step 2 of [Detection-and-Segmentation](https://github.com/parag1604/Detection-and-Segmentation). The network predicts the box around the **pet's head**. It starts from the step-1 cat/dog classifier (transfer again: features that recognize pets already respond to their heads), only the last layer is replaced by a 4-output sigmoid layer, and training minimizes the mean squared error between predicted and true corners.
 
-**Box losses.** Squared error is the simplest choice. The $L_1$ loss is less sensitive to badly wrong boxes, and the **smooth $L_1$** (Huber) loss used by the R-CNN family combines the two: quadratic for small errors $z$ and linear for large ones,
+**Box losses.** Squared error is the simplest choice. The $L_1$ loss is less sensitive to badly wrong boxes, and the **smooth $L_1$** (Huber) loss used by the R-CNN family combines the two: quadratic for small errors $e$ and linear for large ones,
 
 $$
-\ell_\beta(z)=\begin{cases}\dfrac{z^2}{2\beta}&\text{if }|z|<\beta,\\[1ex]|z|-\dfrac{\beta}{2}&\text{otherwise.}\end{cases}
+\rho_\beta(e)=\begin{cases}\dfrac{e^2}{2\beta}&\text{if }|e|<\beta,\\[1ex]|e|-\dfrac{\beta}{2}&\text{otherwise.}\end{cases}
 $$
 
 ### Intersection over union
@@ -249,7 +249,7 @@ $$
 
 It is 1 for a perfect match and 0 for disjoint boxes, and it does not depend on the scale of the image. Parag's repository reports the IoU of predicted and true head boxes as its test metric.
 
-One can also train on $1-\operatorname{IoU}$ directly, but its gradient is zero whenever the boxes do not overlap. The **generalized IoU** fixes this by subtracting the fraction of the smallest enclosing box $C$ that neither box covers, $\operatorname{GIoU}=\operatorname{IoU}-|C\setminus(A\cup B)|/|C|$, which keeps pulling disjoint boxes together.[^rezatofighi2019]
+One can also train on $1-\operatorname{IoU}$ directly, but its gradient is zero whenever the boxes do not overlap. The **generalized IoU** fixes this by subtracting the fraction of the smallest enclosing box $E$ that neither box covers, $\operatorname{GIoU}=\operatorname{IoU}-|E\setminus(A\cup B)|/|E|$, which keeps pulling disjoint boxes together.[^rezatofighi2019]
 
 ![[Machine Learning/images/applications-of-neural-networks-iou-nms.svg]]
 *Figure 3: (a) IoU is the area of the intersection (shaded) divided by the area of the union; these two boxes overlap with IoU 0.20. (b) Non-maximum suppression: among overlapping candidate boxes with confidence scores, the best box is kept and every box overlapping it with IoU > 0.5 is removed (dashed), then the process repeats.*
@@ -258,7 +258,7 @@ One can also train on $1-\operatorname{IoU}$ directly, but its gradient is zero 
 
 A real image contains an unknown number of objects of several classes, so a fixed number of outputs no longer works. Detectors instead score a large set of **candidate boxes** and keep the good ones. Two families dominate.
 
-- **Two-stage detectors (the R-CNN family).** R-CNN first proposed about 2000 candidate regions with a classical algorithm, then classified each crop with a CNN and refined its box.[^girshick2014] Faster R-CNN made the proposals themselves learned: a small **region proposal network** slides over the shared feature map and, at each position, scores a fixed set of reference boxes called **anchors** (several scales and aspect ratios).[^ren2015] Each anchor $(x_a,y_a,w_a,h_a)$ predicts offsets rather than absolute coordinates, for example $t_x=(x-x_a)/w_a$ and $t_w=\log(w/w_a)$, which keeps the regression targets small and scale-free.
+- **Two-stage detectors (the R-CNN family).** R-CNN first proposed about 2000 candidate regions with a classical algorithm, then classified each crop with a CNN and refined its box.[^girshick2014] Faster R-CNN made the proposals themselves learned: a small **region proposal network** slides over the shared feature map and, at each position, scores a fixed set of reference boxes called **anchors** (several scales and aspect ratios).[^ren2015] Each anchor, with centre $(a_x,a_y)$, width $a_w$ and height $a_h$, predicts offsets to a box $(q_x,q_y,q_w,q_h)$ rather than its absolute coordinates, for example $t_x=(q_x-a_x)/a_w$ and $t_w=\log(q_w/a_w)$, which keeps the regression targets small and scale-free.
 - **One-stage detectors.** YOLO divides the image into a grid and lets each cell directly predict a few boxes with confidences and class probabilities, in a single forward pass.[^redmon2016] SSD does the same with default boxes at several feature-map resolutions, so that small objects are found on fine maps and large objects on coarse ones.[^liu2016] One-stage detectors are faster; two-stage ones were historically more accurate.
 
 > [!example]- Code: anchor box offsets and the smooth $L_1$ box loss (PyTorch)
@@ -328,7 +328,7 @@ A classification CNN shrinks the image to a small feature map and then throws aw
 Upsampling can be fixed (bilinear interpolation) or learned. The learned version is the **transposed convolution**: each input pixel scatters a copy of the kernel, scaled by its value, into the output, with stride $s$ between copies. It is the backward map of a convolution (see the aside above), and its output size inverts (2):
 
 $$
-H_{\text{out}}=(H-1)\,s-2p+k.
+H_{\text{out}}=(H-1)\,s-2P+k.
 $$
 
 A $2\times2$ kernel with stride 2 and no padding exactly doubles the resolution. When the kernel size is not a multiple of the stride the copies overlap unevenly, which can produce **checkerboard artifacts**; resize-then-convolve avoids them.[^odena2016]
@@ -423,7 +423,7 @@ Parag's code trains with **BCE + (1 − soft Dice)** and reports the hard Dice (
 ## Key takeaways
 
 - **Architectures encode assumptions.** Convolutions assume locality and translation equivariance; that bias is why a small CNN beats a much larger MLP on images.
-- A **convolution** is a sparse, weight-shared linear map. Its output size is $\lfloor(H+2p-k)/s\rfloor+1$, stacking layers grows the receptive field, and its gradient is again a convolution (with the flipped kernel). Pooling turns equivariance into approximate invariance.
+- A **convolution** is a sparse, weight-shared linear map. Its output size is $\lfloor(H+2P-k)/s\rfloor+1$, stacking layers grows the receptive field, and its gradient is again a convolution (with the flipped kernel). Pooling turns equivariance into approximate invariance.
 - **Residual connections** give the gradient a direct path through very deep networks. Data augmentation and **transfer learning** matter in almost every application.
 - **Localization** adds box regression to a classifier; **detection** scores many candidate boxes and removes duplicates with **NMS**; boxes are judged by **IoU** and detectors by **mAP**.
 - **Segmentation** predicts every pixel with an encoder–decoder such as **U-Net**, whose skip connections restore spatial detail. The **soft Dice** loss handles class imbalance and stays differentiable, unlike the thresholded metric.
@@ -432,6 +432,7 @@ Parag's code trains with **BCE + (1 − soft Dice)** and reports the hard Dice (
 
 - [[Sequence Models]], the next lecture: weight sharing **in time** (recurrent networks), attention and transformers, and the [[Sequence Models#The Vision Transformer|Vision Transformer]], which drops convolutions and treats image patches as tokens.
 - **Generative models.** The decoders of [[Variational Autoencoders]] and the generators of [[Generative Adversarial Networks]] for images are built from transposed convolutions, and a U-Net is the standard noise- or score-prediction network in [[Denoising Diffusion Models]].
+- [[Graph Neural Networks]]: convolution generalized from grids to arbitrary graphs, where neighbours have no fixed positions.
 - [[Self-Supervised Representation Learning]]: learning image features without labels, for transfer to tasks like the ones in this lecture.
 - **Textbooks.** Prince's *Understanding Deep Learning*,[^prince2023] Goodfellow, Bengio and Courville's *Deep Learning*,[^goodfellow2016] and the interactive *Dive into Deep Learning*[^zhang2023] cover all of this lecture in more depth.
 

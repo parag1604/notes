@@ -179,7 +179,7 @@ $$
 \mathbf{A}=\sigma_1\mathbf{u}_1\mathbf{v}_1^\top+\sigma_2\mathbf{u}_2\mathbf{v}_2^\top+\cdots+\sigma_r\mathbf{u}_r\mathbf{v}_r^\top.
 $$
 
-Each $\mathbf{u}_i\mathbf{v}_i^\top$ is a rank-one matrix with unit Frobenius norm, and the pieces are mutually orthogonal: $\operatorname{Tr}\big((\mathbf{u}_i\mathbf{v}_i^\top)^\top\mathbf{u}_j\mathbf{v}_j^\top\big)=(\mathbf{u}_i^\top\mathbf{u}_j)(\mathbf{v}_i^\top\mathbf{v}_j)=0$ for $i\ne j$. So the SVD splits $\mathbf{A}$ into orthogonal **layers**, sorted by importance $\sigma_i$. For the worked example, the two layers are
+Each $\mathbf{u}_i\mathbf{v}_i^\top$ is a rank-one matrix with unit Frobenius norm, and the pieces are mutually orthogonal: $\operatorname{tr}\big((\mathbf{u}_i\mathbf{v}_i^\top)^\top\mathbf{u}_j\mathbf{v}_j^\top\big)=(\mathbf{u}_i^\top\mathbf{u}_j)(\mathbf{v}_i^\top\mathbf{v}_j)=0$ for $i\ne j$. So the SVD splits $\mathbf{A}$ into orthogonal **layers**, sorted by importance $\sigma_i$. For the worked example, the two layers are
 
 $$
 \begin{aligned}
@@ -194,12 +194,12 @@ The first layer is the best rank-one summary of $\mathbf{A}$; the [[#Best low-ra
 
 ### Norms through the SVD
 
-**Frobenius norm and trace.** The Frobenius norm is $\lVert\mathbf{A}\rVert_F=\sqrt{\sum_{ij}a_{ij}^2}=\sqrt{\operatorname{Tr}(\mathbf{A}\mathbf{A}^\top)}$. For complex matrices, use the conjugate transpose $\mathbf{A}^H$. On a $2\times2$ example, $\operatorname{Tr}(\mathbf{A}\mathbf{A}^\top)=a_{11}^2+a_{12}^2+a_{21}^2+a_{22}^2$. Two facts we use repeatedly:
+**Frobenius norm and trace.** The Frobenius norm is $\lVert\mathbf{A}\rVert_F=\sqrt{\sum_{ij}a_{ij}^2}=\sqrt{\operatorname{tr}(\mathbf{A}\mathbf{A}^\top)}$. For complex matrices, use the conjugate transpose $\mathbf{A}^H$. On a $2\times2$ example, $\operatorname{tr}(\mathbf{A}\mathbf{A}^\top)=a_{11}^2+a_{12}^2+a_{21}^2+a_{22}^2$. Two facts we use repeatedly:
 
-- the **cyclic property**, $\operatorname{Tr}(\mathbf{A}\mathbf{B})=\operatorname{Tr}(\mathbf{B}\mathbf{A})$;
+- the **cyclic property**, $\operatorname{tr}(\mathbf{A}\mathbf{B})=\operatorname{tr}(\mathbf{B}\mathbf{A})$;
 - **orthogonal invariance**: $\lVert\mathbf{Q}_1\mathbf{A}\mathbf{Q}_2\rVert_F=\lVert\mathbf{A}\rVert_F$ for orthogonal $\mathbf{Q}_1,\mathbf{Q}_2$.
 
-Combining them gives $\lVert\mathbf{A}\rVert_F^2=\operatorname{Tr}(\boldsymbol{\Sigma}\boldsymbol{\Sigma}^\top)=\sum_i\sigma_i^2$. Two other norms come straight from the singular values:
+Combining them gives $\lVert\mathbf{A}\rVert_F^2=\operatorname{tr}(\boldsymbol{\Sigma}\boldsymbol{\Sigma}^\top)=\sum_i\sigma_i^2$. Two other norms come straight from the singular values:
 
 - the **spectral norm** $\lVert\mathbf{A}\rVert_2=\max_{\lVert\mathbf{x}\rVert=1}\lVert\mathbf{A}\mathbf{x}\rVert=\sigma_1$, the longest semi-axis of the ellipse in Figure 1;
 - the **nuclear norm** $\lVert\mathbf{A}\rVert_*=\sigma_1+\cdots+\sigma_r$, the convex surrogate for rank used in matrix completion.
@@ -212,28 +212,28 @@ How much can a small change in the data change the answer? For a square invertib
 
 $$
 \begin{aligned}
-\frac{\lVert\delta\mathbf{x}\rVert}{\lVert\mathbf{x}\rVert}&\le\kappa(\mathbf{A})\,\frac{\lVert\delta\mathbf{b}\rVert}{\lVert\mathbf{b}\rVert},\\
-\kappa(\mathbf{A})&=\frac{\sigma_1}{\sigma_n}=\lVert\mathbf{A}\rVert_2\,\lVert\mathbf{A}^{-1}\rVert_2.
+\frac{\lVert\delta\mathbf{x}\rVert}{\lVert\mathbf{x}\rVert}&\le\operatorname{cond}(\mathbf{A})\,\frac{\lVert\delta\mathbf{b}\rVert}{\lVert\mathbf{b}\rVert},\\
+\operatorname{cond}(\mathbf{A})&=\frac{\sigma_1}{\sigma_n}=\lVert\mathbf{A}\rVert_2\,\lVert\mathbf{A}^{-1}\rVert_2.
 \end{aligned}
 $$
 
-Both inequalities are tight at once when $\mathbf{b}$ points along $\mathbf{u}_1$ and $\delta\mathbf{b}$ along $\mathbf{u}_n$, so the **condition number** $\kappa$ is the worst-case amplification of relative error. Geometrically it is the aspect ratio of the ellipse in Figure 1: a nearly flat ellipse means some direction is almost crushed, and undoing that crushing amplifies noise. For a rectangular matrix of full column rank, $\kappa=\sigma_1/\sigma_n$ is the natural definition, and it governs the sensitivity of least squares (with an extra $\kappa^2$ term when the residual is large). The worked example has $\kappa=2$: harmless.
+Both inequalities are tight at once when $\mathbf{b}$ points along $\mathbf{u}_1$ and $\delta\mathbf{b}$ along $\mathbf{u}_n$, so the **condition number** $\operatorname{cond}(\mathbf{A})$ is the worst-case amplification of relative error. Geometrically it is the aspect ratio of the ellipse in Figure 1: a nearly flat ellipse means some direction is almost crushed, and undoing that crushing amplifies noise. For a rectangular matrix of full column rank, $\operatorname{cond}(\mathbf{A})=\sigma_1/\sigma_n$ is the natural definition, and it governs the sensitivity of least squares (with an extra $\operatorname{cond}(\mathbf{A})^2$ term when the residual is large). The worked example has $\operatorname{cond}(\mathbf{A})=2$: harmless.
 
 > [!example] Example: nearly parallel equations
-> The system $x+y=2$, $x+1.01y=2.01$ has the solution $(1,1)$. Change the right-hand side to $2.02$, a relative change of $0.35\%$ in $\mathbf{b}$, and the solution jumps to $(0,2)$, a relative change of $100\%$. The singular values of $\begin{bmatrix}1&1\\1&1.01\end{bmatrix}$ are about $2.005$ and $0.005$, so $\kappa\approx402$. The observed amplification, $284$, is within the bound. The two rows are nearly parallel, so their intersection slides a long way when either line moves slightly (Figure 3).
+> The system $x+y=2$, $x+1.01y=2.01$ has the solution $(1,1)$. Change the right-hand side to $2.02$, a relative change of $0.35\%$ in $\mathbf{b}$, and the solution jumps to $(0,2)$, a relative change of $100\%$. The singular values of $\begin{bmatrix}1&1\\1&1.01\end{bmatrix}$ are about $2.005$ and $0.005$, so $\operatorname{cond}\approx402$. The observed amplification, $284$, is within the bound. The two rows are nearly parallel, so their intersection slides a long way when either line moves slightly (Figure 3).
 
 ![[Machine Learning/images/matrix-factorization-svd-condition.svg]]
-*Figure 3: (a) the worked example maps the unit circle to a fat ellipse with $\kappa=\sigma_1/\sigma_2=2$. (b) An ill-conditioned system: the lines $x+y=2$ and $x+1.01y=c$ are almost parallel, so moving $c$ from $2.01$ to $2.02$ moves the intersection from $(1,1)$ to $(0,2)$.*
+*Figure 3: (a) the worked example maps the unit circle to a fat ellipse with $\operatorname{cond}(\mathbf{A})=\sigma_1/\sigma_2=2$. (b) An ill-conditioned system: the lines $x+y=2$ and $x+1.01y=c$ are almost parallel, so moving $c$ from $2.01$ to $2.02$ moves the intersection from $(1,1)$ to $(0,2)$.*
 
 Two consequences recur throughout machine learning:
 
-- $\kappa(\mathbf{A}^\top\mathbf{A})=\kappa(\mathbf{A})^2$. Forming the normal equations squares the condition number (in the example, from $402$ to about $1.6\times10^5$). That is why least squares is solved with QR or the SVD rather than by inverting $\mathbf{X}^\top\mathbf{X}$; see [[Orthogonality and Least Squares]].
-- Gradient descent on a quadratic with Hessian $\mathbf{H}$ converges at a rate governed by $\kappa(\mathbf{H})$, which is why ill-conditioned problems zig-zag; see [[First-Order Optimization]]. Ridge regularization improves conditioning, since $\kappa(\mathbf{X}^\top\mathbf{X}+\lambda\mathbf{I})=(\sigma_1^2+\lambda)/(\sigma_D^2+\lambda)$ for $\mathbf{X}\in\mathbb{R}^{N\times D}$ (with $\sigma_D=0$ if $N<D$).
+- $\operatorname{cond}(\mathbf{A}^\top\mathbf{A})=\operatorname{cond}(\mathbf{A})^2$. Forming the normal equations squares the condition number (in the example, from $402$ to about $1.6\times10^5$). That is why least squares is solved with QR or the SVD rather than by inverting $\mathbf{X}^\top\mathbf{X}$; see [[Orthogonality and Least Squares]].
+- Gradient descent on a quadratic $f$ converges at a rate governed by the condition number of its Hessian, $\operatorname{cond}(\nabla^2f)$, which is why ill-conditioned problems zig-zag; see [[First-Order Optimization]]. Ridge regularization improves conditioning, since $\operatorname{cond}(\mathbf{X}^\top\mathbf{X}+\rho\mathbf{I})=(\sigma_1^2+\rho)/(\sigma_D^2+\rho)$ for $\mathbf{X}\in\mathbb{R}^{N\times D}$ (with $\sigma_D=0$ if $N<D$).
 
 ## Best low-rank approximation: Eckart–Young
 
 > [!note] Theorem (Eckart–Young–Mirsky)
-> Let $\mathbf{A}=\sum_i\sigma_i\mathbf{u}_i\mathbf{v}_i^\top$ and $\mathbf{A}_k=\sum_{i=1}^{k}\sigma_i\mathbf{u}_i\mathbf{v}_i^\top$. Among all matrices of rank **at most** $k$, $\mathbf{A}_k$ minimizes $\lVert\mathbf{A}-\mathbf{M}\rVert$ for every unitarily invariant norm, with
+> Let $\mathbf{A}=\sum_i\sigma_i\mathbf{u}_i\mathbf{v}_i^\top$ and $\mathbf{A}_k=\sum_{i=1}^{k}\sigma_i\mathbf{u}_i\mathbf{v}_i^\top$. Among all matrices of rank **at most** $k$, $\mathbf{A}_k$ minimizes $\lVert\mathbf{A}-\mathbf{T}\rVert$ for every unitarily invariant norm, with
 > $$
 > \lVert\mathbf{A}-\mathbf{A}_k\rVert_2=\sigma_{k+1},\qquad\lVert\mathbf{A}-\mathbf{A}_k\rVert_F=\sqrt{\textstyle\sum_{i>k}\sigma_i^2}.
 > $$
@@ -244,25 +244,25 @@ In the worked example, the best rank-one approximation is the first layer $\begi
 **Step 1: the error of the truncation.** For the symmetric case, write $\mathbf{S}=\mathbf{Q}\boldsymbol{\Lambda}\mathbf{Q}^\top$ with a square orthogonal $\mathbf{Q}$, and pad $\mathbf{S}_k=\mathbf{Q}\bar{\boldsymbol{\Lambda}}_k\mathbf{Q}^\top$, where $\bar{\boldsymbol{\Lambda}}_k=\operatorname{diag}(\lambda_1,\dots,\lambda_k,0,\dots,0)$. By orthogonal invariance,
 
 $$
-\epsilon_k=\lVert\mathbf{S}-\mathbf{S}_k\rVert_F^2=\lVert\mathbf{Q}(\boldsymbol{\Lambda}-\bar{\boldsymbol{\Lambda}}_k)\mathbf{Q}^\top\rVert_F^2=\lVert\boldsymbol{\Lambda}-\bar{\boldsymbol{\Lambda}}_k\rVert_F^2=\sum_{i=k+1}^{r}\lambda_i^2.
+\lVert\mathbf{S}-\mathbf{S}_k\rVert_F^2=\lVert\mathbf{Q}(\boldsymbol{\Lambda}-\bar{\boldsymbol{\Lambda}}_k)\mathbf{Q}^\top\rVert_F^2=\lVert\boldsymbol{\Lambda}-\bar{\boldsymbol{\Lambda}}_k\rVert_F^2=\sum_{i=k+1}^{r}\lambda_i^2.
 $$
 
 The same computation gives $\sum_{i>k}\sigma_i^2$ for the SVD. This shows how good the truncation is. It does **not** yet show that no other rank-$k$ matrix does better. That is the real content of the theorem, and needs one more idea.
 
-**Step 2: nothing beats it in the spectral norm.** Let $\mathbf{M}$ have rank at most $k$. Its null space has dimension at least $n-k$, and $\operatorname{span}(\mathbf{v}_1,\dots,\mathbf{v}_{k+1})$ has dimension $k+1$. Two subspaces whose dimensions add up to more than $n$ must intersect, so there is a unit vector $\mathbf{x}$ in both. Writing $\mathbf{x}=\sum_{i\le k+1}c_i\mathbf{v}_i$ with $\sum_ic_i^2=1$:
+**Step 2: nothing beats it in the spectral norm.** Let $\mathbf{T}$ have rank at most $k$. Its null space has dimension at least $n-k$, and $\operatorname{span}(\mathbf{v}_1,\dots,\mathbf{v}_{k+1})$ has dimension $k+1$. Two subspaces whose dimensions add up to more than $n$ must intersect, so there is a unit vector $\mathbf{x}$ in both. Writing $\mathbf{x}=\sum_{i\le k+1}\beta_i\mathbf{v}_i$ with $\sum_i\beta_i^2=1$:
 
 $$
-\lVert\mathbf{A}-\mathbf{M}\rVert_2^2\ \ge\ \lVert(\mathbf{A}-\mathbf{M})\mathbf{x}\rVert^2=\lVert\mathbf{A}\mathbf{x}\rVert^2=\sum_{i\le k+1}\sigma_i^2c_i^2\ \ge\ \sigma_{k+1}^2.
+\lVert\mathbf{A}-\mathbf{T}\rVert_2^2\ \ge\ \lVert(\mathbf{A}-\mathbf{T})\mathbf{x}\rVert^2=\lVert\mathbf{A}\mathbf{x}\rVert^2=\sum_{i\le k+1}\sigma_i^2\beta_i^2\ \ge\ \sigma_{k+1}^2.
 $$
 
 $\mathbf{A}_k$ achieves this bound, so it is optimal in $\lVert\cdot\rVert_2$.
 
-**Step 3: nothing beats it in the Frobenius norm.** The same null-space argument proves **Weyl's inequality** for singular values, $\sigma_{i+j-1}(\mathbf{X}+\mathbf{Y})\le\sigma_i(\mathbf{X})+\sigma_j(\mathbf{Y})$. Apply it with $\mathbf{X}=\mathbf{A}-\mathbf{M}$, $\mathbf{Y}=\mathbf{M}$ and $j=k+1$, noting that $\sigma_{k+1}(\mathbf{M})=0$ because $\operatorname{rank}\mathbf{M}\le k$:
+**Step 3: nothing beats it in the Frobenius norm.** The same null-space argument proves **Weyl's inequality** for singular values, $\sigma_{i+j-1}(\mathbf{E}+\mathbf{F})\le\sigma_i(\mathbf{E})+\sigma_j(\mathbf{F})$. Apply it with $\mathbf{E}=\mathbf{A}-\mathbf{T}$, $\mathbf{F}=\mathbf{T}$ and $j=k+1$, noting that $\sigma_{k+1}(\mathbf{T})=0$ because $\operatorname{rank}\mathbf{T}\le k$:
 
 $$
 \begin{aligned}
-&\sigma_{i+k}(\mathbf{A})\le\sigma_i(\mathbf{A}-\mathbf{M})\quad\text{for all }i\\
-\Longrightarrow\quad&\lVert\mathbf{A}-\mathbf{M}\rVert_F^2=\sum_i\sigma_i(\mathbf{A}-\mathbf{M})^2\ \ge\ \sum_i\sigma_{i+k}(\mathbf{A})^2=\lVert\mathbf{A}-\mathbf{A}_k\rVert_F^2.\qquad\blacksquare
+&\sigma_{i+k}(\mathbf{A})\le\sigma_i(\mathbf{A}-\mathbf{T})\quad\text{for all }i\\
+\Longrightarrow\quad&\lVert\mathbf{A}-\mathbf{T}\rVert_F^2=\sum_i\sigma_i(\mathbf{A}-\mathbf{T})^2\ \ge\ \sum_i\sigma_{i+k}(\mathbf{A})^2=\lVert\mathbf{A}-\mathbf{A}_k\rVert_F^2.\qquad\blacksquare
 \end{aligned}
 $$
 
@@ -295,7 +295,7 @@ $$
 \mathbf{x}^+=\mathbf{A}^+\mathbf{b}\ \text{ is the least-squares solution with the smallest norm }\lVert\mathbf{x}\rVert.
 $$
 
-*Why.* In the SVD coordinates $\mathbf{y}=\mathbf{V}^\top\mathbf{x}$ and $\mathbf{c}=\mathbf{U}^\top\mathbf{b}$, orthogonal invariance turns the loss into $\sum_{i\le r}(\sigma_iy_i-c_i)^2+\sum_{i>r}c_i^2$. The first $r$ coordinates are forced, $y_i=c_i/\sigma_i$. The remaining $y_{r+1},\dots,y_n$ (the null-space directions) do not appear in the loss at all, and setting them to zero minimizes $\lVert\mathbf{x}\rVert=\lVert\mathbf{y}\rVert$. That choice is exactly $\mathbf{x}^+$, and it lies in the row space. When $\mathbf{A}$ has full column rank there is nothing to choose, and $\mathbf{A}^+=(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top$ recovers the [[Linear Models#Solving it: the normal equations|normal equations]].
+*Why.* In the SVD coordinates $\tilde{\mathbf{x}}=\mathbf{V}^\top\mathbf{x}$ and $\tilde{\mathbf{b}}=\mathbf{U}^\top\mathbf{b}$, orthogonal invariance turns the loss into $\sum_{i\le r}(\sigma_i\tilde x_i-\tilde b_i)^2+\sum_{i>r}\tilde b_i^2$. The first $r$ coordinates are forced, $\tilde x_i=\tilde b_i/\sigma_i$. The remaining $\tilde x_{r+1},\dots,\tilde x_n$ (the null-space directions) do not appear in the loss at all, and setting them to zero minimizes $\lVert\mathbf{x}\rVert=\lVert\tilde{\mathbf{x}}\rVert$. That choice is exactly $\mathbf{x}^+$, and it lies in the row space. When $\mathbf{A}$ has full column rank there is nothing to choose, and $\mathbf{A}^+=(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top$ recovers the [[Linear Models#Solving it: the normal equations|normal equations]].
 
 > [!example] Example: the rank-one matrix again
 > For $\mathbf{B}$ above, the reduced SVD has a single term, so
@@ -306,34 +306,34 @@ $$
 >
 > Take $\mathbf{b}=(9,9,9)$. Since $\mathbf{B}\mathbf{x}=(x_1+2x_2)\,\mathbf{c}$, the best we can do is the projection of $\mathbf{b}$ onto $\mathbf{c}=(1,2,2)$, which is $\tfrac{\mathbf{c}^\top\mathbf{b}}{\mathbf{c}^\top\mathbf{c}}\mathbf{c}=5\mathbf{c}=(5,10,10)$, with squared residual $\lVert(4,-1,-1)\rVert^2=18$. Every $\mathbf{x}$ on the line $x_1+2x_2=5$ achieves it. The pseudo-inverse gives $\mathbf{x}^+=\mathbf{B}^+\mathbf{b}=(1,2)$, the point of that line closest to the origin ($\lVert\mathbf{x}^+\rVert^2=5$), and indeed a multiple of the row-space direction $(1,2)$.
 
-In regression, $\mathbf{w}=\mathbf{X}^+\mathbf{y}$ is what `np.linalg.lstsq` returns for rank-deficient data. Ridge regression, $(\mathbf{X}^\top\mathbf{X}+\lambda\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}$, replaces each $1/\sigma_i$ by $\sigma_i/(\sigma_i^2+\lambda)$, which tends to the pseudo-inverse as $\lambda\to0$ and stays bounded when $\sigma_i$ is tiny; this is the stable cousin of truncating small singular values.
+In regression, $\mathbf{w}=\mathbf{X}^+\mathbf{y}$ is what `np.linalg.lstsq` returns for rank-deficient data. Ridge regression, $(\mathbf{X}^\top\mathbf{X}+\rho\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}$, replaces each $1/\sigma_i$ by $\sigma_i/(\sigma_i^2+\rho)$, which tends to the pseudo-inverse as $\rho\to0$ and stays bounded when $\sigma_i$ is tiny; this is the stable cousin of truncating small singular values.
 
 ### Randomized linear algebra (a glimpse)
 
 For a matrix with millions of rows, even $O(mn\min(m,n))$ is too slow. A surprising modern idea is to **sample**: a random sketch of a matrix often keeps the information we need, with error guarantees in expectation or with high probability.[^halko2011]
 
-**Sampling a matrix product.** Matrix multiplication is a sum of rank-one pieces, $\mathbf{A}\mathbf{B}=\sum_{k=1}^{n}\mathbf{a}_k\mathbf{b}_k^\top$ (column $k$ of $\mathbf{A}$ times row $k$ of $\mathbf{B}$). Pick $s$ indices $k_1,\dots,k_s$ independently with probabilities $p_k$, and rescale:
+**Sampling a matrix product.** Matrix multiplication is a sum of rank-one pieces, $\mathbf{A}\mathbf{B}=\sum_{t=1}^{n}\mathbf{a}_t\mathbf{b}_t^\top$ (column $t$ of $\mathbf{A}$ times row $t$ of $\mathbf{B}$). Pick $s$ indices $t_1,\dots,t_s$ independently with probabilities $p_t$, and rescale:
 
 $$
-\mathbf{A}\mathbf{B}\ \approx\ \frac1s\sum_{j=1}^{s}\frac{\mathbf{a}_{k_j}\mathbf{b}_{k_j}^\top}{p_{k_j}}=\mathbf{A}\mathbf{S}\mathbf{S}^\top\mathbf{B}.
+\mathbf{A}\mathbf{B}\ \approx\ \frac1s\sum_{j=1}^{s}\frac{\mathbf{a}_{t_j}\mathbf{b}_{t_j}^\top}{p_{t_j}}=\mathbf{A}\boldsymbol{\Pi}\boldsymbol{\Pi}^\top\mathbf{B}.
 $$
 
-Here $\mathbf{S}\in\mathbb{R}^{n\times s}$ has column $j$ equal to $\mathbf{e}_{k_j}/\sqrt{s\,p_{k_j}}$. Each term has expectation $\sum_kp_k\,\mathbf{a}_k\mathbf{b}_k^\top/p_k=\mathbf{A}\mathbf{B}$, so the estimate is **unbiased**; equivalently $\mathbb{E}[\mathbf{S}\mathbf{S}^\top]=\mathbf{I}$. Its mean squared error is
+Here $\boldsymbol{\Pi}\in\mathbb{R}^{n\times s}$ has column $j$ equal to $\mathbf{e}_{t_j}/\sqrt{s\,p_{t_j}}$. Each term has expectation $\sum_tp_t\,\mathbf{a}_t\mathbf{b}_t^\top/p_t=\mathbf{A}\mathbf{B}$, so the estimate is **unbiased**; equivalently $\mathbb{E}[\boldsymbol{\Pi}\boldsymbol{\Pi}^\top]=\mathbf{I}$. Its mean squared error is
 
 $$
-\mathbb{E}\lVert\mathbf{A}\mathbf{B}-\mathbf{A}\mathbf{S}\mathbf{S}^\top\mathbf{B}\rVert_F^2=\frac1s\Big(\sum_k\frac{\lVert\mathbf{a}_k\rVert^2\lVert\mathbf{b}_k\rVert^2}{p_k}-\lVert\mathbf{A}\mathbf{B}\rVert_F^2\Big),
+\mathbb{E}\lVert\mathbf{A}\mathbf{B}-\mathbf{A}\boldsymbol{\Pi}\boldsymbol{\Pi}^\top\mathbf{B}\rVert_F^2=\frac1s\Big(\sum_t\frac{\lVert\mathbf{a}_t\rVert^2\lVert\mathbf{b}_t\rVert^2}{p_t}-\lVert\mathbf{A}\mathbf{B}\rVert_F^2\Big),
 $$
 
-which falls like $1/s$ and is minimized by $p_k\propto\lVert\mathbf{a}_k\rVert\,\lVert\mathbf{b}_k\rVert$ (a Cauchy–Schwarz argument).[^drineas2006] For $\mathbf{A}\mathbf{A}^\top$ this is **norm-squared sampling**, $p_k\propto\lVert\mathbf{a}_k\rVert^2$: heavy columns matter more, so sample them more often. Uniform sampling can be terrible when a few columns dominate (Figure 6a). The same idea, with leverage scores instead of norms, drives the [[#CUR decomposition|CUR decomposition]] below.
+which falls like $1/s$ and is minimized by $p_t\propto\lVert\mathbf{a}_t\rVert\,\lVert\mathbf{b}_t\rVert$ (a Cauchy–Schwarz argument).[^drineas2006] For $\mathbf{A}\mathbf{A}^\top$ this is **norm-squared sampling**, $p_t\propto\lVert\mathbf{a}_t\rVert^2$: heavy columns matter more, so sample them more often. Uniform sampling can be terrible when a few columns dominate (Figure 6a). The same idea, with leverage scores instead of norms, drives the [[#CUR decomposition|CUR decomposition]] below.
 
 **Randomized SVD.** To approximate the top-$k$ singular triplets:
 
-1. draw a Gaussian test matrix $\boldsymbol{\Omega}\in\mathbb{R}^{n\times(k+p)}$, with a small oversampling $p$ such as 5 or 10;
+1. draw a Gaussian test matrix $\boldsymbol{\Omega}\in\mathbb{R}^{n\times(k+\ell)}$, with a small oversampling $\ell$ such as 5 or 10;
 2. form the sketch $\mathbf{Y}=\mathbf{A}\boldsymbol{\Omega}$, whose columns are random combinations of the columns of $\mathbf{A}$ and so concentrate in its dominant column space;
-3. orthonormalize, $\mathbf{Y}=\mathbf{Q}\mathbf{R}$, so that $\mathbf{Q}\mathbf{Q}^\top\mathbf{A}\approx\mathbf{A}$;
-4. compute the SVD of the small $(k+p)\times n$ matrix $\mathbf{Q}^\top\mathbf{A}=\hat{\mathbf{U}}\boldsymbol{\Sigma}\mathbf{V}^\top$, and set $\mathbf{U}=\mathbf{Q}\hat{\mathbf{U}}$.
+3. orthonormalize its columns into $\mathbf{Q}$ (a QR factorization), so that $\mathbf{Q}\mathbf{Q}^\top\mathbf{A}\approx\mathbf{A}$;
+4. compute the SVD of the small $(k+\ell)\times n$ matrix $\mathbf{Q}^\top\mathbf{A}=\hat{\mathbf{U}}\boldsymbol{\Sigma}\mathbf{V}^\top$, and set $\mathbf{U}=\mathbf{Q}\hat{\mathbf{U}}$.
 
-For $k,p\ge2$, Halko, Martinsson and Tropp prove that $\mathbb{E}\lVert\mathbf{A}-\mathbf{Q}\mathbf{Q}^\top\mathbf{A}\rVert_F\le\sqrt{1+k/(p-1)}\,\big(\sum_{i>k}\sigma_i^2\big)^{1/2}$: within a small factor of the Eckart–Young optimum.[^halko2011] When the singular values decay slowly, $q$ **power iterations** (sketching $(\mathbf{A}\mathbf{A}^\top)^q\mathbf{A}$ instead, re-orthonormalizing in between) sharpen the gap $\sigma_k/\sigma_{k+1}$ to its $(2q+1)$-th power, the same mechanism as [[Eigenvalues and Eigenvectors#Power iteration and the QR algorithm|power iteration]]. The cost is dominated by a few passes of matrix products with $\mathbf{A}$, which parallelize well; scikit-learn's `utils.extmath.randomized_svd` and `PCA(svd_solver="randomized")` use this algorithm.
+For $k,\ell\ge2$, Halko, Martinsson and Tropp prove that $\mathbb{E}\lVert\mathbf{A}-\mathbf{Q}\mathbf{Q}^\top\mathbf{A}\rVert_F\le\sqrt{1+k/(\ell-1)}\,\big(\sum_{i>k}\sigma_i^2\big)^{1/2}$: within a small factor of the Eckart–Young optimum.[^halko2011] When the singular values decay slowly, $q$ **power iterations** (sketching $(\mathbf{A}\mathbf{A}^\top)^q\mathbf{A}$ instead, re-orthonormalizing in between) sharpen the gap $\sigma_k/\sigma_{k+1}$ to its $(2q+1)$-th power, the same mechanism as [[Eigenvalues and Eigenvectors#Power iteration and the QR algorithm|power iteration]]. The cost is dominated by a few passes of matrix products with $\mathbf{A}$, which parallelize well; scikit-learn's `utils.extmath.randomized_svd` and `PCA(svd_solver="randomized")` use this algorithm.
 
 ![[Machine Learning/images/matrix-factorization-svd-randomized.svg]]
 *Figure 6: (a) estimating $\mathbf{A}\mathbf{A}^\top$ for a $40\times400$ matrix with very uneven column norms from $s$ sampled columns. Norm-squared sampling has relative error $0.21$ at $s=40$ and falls like $1/\sqrt s$; uniform sampling has error $1.64$, worse than the answer itself. (b) Randomized SVD of a $600\times400$ matrix with slowly decaying $\sigma_i=1/i$. Without power iterations ($q=0$) the error at $k=20$ is $1.67$ times the optimum $\sigma_{k+1}$; one or two power iterations bring it to $1.04$ and $1.01$.*
@@ -369,7 +369,7 @@ For $k,p\ge2$, Halko, Martinsson and Tropp prove that $\mathbb{E}\lVert\mathbf{A
 > U, s, Vt = randomized_svd(L, 8, rng=1)                              # nearly rank 8
 > print(np.allclose(s, np.linalg.svd(L, compute_uv=False)[:8], rtol=1e-6))  # True
 > ```
-> Tested against Monte Carlo averages (unbiasedness, $\mathbb{E}[\mathbf{S}\mathbf{S}^\top]=\mathbf{I}$, the exact MSE formula) and against `np.linalg.svd` on a matrix with known spectrum.
+> Tested against Monte Carlo averages (unbiasedness, $\mathbb{E}[\boldsymbol{\Pi}\boldsymbol{\Pi}^\top]=\mathbf{I}$, the exact MSE formula) and against `np.linalg.svd` on a matrix with known spectrum.
 
 ## Use case: recommender systems
 
@@ -383,22 +383,22 @@ Let $\mathbf{M}\in\mathbb{R}^{m\times n}$ hold ratings: $M_{ij}\in\{1,\dots,5\}$
 
 By Eckart–Young, $\mathbf{M}_k$ is the best rank-$k$ fit to the filled-in matrix. The $k$ latent dimensions often *resemble* genres, but they are learned, not literal genres.
 
-**Why that's only a baseline.** Filling missing entries with $0$ tells the SVD that every unseen movie was rated "average". With 85–99% missing entries, those fake zeros dominate the fit and shrink every prediction towards the middle. The midpoint $3$ is also not the mean rating, and users and movies have systematic **biases** (generous raters, universally loved films). The fix is to **fit the factorization only to observed entries** $\Omega$, with regularization and biases:[^koren2009]
+**Why that's only a baseline.** Filling missing entries with $0$ tells the SVD that every unseen movie was rated "average". With 85–99% missing entries, those fake zeros dominate the fit and shrink every prediction towards the middle. The midpoint $3$ is also not the mean rating, and users and movies have systematic **biases** (generous raters, universally loved films). The fix is to **fit the factorization only to observed entries** $\mathcal{O}$, with regularization and biases:[^koren2009]
 
 $$
 \begin{aligned}
-\min_{\mathbf{u},\mathbf{v},b,c}\ &\sum_{(i,j)\in\Omega}\Big(M_{ij}-\mu-b_i-c_j-\mathbf{u}_i^\top\mathbf{v}_j\Big)^2\\
-&+\lambda\Big(\sum_i\lVert\mathbf{u}_i\rVert^2+b_i^2+\sum_j\lVert\mathbf{v}_j\rVert^2+c_j^2\Big).
+\min_{\mathbf{p},\mathbf{h},b,d}\ &\sum_{(i,j)\in\mathcal{O}}\Big(M_{ij}-\mu-b_i-d_j-\mathbf{p}_i^\top\mathbf{h}_j\Big)^2\\
+&+\rho\Big(\sum_i\lVert\mathbf{p}_i\rVert^2+b_i^2+\sum_j\lVert\mathbf{h}_j\rVert^2+d_j^2\Big).
 \end{aligned}
 $$
 
-This is no longer an SVD, because the missing entries break the structure. But **alternating least squares** (ALS) solves it efficiently. With all movie factors fixed, each user's $(\mathbf{v}_j,c_j)$ is an independent [[Linear Models#MAP estimation and regularization|ridge regression]] on the movies that user rated, and vice versa. SGD over the observed entries is the other standard choice.
+This is no longer an SVD, because the missing entries break the structure. But **alternating least squares** (ALS) solves it efficiently. With all movie factors fixed, each user's $(\mathbf{h}_j,d_j)$ is an independent [[Linear Models#MAP estimation and regularization|ridge regression]] on the movies that user rated, and vice versa. SGD over the observed entries is the other standard choice.
 
 > [!example]- Code: one sweep of alternating least squares
 > ```python
 > import numpy as np
-> # assumes: R (m, n) observed ratings minus mu + b_i + c_j (anything where missing),
-> #          mask (m, n) True where observed, U (m, k) movie factors, V (n, k) user factors, lam > 0
+> # assumes: R (m, n) observed ratings minus mu + b_i + d_j (anything where missing),
+> #          mask (m, n) True where observed, U (m, k) movie factors p_i, V (n, k) user factors h_j, lam > 0
 > def ridge(F, r, lam):                               # argmin_x ||F x - r||^2 + lam ||x||^2
 >     return np.linalg.solve(F.T @ F + lam * np.eye(F.shape[1]), F.T @ r)
 >
@@ -458,7 +458,7 @@ where $\odot$ and the fractions act elementwise. The factors stay non-negative a
 SVD, and to a lesser extent NMF, produce basis vectors that are *combinations* of the data. A singular vector of a gene-expression matrix is a weighted mix of thousands of genes, and no biologist can measure "eigen-gene 3". **CUR** builds the approximation from **actual columns and rows** of $\mathbf{A}$:[^mahoney2009]
 
 $$
-\mathbf{A}\approx\mathbf{C}\,\mathbf{U}\,\mathbf{R},\qquad\mathbf{C}=\text{some columns of }\mathbf{A},\quad\mathbf{R}=\text{some rows of }\mathbf{A}.
+\mathbf{A}\approx\mathbf{C}\,\mathbf{U}_{\mathrm{CUR}}\,\mathbf{R},\qquad\mathbf{C}=\text{some columns of }\mathbf{A},\quad\mathbf{R}=\text{some rows of }\mathbf{A}.
 $$
 
 The factors $\mathbf{C}$ and $\mathbf{R}$ are then directly interpretable: these genes, these patients. They also keep properties of the data, such as sparsity and non-negativity.
@@ -473,10 +473,10 @@ $p_j$ is large when column $j$ contributes strongly to the dominant subspace. Ro
 
 > [!example] Algorithm: CUR with leverage-score sampling
 > 1. Compute the top-$k$ singular vectors, or approximate them, and the column and row leverage scores.
-> 2. Sample $c$ columns with probabilities $p_j$ to form $\mathbf{C}$, and $r$ rows with their leverage scores to form $\mathbf{R}$.
-> 3. Set $\mathbf{U}=\mathbf{C}^+\mathbf{A}\mathbf{R}^+$, the best middle matrix for these $\mathbf{C}$ and $\mathbf{R}$ in Frobenius norm.
+> 2. Sample $s$ columns with probabilities $p_j$ to form $\mathbf{C}$, and $s'$ rows with their leverage scores to form $\mathbf{R}$.
+> 3. Set $\mathbf{U}_{\mathrm{CUR}}=\mathbf{C}^+\mathbf{A}\mathbf{R}^+$, the best middle matrix for these $\mathbf{C}$ and $\mathbf{R}$ in Frobenius norm.
 
-With $c,r=O(k\log k/\varepsilon^2)$, this gives $\lVert\mathbf{A}-\mathbf{C}\mathbf{U}\mathbf{R}\rVert_F\le(2+\varepsilon)\lVert\mathbf{A}-\mathbf{A}_k\rVert_F$ with high probability. So we lose little accuracy compared with the optimal SVD, and gain interpretability.
+With $s,s'=O(k\log k/\varepsilon^2)$, this gives $\lVert\mathbf{A}-\mathbf{C}\mathbf{U}_{\mathrm{CUR}}\mathbf{R}\rVert_F\le(2+\varepsilon)\lVert\mathbf{A}-\mathbf{A}_k\rVert_F$ with high probability. So we lose little accuracy compared with the optimal SVD, and gain interpretability.
 
 ![[Machine Learning/images/matrix-factorization-cur.svg]]
 *Figure 9: CUR error relative to the best rank-8 approximation, as more columns and rows are sampled. Leverage-score sampling beats uniform sampling at every size, especially when few columns are sampled. With 30–40 columns, CUR matches or beats the rank-8 SVD (its rank can exceed 8), using actual data columns.*
@@ -508,7 +508,7 @@ $$
 \mathbf{w}_1=\arg\max_{\lVert\mathbf{w}\rVert=1}\sum_i\big(\mathbf{w}^\top\bar{\mathbf{x}}_i\big)^2=\arg\max_{\lVert\mathbf{w}\rVert=1}\lVert\bar{\mathbf{X}}\mathbf{w}\rVert^2=\arg\max_{\mathbf{w}}\frac{\mathbf{w}^\top\mathbf{S}\mathbf{w}}{\mathbf{w}^\top\mathbf{w}},
 $$
 
-where $\mathbf{S}=\frac{1}{N-1}\bar{\mathbf{X}}^\top\bar{\mathbf{X}}$ is the **sample covariance matrix**. The constant factor does not change the argmax. To solve it, use the [[Support Vector Machines#The Lagrangian dual|Lagrangian]]. Stationarity of $\mathbf{w}^\top\mathbf{S}\mathbf{w}-\lambda(\mathbf{w}^\top\mathbf{w}-1)$ gives
+where $\mathbf{S}=\frac{1}{N-1}\bar{\mathbf{X}}^\top\bar{\mathbf{X}}$ is the **sample covariance matrix**. The constant factor does not change the argmax. To solve it, use a [[Multivariable Calculus#Constrained optimization: Lagrange multipliers|Lagrange multiplier]]. Stationarity of $\mathbf{w}^\top\mathbf{S}\mathbf{w}-\lambda(\mathbf{w}^\top\mathbf{w}-1)$ gives
 
 $$
 \mathbf{S}\mathbf{w}=\lambda\mathbf{w}.
@@ -549,7 +549,7 @@ $$
 \end{aligned}
 $$
 
-**Minimizing the error is maximizing the variance.** For general $K$ the error is $\sum_i\lVert\bar{\mathbf{x}}_i\rVert^2-(N-1)\operatorname{Tr}(\mathbf{W}^\top\mathbf{S}\mathbf{W})$, which is minimized by the top-$K$ eigenvectors (Ky Fan's theorem). The two views agree, and PCA's subspace is the best $K$-dimensional linear approximation of the centred data.
+**Minimizing the error is maximizing the variance.** For general $K$ the error is $\sum_i\lVert\bar{\mathbf{x}}_i\rVert^2-(N-1)\operatorname{tr}(\mathbf{W}^\top\mathbf{S}\mathbf{W})$, which is minimized by the top-$K$ eigenvectors (Ky Fan's theorem). The two views agree, and PCA's subspace is the best $K$-dimensional linear approximation of the centred data.
 
 ### PCA through the SVD
 
@@ -593,44 +593,44 @@ In practice PCA is computed through the SVD rather than by forming $\mathbf{S}$.
 
 ## Autoencoders
 
-In PCA, the reduced representation $\mathbf{z}=\mathbf{W}^\top\bar{\mathbf{x}}$ is a linear function of the input, an **encoder**. Going back, $\hat{\mathbf{x}}=\mathbf{W}\mathbf{z}$, is a **decoder**. $\mathbf{W}$ is not square, so it has no inverse. But its pseudo-inverse is simply $\mathbf{W}^+=\mathbf{W}^\top$, because its columns are orthonormal. Generalize both maps to learnable functions: an encoder $f_\theta$ and a decoder $g_\phi$, with a narrow bottleneck $\mathbf{z}$ in between (Figure 12). Train them to reproduce the input:
+In PCA, the reduced representation $\mathbf{z}=\mathbf{W}^\top\bar{\mathbf{x}}$ is a linear function of the input, an **encoder**. Going back, $\hat{\mathbf{x}}=\mathbf{W}\mathbf{z}$, is a **decoder**. $\mathbf{W}$ is not square, so it has no inverse. But its pseudo-inverse is simply $\mathbf{W}^+=\mathbf{W}^\top$, because its columns are orthonormal. Generalize both maps to learnable functions: an encoder $f_\theta$ and a decoder $g_\psi$, with a narrow bottleneck $\mathbf{z}$ in between (Figure 12). Train them to reproduce the input:
 
 $$
-\min_{\theta,\phi}\ \sum_i\big\lVert g_\phi\big(f_\theta(\bar{\mathbf{x}}_i)\big)-\bar{\mathbf{x}}_i\big\rVert^2.
+\min_{\theta,\psi}\ \sum_i\big\lVert g_\psi\big(f_\theta(\bar{\mathbf{x}}_i)\big)-\bar{\mathbf{x}}_i\big\rVert^2.
 $$
 
-$\mathbf{z}_i=f_\theta(\bar{\mathbf{x}}_i)$ is the compressed, *latent* representation, and $\hat{\mathbf{x}}_i=g_\phi(\mathbf{z}_i)$ the reconstruction. With neural networks as $f_\theta$ and $g_\phi$, autoencoders learn non-linear representations. Undercomplete, denoising and sparse variants are common. Probabilistic versions, the variational autoencoders of a later lecture, turn this into a generative model.
+$\mathbf{z}_i=f_\theta(\bar{\mathbf{x}}_i)$ is the compressed, *latent* representation, and $\hat{\mathbf{x}}_i=g_\psi(\mathbf{z}_i)$ the reconstruction. With neural networks as $f_\theta$ and $g_\psi$, autoencoders learn non-linear representations. Undercomplete, denoising and sparse variants are common. Probabilistic versions, the [[Variational Autoencoders|variational autoencoders]] of a later lecture, turn this into a generative model.
 
 ![[Machine Learning/images/matrix-factorization-autoencoder.svg]]
 *Figure 12: an autoencoder squeezes the input through a $K$-dimensional bottleneck $\mathbf{z}$ and is trained so that the reconstruction matches the input.*
 
-**Linear autoencoders are PCA.** If $f_\theta$ and $g_\phi$ are linear and the loss is squared error, the optimal autoencoder spans **the same subspace as the top-$K$ principal components**.[^baldihornik1989] It need not be the individual components, nor orthonormal: any invertible $K\times K$ mixing of them is equally good. Non-linearity is what lets autoencoders go beyond PCA.
+**Linear autoencoders are PCA.** If $f_\theta$ and $g_\psi$ are linear and the loss is squared error, the optimal autoencoder spans **the same subspace as the top-$K$ principal components**.[^baldihornik1989] It need not be the individual components, nor orthonormal: any invertible $K\times K$ mixing of them is equally good. Non-linearity is what lets autoencoders go beyond PCA.
 
 ## Kernel PCA
 
-PCA finds linear structure, but we can again run it in a feature space $\phi(\mathbf{x})$ given only a [[Support Vector Machines#Kernels|kernel]] $\kappa(\mathbf{x},\mathbf{x}')=\phi(\mathbf{x})^\top\phi(\mathbf{x}')$. The kernel must satisfy Mercer's condition (symmetric, with PSD Gram matrices).[^scholkopf1998] Assume for now that the features are centred, $\sum_n\phi(\mathbf{x}_n)=\mathbf{0}$. The feature-space covariance and its eigenvectors are
+PCA finds linear structure, but we can again run it in a feature space $\phi(\mathbf{x})$ given only a [[Support Vector Machines#Kernels|kernel]] $\kappa(\mathbf{x},\mathbf{x}')=\phi(\mathbf{x})^\top\phi(\mathbf{x}')$. The kernel must satisfy Mercer's condition (symmetric, with PSD Gram matrices).[^scholkopf1998] Assume for now that the features are centred, $\sum_j\phi(\mathbf{x}_j)=\mathbf{0}$. The feature-space covariance and its eigenvectors are
 
 $$
-\mathbf{C}=\frac{1}{N-1}\sum_n\phi(\mathbf{x}_n)\phi(\mathbf{x}_n)^\top,\qquad\mathbf{C}\mathbf{v}_i=\lambda_i\mathbf{v}_i.
+\mathbf{S}_\phi=\frac{1}{N-1}\sum_j\phi(\mathbf{x}_j)\phi(\mathbf{x}_j)^\top,\qquad\mathbf{S}_\phi\mathbf{v}_i=\lambda_i\mathbf{v}_i.
 $$
 
-Can we find $\mathbf{v}_i$ and $\lambda_i$ without ever computing $\mathbf{C}$ or $\phi$? Yes. Rearranging the eigen-equation,
+Can we find $\mathbf{v}_i$ and $\lambda_i$ without ever computing $\mathbf{S}_\phi$ or $\phi$? Yes. Rearranging the eigen-equation,
 
 $$
-\mathbf{v}_i=\frac{1}{\lambda_i(N-1)}\sum_n\phi(\mathbf{x}_n)\big(\phi(\mathbf{x}_n)^\top\mathbf{v}_i\big)=\sum_n\alpha_{in}\,\phi(\mathbf{x}_n).
+\mathbf{v}_i=\frac{1}{\lambda_i(N-1)}\sum_j\phi(\mathbf{x}_j)\big(\phi(\mathbf{x}_j)^\top\mathbf{v}_i\big)=\sum_j\alpha_{ij}\,\phi(\mathbf{x}_j).
 $$
 
-So every $\mathbf{v}_i$ with $\lambda_i>0$ lies in the **span of the mapped data**, with coefficients $\boldsymbol{\alpha}_i\in\mathbb{R}^N$. Substitute back, take the inner product with $\phi(\mathbf{x}_l)$, and write $\mathbb{K}_{ln}=\kappa(\mathbf{x}_l,\mathbf{x}_n)$:
+So every $\mathbf{v}_i$ with $\lambda_i>0$ lies in the **span of the mapped data**, with coefficients $\boldsymbol{\alpha}_i\in\mathbb{R}^N$. Substitute back, take the inner product with $\phi(\mathbf{x}_l)$, and write $\mathbf{G}_{lj}=\kappa(\mathbf{x}_l,\mathbf{x}_j)$:
 
 $$
-\frac{1}{N-1}\mathbb{K}\mathbb{K}\boldsymbol{\alpha}_i=\lambda_i\mathbb{K}\boldsymbol{\alpha}_i\quad\Longleftarrow\quad\mathbb{K}\boldsymbol{\alpha}_i=\lambda_i(N-1)\boldsymbol{\alpha}_i.
+\frac{1}{N-1}\mathbf{G}\mathbf{G}\boldsymbol{\alpha}_i=\lambda_i\mathbf{G}\boldsymbol{\alpha}_i\quad\Longleftarrow\quad\mathbf{G}\boldsymbol{\alpha}_i=\lambda_i(N-1)\boldsymbol{\alpha}_i.
 $$
 
-Every solution of the right-hand equation solves the left one. The parts of $\boldsymbol{\alpha}_i$ in the null space of $\mathbb{K}$ don't change $\mathbf{v}_i$, so we may simply solve the $N\times N$ **eigenproblem of the Gram matrix**. Three practical steps complete the algorithm:
+Every solution of the right-hand equation solves the left one. The parts of $\boldsymbol{\alpha}_i$ in the null space of $\mathbf{G}$ don't change $\mathbf{v}_i$, so we may simply solve the $N\times N$ **eigenproblem of the Gram matrix**. Three practical steps complete the algorithm:
 
-1. **Centre in feature space.** The assumption $\sum_n\phi(\mathbf{x}_n)=\mathbf{0}$ is not free. Use the centred Gram matrix $\tilde{\mathbb{K}}=\mathbb{K}-\mathbf{1}_N\mathbb{K}-\mathbb{K}\mathbf{1}_N+\mathbf{1}_N\mathbb{K}\mathbf{1}_N$, where $\mathbf{1}_N$ is the $N\times N$ matrix with every entry $1/N$.
-2. **Normalize.** $\lVert\mathbf{v}_i\rVert=1$ requires $\boldsymbol{\alpha}_i^\top\tilde{\mathbb{K}}\boldsymbol{\alpha}_i=1$, so rescale each eigenvector of $\tilde{\mathbb{K}}$ by $1/\sqrt{\text{its eigenvalue}}$.
-3. **Project.** The $i$-th kernel principal component of a point $\mathbf{x}$ is $z_i(\mathbf{x})=\mathbf{v}_i^\top\phi(\mathbf{x})=\sum_n\alpha_{in}\,\kappa(\mathbf{x},\mathbf{x}_n)$. For new points, centre their kernel values consistently.
+1. **Centre in feature space.** The assumption $\sum_j\phi(\mathbf{x}_j)=\mathbf{0}$ is not free. Use the centred Gram matrix $\tilde{\mathbf{G}}=\mathbf{G}-\mathbf{1}_N\mathbf{G}-\mathbf{G}\mathbf{1}_N+\mathbf{1}_N\mathbf{G}\mathbf{1}_N$, where $\mathbf{1}_N$ is the $N\times N$ matrix with every entry $1/N$.
+2. **Normalize.** $\lVert\mathbf{v}_i\rVert=1$ requires $\boldsymbol{\alpha}_i^\top\tilde{\mathbf{G}}\boldsymbol{\alpha}_i=1$, so rescale each eigenvector of $\tilde{\mathbf{G}}$ by $1/\sqrt{\text{its eigenvalue}}$.
+3. **Project.** The $i$-th kernel principal component of a point $\mathbf{x}$ is $z_i(\mathbf{x})=\mathbf{v}_i^\top\phi(\mathbf{x})=\sum_j\alpha_{ij}\,\kappa(\mathbf{x},\mathbf{x}_j)$. For new points, centre their kernel values consistently.
 
 > [!example]- Code: kernel PCA from a Gram matrix
 > ```python
@@ -644,7 +644,7 @@ Every solution of the right-hand equation solves the left one. The parts of $\bo
 >     vals, vecs = np.linalg.eigh(Kc)                            # ascending eigenvalues
 >     vals, vecs = vals[::-1][:n_comp], vecs[:, ::-1][:, :n_comp]
 >     alphas = vecs / np.sqrt(vals)                              # 2. normalize: alpha^T Kc alpha = 1
->     return Kc @ alphas                                         # 3. project: sum_n alpha_in Kc[l, n]
+>     return Kc @ alphas                                         # 3. project: sum_j alpha_ij Kc[l, j]
 > ```
 > With a linear kernel, `Kmat = X @ X.T`, the scores equal ordinary PCA's up to the sign of each component.
 
@@ -664,8 +664,7 @@ The cost is that of the $N\times N$ eigenproblem, $O(N^3)$, and mapping componen
 
 ## Key takeaways
 
-- **Similar matrices** ($\mathbf{B}=\mathbf{M}^{-1}\mathbf{A}\mathbf{M}$) share eigenvalues. **Diagonalizable** means $n$ independent eigenvectors, not invertible. **Symmetric** matrices have $\mathbf{S}=\mathbf{Q}\boldsymbol{\Lambda}\mathbf{Q}^\top$ with an orthonormal $\mathbf{Q}$.
-- **Power iteration** finds the top eigenvector at rate $\lvert\lambda_2/\lambda_1\rvert^t$. The **QR algorithm** iterates similarity transforms to the Schur form.
+- **Symmetric** matrices have $\mathbf{S}=\mathbf{Q}\boldsymbol{\Lambda}\mathbf{Q}^\top$ with an orthonormal $\mathbf{Q}$, a sum of rank-1 layers (eigenvalues, diagonalization and power iteration are in [[Eigenvalues and Eigenvectors]]).
 - **SVD** $\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ exists for every matrix: rotate, scale, rotate. $\lVert\mathbf{A}\rVert_2=\sigma_1$, $\lVert\mathbf{A}\rVert_F^2=\sum\sigma_i^2$, and $\mathbf{A}^+=\mathbf{V}\boldsymbol{\Sigma}^+\mathbf{U}^\top$.
 - **Eckart–Young:** the truncated SVD is the best rank-$k$ approximation, with errors $\sigma_{k+1}$ and $\sqrt{\sum_{i>k}\sigma_i^2}$. Proving optimality needs the null-space (or Weyl) argument, not just the truncation error.
 - **Recommenders:** fit low-rank factors with biases **on observed entries only** (ALS = alternating ridge regressions). Filling the missing entries in first biases everything.
@@ -675,10 +674,10 @@ The cost is that of the $N\times N$ eigenproblem, $O(N^3)$, and mapping componen
 
 ## Where this shows up next
 
-- [[Linear Models]]: least squares, the pseudo-inverse, and ridge regression (which shrinks along principal directions by $\sigma_i^2/(\sigma_i^2+\lambda)$).
-- [[Discriminant Analysis]]: Fisher's discriminant, the supervised counterpart of PCA.
-- [[Clustering and Expectation Maximization]]: spectral clustering (Laplacian eigenvectors) and kernel K-Means. Probabilistic PCA is a linear-Gaussian latent-variable model fitted with EM.
+- [[Clustering and Expectation Maximization]], the next lecture: spectral clustering (Laplacian eigenvectors) and kernel K-Means. Probabilistic PCA is a linear-Gaussian latent-variable model fitted with EM.
+- [[Graph Representation Learning]]: node embeddings as low-rank factorizations of a proximity matrix, and Laplacian eigenmaps on graphs.
 - [[Variational Autoencoders]]: probabilistic autoencoders built on the ELBO.
+- Back in [[Linear Models]] and [[Discriminant Analysis]]: least squares, the pseudo-inverse and ridge regression (which shrinks along principal directions by $\sigma_i^2/(\sigma_i^2+\rho)$), and Fisher's discriminant, the supervised counterpart of PCA.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

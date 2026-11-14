@@ -13,7 +13,7 @@ next: "[[Probability Basics]]"
 >
 > **Series:** this is part 8 of 8, the closing lecture. [[Multivariable Calculus]] → [[Column Space and Rank]] → [[Elimination and the Nullspace]] → [[The Four Fundamental Subspaces]] → [[Orthogonality and Least Squares]] → [[Eigenvalues and Eigenvectors]] → [[First-Order Optimization]] → **Five Factorizations of a Matrix**.
 >
-> **Notation:** in this lecture $\mathbf{X}$ is the **eigenvector matrix** in $\mathbf{A}=\mathbf{X}\boldsymbol{\Lambda}\mathbf{X}^{-1}$, as in Strang's books. Elsewhere in the series $\mathbf{X}\in\mathbb{R}^{N\times D}$ is the data matrix; when both appear below, the data matrix is written out as such.
+> **Notation:** in this lecture $\mathbf{X}$ is the **eigenvector matrix** in $\mathbf{A}=\mathbf{X}\boldsymbol{\Lambda}\mathbf{X}^{-1}$, as in Strang's books, not the data matrix $\mathbf{X}\in\mathbb{R}^{N\times D}$ of the rest of the series.
 >
 > **TL;DR:**
 > - A product of matrices is a **sum of rank-one pieces**, column times row. Every factorization is a way of splitting a matrix into simple pieces.
@@ -36,7 +36,7 @@ $$
 where $\mathbf{a}_k$ is column $k$ of $\mathbf{A}$ and $\mathbf{b}_k^\top$ is row $k$ of $\mathbf{B}$. The proof is one line: entry $(i,j)$ of the right-hand side is $\sum_ka_{ik}b_{kj}$, which is entry $(i,j)$ of $\mathbf{A}\mathbf{B}$. Each $\mathbf{a}_k\mathbf{b}_k^\top$ is a **rank-one** matrix: every column is a multiple of $\mathbf{a}_k$ and every row a multiple of $\mathbf{b}_k^\top$. This is the fourth of the [[Column Space and Rank#Matrix multiplication four ways|four ways to multiply matrices]], and it is the one that makes factorizations readable.
 
 > [!tip] Intuition: a factorization is a recipe of layers
-> If $\mathbf{A}=\mathbf{F}\mathbf{G}$ with $\mathbf{F}$ having $r$ columns, then $\mathbf{A}$ is a stack of $r$ rank-one layers, $\mathbf{f}_1\mathbf{g}_1^\top+\cdots+\mathbf{f}_r\mathbf{g}_r^\top$. The factorizations below differ in what they demand of the layers: built from actual columns (CR), peeled off by elimination (LU), built on orthonormal columns (QR), orthonormal on both sides and sorted by importance (SVD).
+> If $\mathbf{A}$ has $r$ columns, then the product $\mathbf{A}\mathbf{B}$ is a stack of $r$ rank-one layers, $\mathbf{a}_1\mathbf{b}_1^\top+\cdots+\mathbf{a}_r\mathbf{b}_r^\top$. The factorizations below differ in what they demand of the layers: built from actual columns (CR), peeled off by elimination (LU), built on orthonormal columns (QR), orthonormal on both sides and sorted by importance (SVD).
 
 **Example.** The matrix below has rank 2: its second column is twice its first, and its first and third columns are independent. With $\mathbf{C}$ holding columns 1 and 3, and $\mathbf{R}$ saying how to rebuild every column from them,
 
@@ -86,10 +86,10 @@ $$
 \begin{bmatrix}2&1&1\\4&3&3\\2&3&5\end{bmatrix}=\underbrace{\begin{bmatrix}1&0&0\\2&1&0\\1&2&1\end{bmatrix}}_{\mathbf{L}}\underbrace{\begin{bmatrix}2&1&1\\0&1&1\\0&0&2\end{bmatrix}}_{\mathbf{U}}.
 $$
 
-The pivots are $2,1,2$, so $\det\mathbf{A}=4$. To solve $\mathbf{A}\mathbf{x}=(4,10,10)$, first solve $\mathbf{L}\mathbf{c}=\mathbf{b}$ forwards: $c_1=4$, $c_2=10-2\cdot4=2$, $c_3=10-4-2\cdot2=2$. Then solve $\mathbf{U}\mathbf{x}=\mathbf{c}$ backwards: $x_3=2/2=1$, $x_2=2-1=1$, $x_1=(4-1-1)/2=1$.
+The pivots are $2,1,2$, so $\det\mathbf{A}=4$. To solve $\mathbf{A}\mathbf{x}=(4,10,10)$, first solve $\mathbf{L}\mathbf{y}=\mathbf{b}$ forwards: $y_1=4$, $y_2=10-2\cdot4=2$, $y_3=10-4-2\cdot2=2$. Then solve $\mathbf{U}\mathbf{x}=\mathbf{y}$ backwards: $x_3=2/2=1$, $x_2=2-1=1$, $x_1=(4-1-1)/2=1$.
 
 - **Symmetric positive definite case:** $\mathbf{S}=\mathbf{L}\mathbf{L}^\top$ (**Cholesky**), at half the cost, about $\tfrac13n^3$. It succeeds exactly when $\mathbf{S}$ is positive definite, which makes it the standard test for definiteness.
-- **Used for:** solving linear systems. Exact policy evaluation in RL solves $(\mathbf{I}-\gamma\mathbf{P}^\pi)\mathbf{v}=\mathbf{r}^\pi$ ([[Introduction to Reinforcement Learning#Matrix form and closed-form policy evaluation|matrix form of the Bellman equation]]); Newton's method solves a Hessian system at every step. Cholesky samples a [[Joint Distributions#The multivariate Gaussian|multivariate Gaussian]] as $\boldsymbol{\mu}+\mathbf{L}\mathbf{z}$ and gives $\log\det\boldsymbol{\Sigma}=2\sum_i\log L_{ii}$ for Gaussian likelihoods and Gaussian processes.
+- **Used for:** solving linear systems. Exact policy evaluation in RL solves $(\mathbf{I}-\gamma\mathbf{P}^\pi)\mathbf{v}=\mathbf{r}^\pi$ ([[Introduction to Reinforcement Learning#Matrix form and closed-form policy evaluation|matrix form of the Bellman equation]]); Newton's method solves a Hessian system at every step. Cholesky samples a [[Joint Distributions#The multivariate Gaussian|multivariate Gaussian]] as $\boldsymbol{\mu}+\mathbf{L}\boldsymbol{\epsilon}$ with $\boldsymbol{\epsilon}\sim\mathcal{N}(\mathbf{0},\mathbf{I})$, and gives the log-determinant of the covariance matrix as $2\sum_i\log L_{ii}$ for Gaussian likelihoods and Gaussian processes.
 - **Full treatment:** [[Elimination and the Nullspace#Elimination and A = LU]].
 
 ### A = QR: orthogonalization
@@ -122,7 +122,7 @@ Each $\mathbf{q}_i\mathbf{q}_i^\top$ is the projection onto one axis, so $\mathb
 
 ### A = XΛX⁻¹: diagonalization
 
-- **Reveals:** the directions $\mathbf{x}_i$ that $\mathbf{A}$ only scales, and by how much. Powers become trivial: $\mathbf{A}^k=\mathbf{X}\boldsymbol{\Lambda}^k\mathbf{X}^{-1}$, so the long-run behaviour of $\mathbf{x}_{t+1}=\mathbf{A}\mathbf{x}_t$ is governed by the largest $\lvert\lambda_i\rvert$.
+- **Reveals:** the directions $\mathbf{x}_i$ that $\mathbf{A}$ only scales, and by how much. Powers become trivial: $\mathbf{A}^k=\mathbf{X}\boldsymbol{\Lambda}^k\mathbf{X}^{-1}$, so the long-run behaviour of $\mathbf{z}_{t+1}=\mathbf{A}\mathbf{z}_t$ is governed by the largest $\lvert\lambda_i\rvert$.
 - **Computed by:** reduction to Hessenberg form, then the shifted QR algorithm, which converges to the triangular Schur form. Cost $O(n^3)$, with a larger constant than the symmetric case.
 - **Example:** $\mathbf{A}=\begin{bmatrix}4&1\\2&3\end{bmatrix}$ has trace $7$ and determinant $10$, so $\lambda=5$ and $2$, with eigenvectors $(1,1)$ and $(1,-2)$. Then
 
@@ -138,15 +138,15 @@ $$
 
 For $k=2$ this gives $\begin{bmatrix}18&7\\14&11\end{bmatrix}$, which is $\mathbf{A}^2$ multiplied out. For large $k$ the first layer wins by a factor $(5/2)^k$: repeated application aligns everything with the top eigenvector, which is power iteration.
 
-- **Weaknesses:** not every matrix has $n$ independent eigenvectors ($\begin{bmatrix}1&1\\0&1\end{bmatrix}$ does not), eigenvalues of a real matrix can be complex (rotations), and even when $\mathbf{X}$ exists it can be badly conditioned. Numerical software therefore prefers the Schur form $\mathbf{A}=\mathbf{Q}\mathbf{T}\mathbf{Q}^\top$, with orthogonal $\mathbf{Q}$ and triangular $\mathbf{T}$.
-- **Used for:** Markov chains, where the stationary distribution is the eigenvector for $\lambda=1$ and the second eigenvalue sets the [[Markov Chains#Aside: mixing and the spectral gap|mixing speed]]; linear dynamical systems; the analysis of gradient descent on a quadratic, where the error evolves as $\mathbf{e}_{t+1}=(\mathbf{I}-\alpha\mathbf{H})\mathbf{e}_t$ ([[First-Order Optimization]]); and discounted RL, where $(\mathbf{I}-\gamma\mathbf{P})^{-1}=\sum_t\gamma^t\mathbf{P}^t$ converges because every eigenvalue of $\gamma\mathbf{P}$ has modulus at most $\gamma<1$.
+- **Weaknesses:** not every matrix has $n$ independent eigenvectors ($\begin{bmatrix}1&1\\0&1\end{bmatrix}$ does not), eigenvalues of a real matrix can be complex (rotations), and even when $\mathbf{X}$ exists it can be badly conditioned. Numerical software therefore prefers the Schur form $\mathbf{A}=\mathbf{Q}\mathbf{T}\mathbf{Q}^*$, with unitary $\mathbf{Q}$ and triangular $\mathbf{T}$ (complex entries allowed; a real orthogonal factor only reaches a block-triangular $\mathbf{T}$).
+- **Used for:** Markov chains, where the stationary distribution is the eigenvector for $\lambda=1$ and the second eigenvalue sets the [[Markov Chains#Aside: mixing and the spectral gap|mixing speed]]; linear dynamical systems; the analysis of gradient descent on a quadratic, where the error evolves as $\mathbf{e}_{t+1}=(\mathbf{I}-\alpha\mathbf{A})\mathbf{e}_t$ for the Hessian $\mathbf{A}$ ([[First-Order Optimization#Gradient descent on a quadratic|First-Order Optimization]]); and discounted RL, where $(\mathbf{I}-\gamma\mathbf{P}^\pi)^{-1}=\sum_t\gamma^t(\mathbf{P}^\pi)^t$ converges because every eigenvalue of $\gamma\mathbf{P}^\pi$ has modulus at most $\gamma<1$.
 - **Full treatment:** [[Eigenvalues and Eigenvectors#Diagonalization A = XΛX⁻¹]].
 
 ### A = UΣVᵀ: the singular value decomposition
 
 - **Reveals:** for **any** matrix, square or not, orthonormal bases of all four fundamental subspaces, the rank (the number of nonzero $\sigma_i$), the norm $\lVert\mathbf{A}\rVert_2=\sigma_1$, and the condition number $\sigma_1/\sigma_n$. Geometrically: rotate, stretch, rotate.
 - **Computed by:** Golub–Kahan bidiagonalization followed by an iterative step; never by forming $\mathbf{A}^\top\mathbf{A}$. Cost $O(mn\min(m,n))$; randomized algorithms approximate the top $k$ triplets much faster.
-- **Used for:** PCA (the right singular vectors of the centred data matrix), the best low-rank approximation (Eckart–Young), the pseudo-inverse and minimum-norm least squares, recommender systems, and diagnosing conditioning. In deep learning, LoRA fine-tunes a large model by adding a low-rank update $\Delta\mathbf{W}=\mathbf{B}\mathbf{A}$ to each weight matrix,[^hu2022] and spectral normalization divides a layer's weights by their largest singular value to control its Lipschitz constant, as in the critic of a [[Generative Adversarial Networks|GAN]].[^miyato2018]
+- **Used for:** PCA (the right singular vectors of the centred data matrix), the best low-rank approximation (Eckart–Young), the pseudo-inverse and minimum-norm least squares, recommender systems, and diagnosing conditioning. In deep learning, LoRA fine-tunes a large model by adding to each weight matrix a low-rank update $\Delta\mathbf{W}$, the product of two thin factors,[^hu2022] and spectral normalization divides a layer's weights by their largest singular value to control its Lipschitz constant, as in the critic of a [[Generative Adversarial Networks|GAN]].[^miyato2018]
 - **Full treatment:** [[Matrix Factorization and Dimensionality Reduction#Singular value decomposition (SVD)]], including a $2\times2$ example by hand, the Eckart–Young theorem with proof and image compression.
 
 ### All six on one matrix
@@ -195,7 +195,7 @@ The LU pivots, the diagonal of $\mathbf{R}$, the eigenvalues and the singular va
 | Least squares, rank-deficient or ill-conditioned | SVD | minimum-norm solution $\mathbf{A}^+\mathbf{b}$; drop tiny $\sigma_i$ | |
 | Powers $\mathbf{A}^k$, dynamics, Markov chains | $\mathbf{X}\boldsymbol{\Lambda}\mathbf{X}^{-1}$, or $\mathbf{Q}\boldsymbol{\Lambda}\mathbf{Q}^\top$ if symmetric | $\boldsymbol{\Lambda}^k$ is trivial; the top $\lvert\lambda\rvert$ rules | multiplying out $k$ times |
 | Curvature, convexity, definiteness | $\mathbf{Q}\boldsymbol{\Lambda}\mathbf{Q}^\top$ (or try Cholesky) | signs of eigenvalues | |
-| PCA, low-rank approximation, compression | SVD (randomized for huge matrices) | Eckart–Young optimality | eigenvalues of $\mathbf{X}^\top\mathbf{X}$ (squares $\kappa$) |
+| PCA, low-rank approximation, compression | SVD (randomized for huge matrices) | Eckart–Young optimality | eigenvalues of $\mathbf{A}^\top\mathbf{A}$ (squares $\kappa$) |
 | Rank and conditioning | SVD | numerical rank = number of $\sigma_i$ above a tolerance; $\kappa=\sigma_1/\sigma_n$ | rank from elimination in floating point |
 | Interpretable basis of real columns | $\mathbf{C}\mathbf{R}$ or CUR | keeps actual columns and rows | |
 
@@ -203,19 +203,19 @@ Two rules of thumb summarize the table. **Triangular factors are cheap, orthogon
 
 ## Block elimination and the CR connection
 
-Strang and Moler noticed that elimination, written in blocks, produces $\mathbf{A}=\mathbf{C}\mathbf{R}$ directly and explains why it works.[^strangmoler2022] Suppose $\mathbf{A}$ has rank $r$. Reorder rows and columns (by permutation matrices $\mathbf{P}_r$ and $\mathbf{P}_c$) so that an invertible $r\times r$ submatrix $\mathbf{W}$ sits in the top-left corner:
+Strang and Moler noticed that elimination, written in blocks, produces $\mathbf{A}=\mathbf{C}\mathbf{R}$ directly and explains why it works.[^strangmoler2022] Suppose $\mathbf{A}$ has rank $r$. Reorder rows and columns (by permutation matrices $\mathbf{P}_r$ and $\mathbf{P}_c$) so that an invertible $r\times r$ submatrix $\mathbf{G}$ sits in the top-left corner:
 
 $$
-\mathbf{P}_r\mathbf{A}\mathbf{P}_c=\begin{bmatrix}\mathbf{W}&\mathbf{H}\\\mathbf{J}&\mathbf{K}\end{bmatrix}.
+\mathbf{P}_r\mathbf{A}\mathbf{P}_c=\begin{bmatrix}\mathbf{G}&\mathbf{H}\\\mathbf{J}&\mathbf{K}\end{bmatrix}.
 $$
 
-**Claim: $\mathbf{K}=\mathbf{J}\mathbf{W}^{-1}\mathbf{H}$.** The first $r$ columns are independent (their top block $\mathbf{W}$ is invertible) and the rank is $r$, so the remaining columns are combinations of them: $\begin{bmatrix}\mathbf{H}\\\mathbf{K}\end{bmatrix}=\begin{bmatrix}\mathbf{W}\\\mathbf{J}\end{bmatrix}\mathbf{M}$ for some $\mathbf{M}$. The top block says $\mathbf{H}=\mathbf{W}\mathbf{M}$, so $\mathbf{M}=\mathbf{W}^{-1}\mathbf{H}$, and the bottom block gives $\mathbf{K}=\mathbf{J}\mathbf{M}=\mathbf{J}\mathbf{W}^{-1}\mathbf{H}$. Therefore
+**Claim: $\mathbf{K}=\mathbf{J}\mathbf{G}^{-1}\mathbf{H}$.** The first $r$ columns are independent (their top block $\mathbf{G}$ is invertible) and the rank is $r$, so the remaining columns are combinations of them: $\begin{bmatrix}\mathbf{H}\\\mathbf{K}\end{bmatrix}=\begin{bmatrix}\mathbf{G}\\\mathbf{J}\end{bmatrix}\mathbf{F}$ for some $\mathbf{F}$. The top block says $\mathbf{H}=\mathbf{G}\mathbf{F}$, so $\mathbf{F}=\mathbf{G}^{-1}\mathbf{H}$, and the bottom block gives $\mathbf{K}=\mathbf{J}\mathbf{F}=\mathbf{J}\mathbf{G}^{-1}\mathbf{H}$. Therefore
 
 $$
-\mathbf{P}_r\mathbf{A}\mathbf{P}_c=\underbrace{\begin{bmatrix}\mathbf{W}\\\mathbf{J}\end{bmatrix}}_{\mathbf{C}}\underbrace{\begin{bmatrix}\mathbf{I}&\mathbf{W}^{-1}\mathbf{H}\end{bmatrix}}_{\mathbf{R}}=\begin{bmatrix}\mathbf{W}\\\mathbf{J}\end{bmatrix}\mathbf{W}^{-1}\begin{bmatrix}\mathbf{W}&\mathbf{H}\end{bmatrix}.
+\mathbf{P}_r\mathbf{A}\mathbf{P}_c=\underbrace{\begin{bmatrix}\mathbf{G}\\\mathbf{J}\end{bmatrix}}_{\mathbf{C}}\underbrace{\begin{bmatrix}\mathbf{I}&\mathbf{G}^{-1}\mathbf{H}\end{bmatrix}}_{\mathbf{R}}=\begin{bmatrix}\mathbf{G}\\\mathbf{J}\end{bmatrix}\mathbf{G}^{-1}\begin{bmatrix}\mathbf{G}&\mathbf{H}\end{bmatrix}.
 $$
 
-The first form is $\mathbf{C}\mathbf{R}$: $\mathbf{C}$ holds $r$ actual columns, and $\mathbf{R}$ contains the identity. The second form uses $r$ actual columns **and** $r$ actual rows, glued by $\mathbf{W}^{-1}$; it is the exact, noise-free version of the CUR decomposition. Elimination computes $\mathbf{R}$ by row-reducing the top block row: $\begin{bmatrix}\mathbf{W}&\mathbf{H}\end{bmatrix}\to\begin{bmatrix}\mathbf{I}&\mathbf{W}^{-1}\mathbf{H}\end{bmatrix}$. That is why $\operatorname{rref}(\mathbf{A})$ has the form $\begin{bmatrix}\mathbf{I}&\mathbf{F}\\\mathbf{0}&\mathbf{0}\end{bmatrix}\mathbf{P}$, with $\mathbf{F}=\mathbf{W}^{-1}\mathbf{H}$ ([[Elimination and the Nullspace#Reduced row echelon form|reduced row echelon form]]).
+The first form is $\mathbf{C}\mathbf{R}$: $\mathbf{C}$ holds $r$ actual columns, and $\mathbf{R}$ contains the identity. The second form uses $r$ actual columns **and** $r$ actual rows, glued by $\mathbf{G}^{-1}$; it is the exact, noise-free version of the CUR decomposition. Elimination computes $\mathbf{R}$ by row-reducing the top block row: $\begin{bmatrix}\mathbf{G}&\mathbf{H}\end{bmatrix}\to\begin{bmatrix}\mathbf{I}&\mathbf{G}^{-1}\mathbf{H}\end{bmatrix}$. That is why $\operatorname{rref}(\mathbf{A})$ has the form $\begin{bmatrix}\mathbf{I}&\mathbf{F}\\\mathbf{0}&\mathbf{0}\end{bmatrix}\mathbf{P}$, with $\mathbf{F}=\mathbf{G}^{-1}\mathbf{H}$ ([[Elimination and the Nullspace#Reduced row echelon form|reduced row echelon form]]).
 
 > [!example] Example: block elimination by hand
 > Take the rank-2 matrix of Figure 1 and swap its last two columns, so that the independent columns 1 and 3 come first:
@@ -227,10 +227,10 @@ The first form is $\mathbf{C}\mathbf{R}$: $\mathbf{C}$ holds $r$ actual columns,
 > so no row exchange is needed ($\mathbf{P}_r=\mathbf{I}$) and the blocks are
 >
 > $$
-> \mathbf{W}=\begin{bmatrix}1&3\\2&7\end{bmatrix},\quad\mathbf{H}=\begin{bmatrix}2\\4\end{bmatrix},\quad\mathbf{J}=\begin{bmatrix}1&4\end{bmatrix},\quad\mathbf{K}=\begin{bmatrix}2\end{bmatrix}.
+> \mathbf{G}=\begin{bmatrix}1&3\\2&7\end{bmatrix},\quad\mathbf{H}=\begin{bmatrix}2\\4\end{bmatrix},\quad\mathbf{J}=\begin{bmatrix}1&4\end{bmatrix},\quad\mathbf{K}=\begin{bmatrix}2\end{bmatrix}.
 > $$
 >
-> $\det\mathbf{W}=1$, so $\mathbf{W}^{-1}=\begin{bmatrix}7&-3\\-2&1\end{bmatrix}$ and $\mathbf{W}^{-1}\mathbf{H}=(14-12,\,-4+4)=(2,0)$. The claim checks out: $\mathbf{J}\mathbf{W}^{-1}\mathbf{H}=1\cdot2+4\cdot0=2=\mathbf{K}$. So $\mathbf{R}=\begin{bmatrix}1&0&2\\0&1&0\end{bmatrix}$ in the swapped column order. Swapping the columns back gives $\begin{bmatrix}1&2&0\\0&0&1\end{bmatrix}$, the $\mathbf{R}$ of Figure 1.
+> $\det\mathbf{G}=1$, so $\mathbf{G}^{-1}=\begin{bmatrix}7&-3\\-2&1\end{bmatrix}$ and $\mathbf{G}^{-1}\mathbf{H}=(14-12,\,-4+4)=(2,0)$. The claim checks out: $\mathbf{J}\mathbf{G}^{-1}\mathbf{H}=1\cdot2+4\cdot0=2=\mathbf{K}$. So $\mathbf{R}=\begin{bmatrix}1&0&2\\0&1&0\end{bmatrix}$ in the swapped column order. Swapping the columns back gives $\begin{bmatrix}1&2&0\\0&0&1\end{bmatrix}$, the $\mathbf{R}$ of Figure 1.
 
 ## From linear algebra to deep learning
 
@@ -244,10 +244,10 @@ a composition of affine maps $\mathbf{x}\mapsto\mathbf{W}\mathbf{x}+\mathbf{b}$ 
 
 **Without the nonlinearity, depth buys nothing.** $\mathbf{W}_L\cdots\mathbf{W}_1$ is a single matrix, and its rank is at most the narrowest layer width. A deep *linear* network is just a matrix factorization; trained with squared loss through a bottleneck it learns the same subspace as the truncated SVD, which is the [[Matrix Factorization and Dimensionality Reduction#Autoencoders|linear autoencoder]] result.
 
-**With ReLUs, the network is piecewise linear.** Each ReLU switches a unit on or off, so the input space is cut into regions, and on each region $f$ is one affine map. In one dimension (Figure 3), $f(x)=\sum_ja_j\,\mathrm{ReLU}(w_jx+b_j)+c$ has a kink at each $x=-b_j/w_j$. With enough units such pieces approximate any continuous function on a bounded set, which is the [[Neural Networks#Universal approximation|universal approximation theorem]].
+**With ReLUs, the network is piecewise linear.** Each ReLU switches a unit on or off, so the input space is cut into regions, and on each region $f$ is one affine map. In one dimension (Figure 3), $f(x)=\sum_j\beta_j\,\mathrm{ReLU}(w_jx+b_j)+\beta_0$ has a kink at each $x=-b_j/w_j$. With enough units such pieces approximate any continuous function on a bounded set, which is the [[Neural Networks#Universal approximation|universal approximation theorem]].
 
 ![[Probability and Linear Algebra/images/five-factorizations-of-a-matrix-relu-network.svg]]
-*Figure 3. A network with one hidden layer of four ReLU units. (a) Each unit contributes a hinge, flat on one side of $x=-b_j/w_j$ and linear on the other. (b) Their sum (plus a constant) is continuous and piecewise linear, with kinks at $x=-1,0,1,2$. Here $\mathbf{w}=(1,-1,1,1)$, $\mathbf{b}=(1,0,-1,-2)$, $\mathbf{a}=(1,1.5,-2,1.5)$ and $c=-0.5$.*
+*Figure 3. A network with one hidden layer of four ReLU units. (a) Each unit contributes a hinge, flat on one side of $x=-b_j/w_j$ and linear on the other. (b) Their sum (plus a constant) is continuous and piecewise linear, with kinks at $x=-1,0,1,2$. Here $\mathbf{w}=(1,-1,1,1)$, $\mathbf{b}=(1,0,-1,-2)$, $\boldsymbol{\beta}=(1,1.5,-2,1.5)$ and $\beta_0=-0.5$.*
 
 **Training uses gradients, not factorizations.** The weights are fitted by minimizing an average loss over the training data. For a linear model that problem has a closed form through QR or the SVD ([[Linear Models]]). For a network it does not, and even Newton's method is out of reach: with $p=10^9$ parameters, the Hessian has $10^{18}$ entries, and solving with it costs $O(p^3)$. The gradient, by contrast, costs about as much as evaluating the network, thanks to backpropagation: the chain rule as a product of Jacobians, evaluated from the output backwards ([[Neural Networks#Backpropagation]]). So networks are trained by [[First-Order Optimization#Stochastic gradient descent|stochastic gradient descent]] on mini-batches and its [[First-Order Optimization#Momentum and adaptive methods|momentum and adaptive variants]]. The same holds for the policy networks of [[Policy Gradients]], which follow a sampled estimate of the gradient of the expected return.
 
@@ -264,7 +264,7 @@ Linear algebra does not disappear; it moves into the analysis and the design.
 - $\mathbf{Q}\boldsymbol{\Lambda}\mathbf{Q}^\top$ gives the principal axes of a symmetric matrix; $\mathbf{X}\boldsymbol{\Lambda}\mathbf{X}^{-1}$ makes powers and dynamics transparent but can fail or be ill-conditioned; $\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ exists for every matrix and gives the four subspaces, the norm, the condition number and the best low-rank approximation.
 - Eigenvalues and singular values agree only for symmetric positive semi-definite matrices. Use eigenvalues for repeated application, singular values for a single application.
 - Factor, don't invert. Triangular factors are cheap; orthogonal factors are safe.
-- Block elimination proves $\mathbf{K}=\mathbf{J}\mathbf{W}^{-1}\mathbf{H}$ for a rank-$r$ matrix, giving $\mathbf{A}=\mathbf{C}\mathbf{R}$ and an exact column–row (CUR) form.
+- Block elimination proves $\mathbf{K}=\mathbf{J}\mathbf{G}^{-1}\mathbf{H}$ for a rank-$r$ matrix, giving $\mathbf{A}=\mathbf{C}\mathbf{R}$ and an exact column–row (CUR) form.
 - Neural networks compose affine maps with ReLUs into piecewise linear functions and are trained by stochastic gradients, not by factorizations. Conditioning and singular values still govern how well that training works.
 
 ## Where this shows up next

@@ -107,7 +107,7 @@ g\big(\mathbb{E}[X]\big)\le\mathbb{E}\big[g(X)\big].
 \tag{1}
 $$
 
-The picture is a two-point distribution (Figure 1). If $X$ is $a$ or $b$ with equal probability, $\mathbb{E}[g(X)]$ is the midpoint of the chord between $(a,g(a))$ and $(b,g(b))$, while $g(\mathbb{E}[X])$ is the curve at the midpoint. For a convex function the chord lies above the curve. The proof in general uses a tangent line instead of a chord. A convex $g$ lies above its tangent at $\mu=\mathbb{E}[X]$: $g(x)\ge g(\mu)+g'(\mu)(x-\mu)$ for all $x$. Taking expectations kills the last term.
+The picture is a two-point distribution (Figure 1). If $X$ is $x_1$ or $x_2$ with equal probability, $\mathbb{E}[g(X)]$ is the midpoint of the chord between $(x_1,g(x_1))$ and $(x_2,g(x_2))$, while $g(\mathbb{E}[X])$ is the curve at the midpoint. For a convex function the chord lies above the curve. The proof in general uses a tangent line instead of a chord. A convex $g$ lies above its tangent at $\mu=\mathbb{E}[X]$: $g(x)\ge g(\mu)+g'(\mu)(x-\mu)$ for all $x$. Taking expectations kills the last term.
 
 ![[Probability and Linear Algebra/images/sample-statistics-jensen.svg]]
 *Figure 1. Jensen's inequality for a two-point distribution. The average of $g$ (red, on the chord) lies above $g$ of the average (green, on the curve), because a convex curve bends below its chords.*
@@ -151,7 +151,7 @@ $$
 \tag{3}
 $$
 
-The key step, **Hoeffding's lemma**, shows that a zero-mean variable confined to an interval of length 1 has $\mathbb{E}[e^{sX}]\le e^{s^2/8}$. Its MGF is no larger than that of a Gaussian with variance $1/4$, so its tails are "sub-Gaussian". Plugging this into (2) and optimizing over $s$ gives (3). The full proof is in the [[Multi-Armed Bandits#Aside: concentration inequalities|concentration aside of the Bandits lecture]].
+The key step, **Hoeffding's lemma**, shows that a zero-mean variable confined to an interval of length 1 has $\mathbb{E}[e^{sX}]\le e^{s^2/8}$. Its MGF is no larger than that of a Gaussian with variance $1/4$, so its tails are "sub-Gaussian". Plugging this into (2) and optimizing over $s$ gives (3). The [[Multi-Armed Bandits#Aside: concentration inequalities|concentration aside of the Bandits lecture]] restates the lemma in the language of sub-Gaussian variables and turns (3) into the UCB confidence interval.
 
 Figure 2 compares the bounds for a fair coin. Chebyshev's bound decays like $1/n$; Hoeffding's and the optimized Chernoff bound decay exponentially and track the exact tail closely. In practical terms, to estimate a probability to within $\varepsilon=0.05$ with confidence $1-\delta=99\%$:
 - Chebyshev, using $\sigma^2\le\frac14$, needs $n\ge\sigma^2/(\varepsilon^2\delta)=10\,000$;
@@ -181,13 +181,13 @@ The dependence on the confidence level drops from $1/\delta$ to $\ln(1/\delta)$:
 
 ### Concentration and the union bound
 
-Suppose we estimate $M$ different quantities from the same $n$ samples, and want **all** of them to be accurate at once. Each estimate fails with probability at most $2e^{-2n\varepsilon^2}$ by (3), so by the [[Probability Basics#The union bound|union bound]],
+Suppose we estimate $m$ different quantities from the same $n$ samples, and want **all** of them to be accurate at once. Each estimate fails with probability at most $2e^{-2n\varepsilon^2}$ by (3), so by the [[Probability Basics#The union bound|union bound]],
 
 $$
-\mathbb{P}\big(\text{some estimate is off by }\ge\varepsilon\big)\le2M\,e^{-2n\varepsilon^2}.
+\mathbb{P}\big(\text{some estimate is off by }\ge\varepsilon\big)\le2m\,e^{-2n\varepsilon^2}.
 $$
 
-Setting this to $\delta$ shows that $n\ge\ln(2M/\delta)/(2\varepsilon^2)$ samples suffice. The cost of $M$ simultaneous guarantees is only **logarithmic** in $M$. Exponential concentration plus a union bound is the engine of statistical learning theory (a finite set of $M$ hypotheses is $M$ training errors estimated at once), and of the confidence bonuses in [[Multi-Armed Bandits|UCB]].
+Setting this to $\delta$ shows that $n\ge\ln(2m/\delta)/(2\varepsilon^2)$ samples suffice. The cost of $m$ simultaneous guarantees is only **logarithmic** in $m$. Exponential concentration plus a union bound is the engine of statistical learning theory (a finite set of $m$ hypotheses is $m$ training errors estimated at once), and of the confidence bonuses in [[Multi-Armed Bandits|UCB]].
 
 ## Four ways a sequence can converge
 
@@ -227,14 +227,14 @@ Two counterexamples show what can go wrong. Let $U$ be uniform on $[0,1]$.
 
 ### The Borel–Cantelli lemma
 
-To prove almost sure convergence, we need to show that bad events stop happening. Let $A_n$ be "$X_n$ is more than $\varepsilon$ from its limit". The tool is:
+To prove almost sure convergence, we need to show that bad events stop happening. Let $B_n$ be "$X_n$ is more than $\varepsilon$ from its limit". The tool is:
 
 > [!note] Borel–Cantelli lemma
-> If $\sum_{n=1}^{\infty}\mathbb{P}(A_n)<\infty$, then with probability 1 only finitely many of the events $A_n$ occur.
+> If $\sum_{n=1}^{\infty}\mathbb{P}(B_n)<\infty$, then with probability 1 only finitely many of the events $B_n$ occur.
 
-*Proof:* the number of events that occur is $N=\sum_n\mathbb{1}_{A_n}$, and by linearity $\mathbb{E}[N]=\sum_n\mathbb{P}(A_n)<\infty$. A random variable with a finite mean is finite with probability 1.
+*Proof:* the number of events that occur is $N=\sum_n\mathbb{1}_{B_n}$, and by linearity $\mathbb{E}[N]=\sum_n\mathbb{P}(B_n)<\infty$. A random variable with a finite mean is finite with probability 1.
 
-If the expected number of bad events is finite, the bad events eventually stop. In the typewriter, $\mathbb{P}(A_n)$ is $2^{-j}$ in sweep $j$, and each sweep has $2^j$ blocks, so the sum is infinite and the lemma does not apply, consistent with Figure 3b. Conversely, if the events are **independent** and the sum is infinite, then infinitely many occur with probability 1 (the second Borel–Cantelli lemma).
+If the expected number of bad events is finite, the bad events eventually stop. In the typewriter, $\mathbb{P}(B_n)$ is $2^{-j}$ in sweep $j$, and each sweep has $2^j$ blocks, so the sum is infinite and the lemma does not apply, consistent with Figure 3b. Conversely, if the events are **independent** and the sum is infinite, then infinitely many occur with probability 1 (the second Borel–Cantelli lemma).
 
 ## The law of large numbers
 
@@ -267,16 +267,16 @@ With probability 1, the path of running averages of a single experiment converge
 *Figure 5. Running averages of four independent sample sequences. (a) Standard Gaussian samples: each path settles at the mean 0. (b) Standard Cauchy samples, which have no mean: an occasional enormous sample throws the average off, and the paths never settle.*
 
 > [!proof]- Proof of the strong law, assuming a finite fourth moment
-> The general proof (finite mean only) uses truncation and is in Kumar's notes and in Durrett.[^durrett2019] With a finite fourth moment there is a short proof by Borel–Cantelli. Let $Y_i=X_i-\mu$ and $S_n=\sum_{i=1}^nY_i$. Expanding $S_n^4$, every term with an index appearing exactly once has expectation 0, because $\mathbb{E}[Y_i]=0$ and the $Y_i$ are independent. What remains are the $n$ terms $Y_i^4$ and the $3n(n-1)$ terms $Y_i^2Y_j^2$ with $i\ne j$:
+> The general proof (finite mean only) uses truncation and is in Kumar's notes and in Durrett.[^durrett2019] With a finite fourth moment there is a short proof by Borel–Cantelli. Let $Y_i=X_i-\mu$ and $T_n=\sum_{i=1}^nY_i$. Expanding $T_n^4$, every term with an index appearing exactly once has expectation 0, because $\mathbb{E}[Y_i]=0$ and the $Y_i$ are independent. What remains are the $n$ terms $Y_i^4$ and the $3n(n-1)$ terms $Y_i^2Y_j^2$ with $i\ne j$:
 >
 > $$
-> \mathbb{E}[S_n^4]=n\,\mathbb{E}[Y_1^4]+3n(n-1)\sigma^4\le Cn^2.
+> \mathbb{E}[T_n^4]=n\,\mathbb{E}[Y_1^4]+3n(n-1)\sigma^4\le cn^2.
 > $$
 >
-> By Markov's inequality applied to $S_n^4$,
+> By Markov's inequality applied to $T_n^4$,
 >
 > $$
-> \mathbb{P}\big(|\bar X_n-\mu|\ge\varepsilon\big)=\mathbb{P}\big(S_n^4\ge n^4\varepsilon^4\big)\le\frac{Cn^2}{n^4\varepsilon^4}=\frac{C}{n^2\varepsilon^4},
+> \mathbb{P}\big(|\bar X_n-\mu|\ge\varepsilon\big)=\mathbb{P}\big(T_n^4\ge n^4\varepsilon^4\big)\le\frac{cn^2}{n^4\varepsilon^4}=\frac{c}{n^2\varepsilon^4},
 > $$
 >
 > which is summable over $n$. By Borel–Cantelli, with probability 1 only finitely many $n$ have $|\bar X_n-\mu|\ge\varepsilon$. Apply this to $\varepsilon=1,\tfrac12,\tfrac13,\dots$; a countable union of probability-zero events has probability zero, so with probability 1 the deviation eventually stays below every $\varepsilon$. That is, $\bar X_n\to\mu$ almost surely.
@@ -366,7 +366,7 @@ Wasserman's book is a good guide to using these results in statistics.[^wasserma
 
 - The sample mean is unbiased with standard error $\sigma/\sqrt n$. The sample variance divides by $n-1$ to be unbiased.
 - MGFs and characteristic functions turn independent sums into products and identify distributions. Characteristic functions always exist, and they show that averages of Cauchy variables never concentrate.
-- Jensen's inequality: $g(\mathbb{E}X)\le\mathbb{E}\,g(X)$ for convex $g$, behind the ELBO and $D_{\mathrm{KL}}\ge0$. Chernoff: apply Markov to $e^{sX}$ and optimize; averages have exponentially small tails. Hoeffding needs only boundedness. Plus a union bound, $M$ estimates cost $\ln M$.
+- Jensen's inequality: $g(\mathbb{E}X)\le\mathbb{E}\,g(X)$ for convex $g$, behind the ELBO and $D_{\mathrm{KL}}\ge0$. Chernoff: apply Markov to $e^{sX}$ and optimize; averages have exponentially small tails. Hoeffding needs only boundedness. Plus a union bound, $m$ estimates cost $\ln m$.
 - Convergence in distribution, in probability, in mean square and almost surely are different. Almost sure and mean square each imply in probability, which implies in distribution. Borel–Cantelli proves almost sure convergence: finitely many expected bad events means finitely many bad events.
 - The weak law (Chebyshev) and the strong law (Borel–Cantelli) make the frequency model a theorem and justify Monte Carlo, whose error $\sigma/\sqrt n$ is independent of dimension.
 - The CLT: $\sqrt n(\bar X_n-\mu)/\sigma\to\mathcal{N}(0,1)$ in distribution, for any finite-variance distribution. It gives confidence intervals, converges at rate $1/\sqrt n$, and is poor in the far tails.

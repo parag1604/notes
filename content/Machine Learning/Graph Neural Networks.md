@@ -41,10 +41,10 @@ What we need is the graph version of the two ideas that made CNNs work: **locali
 
 ### Permutation invariance and equivariance
 
-Renumber the nodes with a permutation matrix $\mathbf{P}$. The features become $\mathbf{P}\mathbf{X}$ and the adjacency matrix becomes $\mathbf{P}\mathbf{A}\mathbf{P}^\top$ (rows *and* columns are permuted). It is the same graph, so:
+Renumber the nodes with a permutation matrix $\boldsymbol\Pi$. The features become $\boldsymbol\Pi\mathbf{X}$ and the adjacency matrix becomes $\boldsymbol\Pi\mathbf{A}\boldsymbol\Pi^\top$ (rows *and* columns are permuted). It is the same graph, so:
 
-- a function $g$ that outputs one thing for the whole graph (a molecule's toxicity) should be **permutation invariant**: $g(\mathbf{P}\mathbf{X},\mathbf{P}\mathbf{A}\mathbf{P}^\top)=g(\mathbf{X},\mathbf{A})$;
-- a function $f$ that outputs one vector per node (each user's interests) should be **permutation equivariant**: $f(\mathbf{P}\mathbf{X},\mathbf{P}\mathbf{A}\mathbf{P}^\top)=\mathbf{P}f(\mathbf{X},\mathbf{A})$. Relabel the input and the output rows are relabelled the same way.
+- a function $\rho$ that outputs one thing for the whole graph (a molecule's toxicity) should be **permutation invariant**: $\rho(\boldsymbol\Pi\mathbf{X},\boldsymbol\Pi\mathbf{A}\boldsymbol\Pi^\top)=\rho(\mathbf{X},\mathbf{A})$;
+- a function $f$ that outputs one vector per node (each user's interests) should be **permutation equivariant**: $f(\boldsymbol\Pi\mathbf{X},\boldsymbol\Pi\mathbf{A}\boldsymbol\Pi^\top)=\boldsymbol\Pi f(\mathbf{X},\mathbf{A})$. Relabel the input and the output rows are relabelled the same way.
 
 This is exactly the pattern of a CNN, with translations replaced by permutations: stack **equivariant** layers (convolutions there, message passing here), then finish with an **invariant** pooling for graph-level outputs ([[Convolutional Neural Networks#Equivariance, invariance and pooling|equivariance, invariance and pooling]]). It is also what [[Sequence Models#Order: positional encodings|attention without positional encodings]] already does: self-attention is permutation equivariant, which is why a transformer needs positional encodings to know about order. A transformer is a graph network on the **complete** graph; a GNN restricts attention, or averaging, to the edges that exist.[^bronstein2021]
 
@@ -119,19 +119,19 @@ Three good things happen at once.
 - **No eigendecomposition.** $g_\theta(\mathbf{L})\mathbf{x}=\sum_k\theta_k\mathbf{L}^k\mathbf{x}$ needs only $K$ sparse matrix–vector products, $O(K\lvert\mathcal{E}\rvert)$.
 - **$K+1$ parameters per filter**, independent of $N$. The same coefficients define a filter on any graph, so the model can transfer.
 
-ChebNet writes the polynomial in the **Chebyshev basis**, which is better conditioned than the monomials $\mathbf{L}^k$.[^defferrard2016] Rescale the spectrum to $[-1,1]$ with $\tilde{\mathbf{L}}=2\mathbf{L}_{\text{sym}}/\lambda_{\max}-\mathbf{I}$ and use
+ChebNet writes the polynomial in the **Chebyshev basis**, which is better conditioned than the monomials $\mathbf{L}^k$.[^defferrard2016] Rescale the spectrum to $[-1,1]$ with $\bar{\mathbf{L}}=2\mathbf{L}_{\text{sym}}/\lambda_{\max}-\mathbf{I}$ and use
 
 $$
-g_\theta(\mathbf{L}_{\text{sym}})\,\mathbf{x}=\sum_{k=0}^{K}\theta_k\,T_k(\tilde{\mathbf{L}})\,\mathbf{x},\qquad T_k(y)=2y\,T_{k-1}(y)-T_{k-2}(y),
+g_\theta(\mathbf{L}_{\text{sym}})\,\mathbf{x}=\sum_{k=0}^{K}\theta_k\,T_k(\bar{\mathbf{L}})\,\mathbf{x},\qquad T_k(\xi)=2\xi\,T_{k-1}(\xi)-T_{k-2}(\xi),
 $$
 
-with $T_0(y)=1$ and $T_1(y)=y$. The recurrence computes $T_k(\tilde{\mathbf{L}})\mathbf{x}$ from the two previous vectors, so the cost stays $O(K\lvert\mathcal{E}\rvert)$. The same Chebyshev trick was used earlier to build wavelets on graphs.[^hammond2011]
+with $T_0(\xi)=1$ and $T_1(\xi)=\xi$. The recurrence computes $T_k(\bar{\mathbf{L}})\mathbf{x}$ from the two previous vectors, so the cost stays $O(K\lvert\mathcal{E}\rvert)$. The same Chebyshev trick was used earlier to build wavelets on graphs.[^hammond2011]
 
 ### The first-order approximation: GCN
 
 Kipf and Welling simplified ChebNet as far as it would go and recovered expressiveness by stacking layers, as CNNs stack $3\times3$ kernels.[^kipf2017] The derivation takes five steps.
 
-**Step 1: keep only $K=1$.** The filter becomes linear in $\mathbf{L}_{\text{sym}}$, i.e. each layer looks one hop away. Also approximate $\lambda_{\max}\approx2$ (its upper bound), so $\tilde{\mathbf{L}}=\mathbf{L}_{\text{sym}}-\mathbf{I}$:
+**Step 1: keep only $K=1$.** The filter becomes linear in $\mathbf{L}_{\text{sym}}$, i.e. each layer looks one hop away. Also approximate $\lambda_{\max}\approx2$ (its upper bound), so $\bar{\mathbf{L}}=\mathbf{L}_{\text{sym}}-\mathbf{I}$:
 
 $$
 g_\theta\star\mathbf{x}\approx\theta_0\,\mathbf{x}+\theta_1(\mathbf{L}_{\text{sym}}-\mathbf{I})\,\mathbf{x}=\theta_0\,\mathbf{x}-\theta_1\,\mathbf{D}^{-1/2}\mathbf{A}\mathbf{D}^{-1/2}\mathbf{x}.
@@ -176,19 +176,19 @@ $$
 trained with the cross-entropy over the **labelled nodes only**. The unlabelled nodes still take part: their features flow into the labelled nodes' predictions, and the gradient flows back through them.
 
 > [!proof]- Why the renormalized spectrum lies in $(-1,1]$
-> Let $\tilde{\mathbf{L}}_{\text{sym}}=\mathbf{I}-\hat{\mathbf{A}}$, take any $\mathbf{x}\ne\mathbf{0}$ and write $y_v=x_v/\sqrt{\tilde d_v}$. Using $\tilde d_v=\sum_u\tilde A_{vu}$,
+> Let $\tilde{\mathbf{L}}_{\text{sym}}=\mathbf{I}-\hat{\mathbf{A}}$, take any $\mathbf{x}\ne\mathbf{0}$ and write $\zeta_v=x_v/\sqrt{\tilde d_v}$. Using $\tilde d_v=\sum_u\tilde A_{vu}$,
 >
 > $$
-> \mathbf{x}^\top\tilde{\mathbf{L}}_{\text{sym}}\mathbf{x}=\sum_v\tilde d_v y_v^2-\sum_{u,v}\tilde A_{uv}y_uy_v=\frac12\sum_{u,v}\tilde A_{uv}(y_u-y_v)^2\ \ge 0 .
+> \mathbf{x}^\top\tilde{\mathbf{L}}_{\text{sym}}\mathbf{x}=\sum_v\tilde d_v \zeta_v^2-\sum_{u,v}\tilde A_{uv}\zeta_u\zeta_v=\frac12\sum_{u,v}\tilde A_{uv}(\zeta_u-\zeta_v)^2\ \ge 0 .
 > $$
 >
 > In the same way,
 >
 > $$
-> 2\,\mathbf{x}^\top\mathbf{x}-\mathbf{x}^\top\tilde{\mathbf{L}}_{\text{sym}}\mathbf{x}=\frac12\sum_{u,v}\tilde A_{uv}(y_u+y_v)^2\ \ge 0 .
+> 2\,\mathbf{x}^\top\mathbf{x}-\mathbf{x}^\top\tilde{\mathbf{L}}_{\text{sym}}\mathbf{x}=\frac12\sum_{u,v}\tilde A_{uv}(\zeta_u+\zeta_v)^2\ \ge 0 .
 > $$
 >
-> So the Rayleigh quotient of $\tilde{\mathbf{L}}_{\text{sym}}$ lies in $[0,2]$. Equality at $2$ would need $y_u=-y_v$ for every pair with $\tilde A_{uv}>0$. The self-loops include the pairs $u=v$, which force $y_v=-y_v$, i.e. $\mathbf{y}=\mathbf{0}$. Hence $0\le\tilde\lambda<2$, and the eigenvalues $1-\tilde\lambda$ of $\hat{\mathbf{A}}$ lie in $(-1,1]$. Without self-loops, $\lambda=2$ is reached exactly when the graph has a bipartite component (alternate the signs across the two sides). The same argument with $\tilde{\mathbf{A}}$ replaced by $\mathbf{A}$ shows that $\mathbf{L}_{\text{sym}}$ has eigenvalues in $[0,2]$.
+> So the Rayleigh quotient of $\tilde{\mathbf{L}}_{\text{sym}}$ lies in $[0,2]$. Equality at $2$ would need $\zeta_u=-\zeta_v$ for every pair with $\tilde A_{uv}>0$. The self-loops include the pairs $u=v$, which force $\zeta_v=-\zeta_v$, i.e. $\boldsymbol\zeta=\mathbf{0}$. Hence $0\le\tilde\lambda<2$, and the eigenvalues $1-\tilde\lambda$ of $\hat{\mathbf{A}}$ lie in $(-1,1]$. Without self-loops, $\lambda=2$ is reached exactly when the graph has a bipartite component (alternate the signs across the two sides). The same argument with $\tilde{\mathbf{A}}$ replaced by $\mathbf{A}$ shows that $\mathbf{L}_{\text{sym}}$ has eigenvalues in $[0,2]$.
 
 > [!example]- Code: a GCN layer with the renormalized adjacency (checked against the dense formula)
 > Graphs are stored as an edge list `edge_index` of shape $(2,\lvert\mathcal{E}\rvert)$ with both directions of every undirected edge; row 0 is the source $u$ and row 1 the target $v$.
@@ -213,7 +213,7 @@ trained with the cross-entropy over the **labelled nodes only**. The unlabelled 
 >     def forward(self, H, A_hat):                        # A_hat from gcn_norm
 >         return torch.sparse.mm(A_hat, self.lin(H))      # A_hat H W
 > ```
-> The test script checks that `gcn_norm` equals $\tilde{\mathbf{D}}^{-1/2}(\mathbf{A}+\mathbf{I})\tilde{\mathbf{D}}^{-1/2}$ computed densely on the karate club, that the layer equals $\hat{\mathbf{A}}\mathbf{X}\mathbf{W}$, that the eigenvalues of $\hat{\mathbf{A}}$ lie in $(-1,1]$ (here $[-0.42,1]$), and that the layer is permutation equivariant.
+> We checked that `gcn_norm` equals $\tilde{\mathbf{D}}^{-1/2}(\mathbf{A}+\mathbf{I})\tilde{\mathbf{D}}^{-1/2}$ computed densely on the karate club, that the layer equals $\hat{\mathbf{A}}\mathbf{X}\mathbf{W}$, that the eigenvalues of $\hat{\mathbf{A}}$ lie in $(-1,1]$ (here $[-0.42,1]$), and that the layer is permutation equivariant.
 
 ### GCN is Laplacian smoothing
 
@@ -257,7 +257,7 @@ $$
 $\phi$ and $\psi$ are small neural networks **shared by all nodes** (weight sharing), and the aggregator does not care about the order of the neighbours. Together these two facts make the layer permutation equivariant. For graph-level tasks a **readout** $\mathbf{h}_{\mathcal{G}}=\bigoplus_v\mathbf{h}_v^{(L)}$, again a permutation-invariant function, makes the network invariant. The idea of a network that iterates neighbour-to-neighbour updates goes back to the original "graph neural network" of Scarselli et al., which ran one shared update to a fixed point.[^scarselli2009]
 
 > [!proof]- Why message passing is permutation equivariant
-> Relabel the nodes by a bijection $\pi$. Node $\pi(v)$ in the new graph has the old state of $v$, and its neighbourhood is $\{\pi(u):u\in\mathcal{N}(v)\}$ with the same edge features. Its messages are therefore the same vectors as those $v$ received, possibly listed in a different order. The aggregator ignores order, so $\mathbf{m}_{\pi(v)}$ equals the old $\mathbf{m}_v$, and the shared update gives $\mathbf{h}_{\pi(v)}^{(\ell+1)}=\mathbf{h}_v^{(\ell+1)}$. In matrix form this is $f(\mathbf{P}\mathbf{X},\mathbf{P}\mathbf{A}\mathbf{P}^\top)=\mathbf{P}f(\mathbf{X},\mathbf{A})$. By induction it holds for any number of layers, and an invariant readout of an equivariant map is invariant. The test script checks this numerically for every layer in this lecture with a random permutation of the karate club.
+> Relabel the nodes by a bijection $\tau$. Node $\tau(v)$ in the new graph has the old state of $v$, and its neighbourhood is $\{\tau(u):u\in\mathcal{N}(v)\}$ with the same edge features. Its messages are therefore the same vectors as those $v$ received, possibly listed in a different order. The aggregator ignores order, so $\mathbf{m}_{\tau(v)}$ equals the old $\mathbf{m}_v$, and the shared update gives $\mathbf{h}_{\tau(v)}^{(\ell+1)}=\mathbf{h}_v^{(\ell+1)}$. In matrix form this is $f(\boldsymbol\Pi\mathbf{X},\boldsymbol\Pi\mathbf{A}\boldsymbol\Pi^\top)=\boldsymbol\Pi f(\mathbf{X},\mathbf{A})$. By induction it holds for any number of layers, and an invariant readout of an equivariant map is invariant. We checked this numerically for every layer in this lecture with a random permutation of the karate club.
 
 After $L$ layers, $\mathbf{h}_v^{(L)}$ depends exactly on the $L$-hop neighbourhood of $v$. Unrolling the recursion gives the **computation tree** of $v$ (Figure 3): $v$ at the root, its neighbours below, their neighbours below those. A GNN is a neural network whose architecture is different for every node, built from that node's tree, but whose weights are shared by all trees in a layer.
 
@@ -339,7 +339,7 @@ GraphSAGE can be trained with labels, or without them by a loss that makes nodes
 >         u, v = edge_index
 >         return self.mlp((1 + self.eps) * H + aggregate(H[u], v, H.shape[0], "sum"))
 > ```
-> The test script compares the sum, mean and max aggregators with an explicit loop over each node's neighbours on the karate club, and checks that both layers are permutation equivariant. Neighbour sampling would replace `edge_index` by a freshly sampled subset of edges at every step.
+> We compared the sum, mean and max aggregators with an explicit loop over each node's neighbours on the karate club, and checked that both layers are permutation equivariant. Neighbour sampling would replace `edge_index` by a freshly sampled subset of edges at every step.
 
 ### GAT: attention over neighbours
 
@@ -347,8 +347,8 @@ In GCN the weight of neighbour $u$ in $v$'s average, $1/\sqrt{\tilde d_u\tilde d
 
 $$
 \begin{aligned}
-e_{vu}&=\operatorname{LeakyReLU}\big(\mathbf{a}^\top[\,\mathbf{W}\mathbf{h}_v\,\Vert\,\mathbf{W}\mathbf{h}_u\,]\big),\\
-\alpha_{vu}&=\frac{\exp(e_{vu})}{\sum_{w\in\mathcal{N}(v)\cup\{v\}}\exp(e_{vw})},\\
+\omega_{vu}&=\operatorname{LeakyReLU}\big(\mathbf{a}^\top[\,\mathbf{W}\mathbf{h}_v\,\Vert\,\mathbf{W}\mathbf{h}_u\,]\big),\\
+\alpha_{vu}&=\frac{\exp(\omega_{vu})}{\sum_{w\in\mathcal{N}(v)\cup\{v\}}\exp(\omega_{vw})},\\
 \mathbf{h}_v^{(\ell+1)}&=\sigma\Big(\sum_{u\in\mathcal{N}(v)\cup\{v\}}\alpha_{vu}\,\mathbf{W}\mathbf{h}_u\Big).
 \end{aligned}
 $$
@@ -356,7 +356,7 @@ $$
 As in [[Sequence Models#Multi-head attention|multi-head attention]], several heads run in parallel with their own $\mathbf{W}$ and $\mathbf{a}$; hidden layers concatenate them and the output layer averages them. The softmax runs over a node's neighbours, so the cost is $O(\lvert\mathcal{E}\rvert)$, not $O(N^2)$.
 
 > [!warning] GAT's attention is "static"
-> Split $\mathbf{a}=[\mathbf{a}_1;\mathbf{a}_2]$. Then $e_{vu}=\operatorname{LeakyReLU}(\mathbf{a}_1^\top\mathbf{W}\mathbf{h}_v+\mathbf{a}_2^\top\mathbf{W}\mathbf{h}_u)$. LeakyReLU is monotone and the first term is the same for all of $v$'s neighbours, so the *ranking* of neighbours is fixed by $\mathbf{a}_2^\top\mathbf{W}\mathbf{h}_u$ alone: if node $u^\star$ gets the highest score from one query, it gets the highest score from every query that sees it. Brody et al. call this **static attention** and fix it with **GATv2**, which applies the non-linearity before the dot product, $e_{vu}=\mathbf{a}^\top\operatorname{LeakyReLU}(\mathbf{W}[\mathbf{h}_v\Vert\mathbf{h}_u])$. The transformer's dot-product attention $\mathbf{q}_v^\top\mathbf{k}_u$ does not have this problem.[^brody2022]
+> Split $\mathbf{a}=[\mathbf{a}_1;\mathbf{a}_2]$. Then $\omega_{vu}=\operatorname{LeakyReLU}(\mathbf{a}_1^\top\mathbf{W}\mathbf{h}_v+\mathbf{a}_2^\top\mathbf{W}\mathbf{h}_u)$. LeakyReLU is monotone and the first term is the same for all of $v$'s neighbours, so the *ranking* of neighbours is fixed by $\mathbf{a}_2^\top\mathbf{W}\mathbf{h}_u$ alone: if node $u^\star$ gets the highest score from one query, it gets the highest score from every query that sees it. Brody et al. call this **static attention** and fix it with **GATv2**, which applies the non-linearity before the dot product, $\omega_{vu}=\mathbf{a}^\top\operatorname{LeakyReLU}(\mathbf{W}[\mathbf{h}_v\Vert\mathbf{h}_u])$. The transformer's dot-product attention $\mathbf{q}_v^\top\mathbf{k}_u$ does not have this problem.[^brody2022]
 
 > [!example]- Code: a multi-head GAT layer on an edge list (checked against dense masked attention)
 > ```python
@@ -394,7 +394,7 @@ As in [[Sequence Models#Multi-head attention|multi-head attention]], several hea
 
 ## Transductive and inductive learning with GNNs
 
-[[Graph Representation Learning]] distinguished **transductive** methods, which embed the nodes of one fixed graph, from **inductive** ones, which can embed nodes they never saw. Shallow embeddings such as DeepWalk and node2vec are transductive by construction: they learn a lookup table $\mathbf{Z}\in\mathbb{R}^{N\times d}$ with one free row per node, so a new node has no row and the table must be retrained.
+[[Graph Representation Learning]] distinguished **transductive** methods, which embed the nodes of one fixed graph, from **inductive** ones, which can embed nodes they never saw. Shallow embeddings such as DeepWalk and node2vec are transductive by construction: they learn a lookup table $\mathbf{Z}\in\mathbb{R}^{N\times F'}$ with one free row per node, so a new node has no row and the table must be retrained.
 
 A GNN replaces the table by a **function** of a node's features and neighbourhood, with parameters shared across nodes. In principle that makes every GNN inductive. In practice it depends on how the model is trained and fed:
 
@@ -462,9 +462,9 @@ Which aggregators lose information? Think of the neighbour states as a **multise
 
 - **mean** sees only the *distribution*: $\{\!\{a,b\}\!\}$ and $\{\!\{a,a,b,b\}\!\}$ have the same mean;
 - **max** sees only the *underlying set*: $\{\!\{a,b\}\!\}$ and $\{\!\{a,a,b\}\!\}$ have the same maximum;
-- **sum** sees the multiset. Xu et al. show that for features from a countable set there is a function $f$ that makes $\sum_{u}f(\mathbf{h}_u)$ injective on bounded multisets.
+- **sum** sees the multiset. Xu et al. show that for features from a countable set there is a function $\chi$ that makes $\sum_{u}\chi(\mathbf{h}_u)$ injective on bounded multisets.
 
-With constant input features, mean and max cannot even count neighbours, so a mean-GNN cannot see degrees. The **graph isomorphism network** (GIN) uses the sum and lets an MLP play the role of $f$ and of the injective update (MLPs are universal approximators):
+With constant input features, mean and max cannot even count neighbours, so a mean-GNN cannot see degrees. The **graph isomorphism network** (GIN) uses the sum and lets an MLP play the role of $\chi$ and of the injective update (MLPs are universal approximators):
 
 $$
 \mathbf{h}_v^{(\ell+1)}=\mathrm{MLP}^{(\ell)}\Big((1+\epsilon^{(\ell)})\,\mathbf{h}_v^{(\ell)}+\sum_{u\in\mathcal{N}(v)}\mathbf{h}_u^{(\ell)}\Big).
@@ -493,7 +493,7 @@ Being bounded by 1-WL means, for example, that message-passing GNNs cannot count
 
 A CNN gets better with depth; a GCN usually peaks at two or three layers. The reason is in the Laplacian-smoothing reading: blur an image often enough and it becomes a uniform grey.
 
-Make it precise. $\hat{\mathbf{A}}$ is similar to the random-walk matrix $\mathbf{P}=\tilde{\mathbf{D}}^{-1}\tilde{\mathbf{A}}$ of the self-looped graph, $\hat{\mathbf{A}}=\tilde{\mathbf{D}}^{1/2}\mathbf{P}\,\tilde{\mathbf{D}}^{-1/2}$. On a connected graph the walk is irreducible, and the self-loops make it aperiodic, so by the [[Markov Chains#Convergence and the ergodic theorem|ergodic theorem]] $\mathbf{P}^k\to\mathbf{1}\boldsymbol\pi^\top$, where $\pi_v=\tilde d_v/\sum_u\tilde d_u$ is the stationary distribution. Therefore
+Make it precise. $\hat{\mathbf{A}}$ is similar to the random-walk matrix $\tilde{\mathbf{P}}=\tilde{\mathbf{D}}^{-1}\tilde{\mathbf{A}}$ of the self-looped graph, $\hat{\mathbf{A}}=\tilde{\mathbf{D}}^{1/2}\tilde{\mathbf{P}}\,\tilde{\mathbf{D}}^{-1/2}$. On a connected graph the walk is irreducible, and the self-loops make it aperiodic, so by the [[Markov Chains#Convergence and the ergodic theorem|ergodic theorem]] $\tilde{\mathbf{P}}^k\to\mathbf{1}\boldsymbol\pi^\top$, where $\pi_v=\tilde d_v/\sum_u\tilde d_u$ is the stationary distribution. Therefore
 
 $$
 \hat{\mathbf{A}}^k\mathbf{X}\ \xrightarrow{\ k\to\infty\ }\ \frac{\mathbf{s}\,\mathbf{s}^\top\mathbf{X}}{\mathbf{s}^\top\mathbf{s}},\qquad \mathbf{s}=\tilde{\mathbf{D}}^{1/2}\mathbf{1}.
@@ -509,37 +509,37 @@ Remedies keep some of each node's own signal from being averaged away:
 - **Normalization.** PairNorm rescales the features after every layer so that the total pairwise distance between nodes stays constant.[^zhao2020]
 - **Decoupling propagation from transformation** (APPNP), described next.
 
-**APPNP.** Compute $\mathbf{H}=f_\theta(\mathbf{X})$ with an MLP, then propagate with a restart:[^gasteiger2019]
+**APPNP.** Compute $\mathbf{H}=\mathrm{MLP}(\mathbf{X})$, then propagate with a restart:[^gasteiger2019]
 
 $$
-\mathbf{Z}^{(0)}=\mathbf{H},\qquad \mathbf{Z}^{(k+1)}=(1-\alpha)\,\hat{\mathbf{A}}\mathbf{Z}^{(k)}+\alpha\,\mathbf{H}.
+\mathbf{Z}^{(0)}=\mathbf{H},\qquad \mathbf{Z}^{(k+1)}=(1-\beta)\,\hat{\mathbf{A}}\mathbf{Z}^{(k)}+\beta\,\mathbf{H}.
 $$
 
-The spectral radius of $(1-\alpha)\hat{\mathbf{A}}$ is $1-\alpha<1$, so the iteration converges, to
+The spectral radius of $(1-\beta)\hat{\mathbf{A}}$ is $1-\beta<1$, so the iteration converges, to
 
 $$
-\mathbf{Z}^{(\infty)}=\alpha\big(\mathbf{I}-(1-\alpha)\hat{\mathbf{A}}\big)^{-1}\mathbf{H}=\sum_{k\ge0}\alpha(1-\alpha)^k\,\hat{\mathbf{A}}^k\mathbf{H}.
+\mathbf{Z}^{(\infty)}=\beta\big(\mathbf{I}-(1-\beta)\hat{\mathbf{A}}\big)^{-1}\mathbf{H}=\sum_{k\ge0}\beta(1-\beta)^k\,\hat{\mathbf{A}}^k\mathbf{H}.
 $$
 
-This is **personalized PageRank**: a random walker that at every step [[Markov Chains#PageRank: the stationary distribution of the web|teleports]] back to its start node with probability $\alpha$. The weights $\alpha(1-\alpha)^k$ on $k$-hop information decay geometrically, and the node's own features always keep weight $\alpha$, so infinitely many propagation steps are safe. Only the MLP has parameters, so the depth of propagation costs no parameters at all.
+This is **personalized PageRank**: a random walker that at every step [[Markov Chains#PageRank: the stationary distribution of the web|teleports]] back to its start node with probability $\beta$. The weights $\beta(1-\beta)^k$ on $k$-hop information decay geometrically, and the node's own features always keep weight $\beta$, so infinitely many propagation steps are safe. Only the MLP has parameters, so the depth of propagation costs no parameters at all.
 
 > [!example]- Code: APPNP propagation (after `appnp_propagate` in version 6 of the repository)
 > ```python
 > import torch
 >
-> def appnp_propagate(H, A_hat, K=10, alpha=0.1):
->     """Z <- (1 - alpha) A_hat Z + alpha H, K times. H = MLP(X); A_hat from gcn_norm."""
+> def appnp_propagate(H, A_hat, K=10, beta=0.1):
+>     """Z <- (1 - beta) A_hat Z + beta H, K times. H = MLP(X); A_hat from gcn_norm."""
 >     Z = H
 >     for _ in range(K):
->         Z = (1 - alpha) * torch.sparse.mm(A_hat, Z) + alpha * H   # restart to H with prob. alpha
+>         Z = (1 - beta) * torch.sparse.mm(A_hat, Z) + beta * H     # restart to H with prob. beta
 >     return Z
 >
 > # the model: logits = appnp_propagate(mlp(X), A_hat); only the MLP has parameters
 > ```
-> After $K$ steps the distance to the closed form $\alpha(\mathbf{I}-(1-\alpha)\hat{\mathbf{A}})^{-1}\mathbf{H}$ has shrunk by at least the factor $(1-\alpha)^K$, which is $0.35$ for $\alpha=0.1$ and $K=10$, typical settings. In practice it shrinks much faster: the components that converge slowest, those along eigenvalues of $\hat{\mathbf{A}}$ near 1, start almost at their limit. On the karate club with random features the remaining error after 10 steps is about 1% of the initial one.
+> After $K$ steps the distance to the closed form $\beta(\mathbf{I}-(1-\beta)\hat{\mathbf{A}})^{-1}\mathbf{H}$ has shrunk by at least the factor $(1-\beta)^K$, which is $0.35$ for $\beta=0.1$ and $K=10$, typical settings. In practice it shrinks much faster: the components that converge slowest, those along eigenvalues of $\hat{\mathbf{A}}$ near 1, start almost at their limit. On the karate club with random features the remaining error after 10 steps is about 1% of the initial one.
 
 ![Left: test accuracy against depth from 1 to 64 for GCN, GCN with residual connections and APPNP on a stochastic block model, with an MLP baseline line. GCN peaks at 2 layers and is at chance from 8 layers on; the residual GCN stays above 80 percent up to 32 layers and collapses at 64; APPNP stays near 76 percent at every depth. Right: without training, the mean cosine similarity between node feature vectors rises towards 1 as the raw features are propagated by the GCN operator, and a linear probe's accuracy rises then falls; under APPNP propagation the similarity levels off and the accuracy stays high.](Machine%20Learning/images/graph-neural-networks-oversmoothing.svg)
-*Figure 5: over-smoothing on a 4-block stochastic block model (400 nodes, mean degree 8, edge homophily 0.63, noisy 16-D Gaussian features, 20 labelled nodes per class). Left: test accuracy against depth, mean ± sd over 5 seeds. Plain GCN peaks at 2 layers ($83.1\pm3.6\%$) and is at chance (25%) from 8 layers on. With residual connections, accuracy stays at 80–85% up to 32 layers, but this simple, unnormalized version fails to train at 64 ($25.2\pm0.9\%$). APPNP, whose propagation has no parameters, settles at $75.6\pm1.4\%$ for any depth. An MLP that ignores the graph gets $49.7\pm3.3\%$. Right: no training, just repeated propagation of the raw features. With $\hat{\mathbf{A}}^k\mathbf{X}$ (solid orange), the mean cosine similarity between nodes rises from 0 to 0.96 after 16 steps and to 1.00 after 32. A logistic-regression probe (dashed) peaks at 83% after 4 steps and falls to chance (24%) by 64. Under APPNP propagation with $\alpha=0.1$ (green), the similarity stays near 0 and the probe stays at 75%.*
+*Figure 5: over-smoothing on a 4-block stochastic block model (400 nodes, mean degree 8, edge homophily 0.63, noisy 16-D Gaussian features, 20 labelled nodes per class). Left: test accuracy against depth, mean ± sd over 5 seeds. Plain GCN peaks at 2 layers ($83.1\pm3.6\%$) and is at chance (25%) from 8 layers on. With residual connections, accuracy stays at 80–85% up to 32 layers, but this simple, unnormalized version fails to train at 64 ($25.2\pm0.9\%$). APPNP, whose propagation has no parameters, settles at $75.6\pm1.4\%$ for any depth. An MLP that ignores the graph gets $49.7\pm3.3\%$. Right: no training, just repeated propagation of the raw features. With $\hat{\mathbf{A}}^k\mathbf{X}$ (solid orange), the mean cosine similarity between nodes rises from 0 to 0.96 after 16 steps and to 1.00 after 32. A logistic-regression probe (dashed) peaks at 83% after 4 steps and falls to chance (24%) by 64. Under APPNP propagation with $\beta=0.1$ (green), the similarity stays near 0 and the probe stays at 75%.*
 
 The stochastic block model used here is the standard synthetic graph with communities: nodes in the same block are connected with probability $p_{\text{in}}$ and nodes in different blocks with $p_{\text{out}}<p_{\text{in}}$.[^holland1983]
 
@@ -550,13 +550,13 @@ The stochastic block model used here is the standard synthetic graph with commun
 
 Over-smoothing is too much mixing; **over-squashing** is too little room. A node's computation tree grows roughly like $d^L$ with depth, and everything in it must be compressed into one fixed-size vector $\mathbf{h}_v$. When a task needs information from far away (a long-range interaction in a molecule, a distant node in a program graph), the signal from that node competes with exponentially many others on the way. Alon and Yahav showed that GNNs fail at a synthetic tree task that needs exactly this, and that making the last layer **fully adjacent** (every node can message every other) already helps on real benchmarks.[^alon2021]
 
-Topping et al. made the bottleneck geometric. For a message-passing network whose layer derivatives are bounded by a constant $c$, the sensitivity of node $v$ after $r$ layers to the input at node $u$ obeys[^topping2022]
+Topping et al. made the bottleneck geometric. For a message-passing network whose layer derivatives are bounded by a constant $C$, the sensitivity of node $v$ after $L$ layers to the input at node $u$ obeys[^topping2022]
 
 $$
-\left\lVert\frac{\partial\mathbf{h}_v^{(r)}}{\partial\mathbf{x}_u}\right\rVert\le c^{\,r}\,\big(\hat{\mathbf{A}}^r\big)_{vu}.
+\left\lVert\frac{\partial\mathbf{h}_v^{(L)}}{\partial\mathbf{x}_u}\right\rVert\le C^{\,L}\,\big(\hat{\mathbf{A}}^L\big)_{vu}.
 $$
 
-$(\hat{\mathbf{A}}^r)_{vu}$ is small when all $r$-step paths from $u$ to $v$ squeeze through a few edges, a **bottleneck** such as the single bridge between two communities. They identify such edges by their negative discrete (Ricci) curvature and **rewire** the graph around them. Graph transformers attack the same problem by letting every node attend to every other.
+$(\hat{\mathbf{A}}^L)_{vu}$ is small when all $L$-step paths from $u$ to $v$ squeeze through a few edges, a **bottleneck** such as the single bridge between two communities. They identify such edges by their negative discrete (Ricci) curvature and **rewire** the graph around them. Graph transformers attack the same problem by letting every node attend to every other.
 
 ### Heterophily: when neighbours differ
 
@@ -594,7 +594,7 @@ Encode with a GNN, then apply a softmax head per node and the cross-entropy over
 
 ### Link prediction
 
-Encode the nodes, then score a candidate pair with a **decoder**, for example $s(u,v)=\sigma(\mathbf{z}_u^\top\mathbf{z}_v)$ or an MLP on $\mathbf{z}_u\odot\mathbf{z}_v$. Train with binary cross-entropy on observed edges against **negative samples** (random non-edges), as in the shallow embeddings of [[Graph Representation Learning]].
+Encode the nodes, then score a candidate pair with a **decoder**, for example $\sigma(\mathbf{z}_u^\top\mathbf{z}_v)$ or an MLP on $\mathbf{z}_u\odot\mathbf{z}_v$. Train with binary cross-entropy on observed edges against **negative samples** (random non-edges), as in the shallow embeddings of [[Graph Representation Learning]].
 
 > [!example]- Code: an inner-product decoder trained against negative samples (PyTorch)
 > ```python
@@ -602,10 +602,10 @@ Encode the nodes, then score a candidate pair with a **decoder**, for example $s
 > import torch.nn.functional as F
 >
 > def link_loss(Z, pos_edges, k=1):
->     """Z: (N, d) GNN node embeddings; pos_edges: (2, E) training edges. k negatives per positive."""
+>     """Z: (N, F') GNN node embeddings; pos_edges: (2, E) training edges. k negatives per positive."""
 >     u, v = pos_edges
 >     neg_v = torch.randint(0, Z.shape[0], (k * u.numel(),))   # random targets: (almost always) non-edges
->     pos = (Z[u] * Z[v]).sum(-1)                               # logit of s(u, v) = sigma(z_u^T z_v)
+>     pos = (Z[u] * Z[v]).sum(-1)                               # logit of sigma(z_u^T z_v)
 >     neg = (Z[u.repeat(k)] * Z[neg_v]).sum(-1)
 >     logits = torch.cat([pos, neg])
 >     labels = torch.cat([torch.ones_like(pos), torch.zeros_like(neg)])
@@ -613,7 +613,7 @@ Encode the nodes, then score a candidate pair with a **decoder**, for example $s
 > ```
 > `Z` must come from a GNN run on the graph *without* the validation and test edges (see the warning below), and the same negatives' distribution should be used when reporting AUC or MRR.
 
-The **graph autoencoder** (GAE) reconstructs the whole adjacency matrix as $\sigma(\mathbf{Z}\mathbf{Z}^\top)$ from a GCN encoder. Its probabilistic version, the **variational graph autoencoder** (VGAE), has a GCN output a Gaussian $q(\mathbf{z}_v\mid\mathbf{X},\mathbf{A})=\mathcal{N}(\boldsymbol\mu_v,\operatorname{diag}\boldsymbol\sigma_v^2)$ per node and maximizes the evidence lower bound
+The **graph autoencoder** (GAE) reconstructs the whole adjacency matrix as $\sigma(\mathbf{Z}\mathbf{Z}^\top)$ from a GCN encoder. Its probabilistic version, the **variational graph autoencoder** (VGAE), has a GCN output a Gaussian $q(\mathbf{z}_v\mid\mathbf{X},\mathbf{A})=\mathcal{N}(\boldsymbol\mu_v,\boldsymbol\Sigma_v)$ per node, with diagonal $\boldsymbol\Sigma_v$, and maximizes the evidence lower bound
 
 $$
 \mathbb{E}_q\big[\log p(\mathbf{A}\mid\mathbf{Z})\big]-D_{\mathrm{KL}}\big(q(\mathbf{Z}\mid\mathbf{X},\mathbf{A})\,\big\|\,p(\mathbf{Z})\big),
@@ -651,7 +651,7 @@ Pool the node states into one vector with a **readout** and put an MLP on top. T
 
 Images are pooled hierarchically (pixels, then parts, then objects), and graphs can be too:
 
-- **DiffPool** learns a soft assignment of nodes to clusters with a second GNN, $\mathbf{S}=\operatorname{softmax}(\mathrm{GNN}_{\text{pool}}(\mathbf{A},\mathbf{X}))\in\mathbb{R}^{N\times N'}$, and coarsens the graph to $\mathbf{X}'=\mathbf{S}^\top\mathbf{Z}$ and $\mathbf{A}'=\mathbf{S}^\top\mathbf{A}\mathbf{S}$. The coarse graph is dense, which limits it to small graphs.[^ying2018]
+- **DiffPool** learns a soft assignment of nodes to clusters with a second GNN, $\mathbf{M}=\operatorname{softmax}(\mathrm{GNN}_{\text{pool}}(\mathbf{A},\mathbf{X}))\in\mathbb{R}^{N\times N'}$, and coarsens the graph to $\mathbf{X}'=\mathbf{M}^\top\mathbf{Z}$ and $\mathbf{A}'=\mathbf{M}^\top\mathbf{A}\mathbf{M}$. The coarse graph is dense, which limits it to small graphs.[^ying2018]
 - **SAGPool** scores every node with a GCN, keeps the top fraction, and gates their features by the scores, so the pooled graph stays sparse.[^lee2019]
 
 In an important re-evaluation with careful model selection, Errica et al. found that baselines that **ignore the graph structure** (for example, an MLP on summed node features) are competitive with GNNs on several standard graph-classification benchmarks.[^errica2020] It is a useful sanity check for any new method.
@@ -662,9 +662,9 @@ In an important re-evaluation with careful model selection, Errica et al. found 
 
 A transformer is a GNN on the complete graph. Running one on the nodes gives every node a one-layer path to every other (no over-squashing) and content-based weights, at $O(N^2)$ cost. But full attention ignores the edges, so the structure must come back through **encodings**, as order came back through [[Sequence Models#Order: positional encodings|positional encodings]] in text:
 
-- **Laplacian eigenvector positional encodings**: give node $v$ the entries $(u_{2,v},\dots,u_{k+1,v})$ of the $k$ smoothest non-trivial Laplacian eigenvectors. These are the graph's sines and cosines, the natural generalization of sinusoidal positions.[^dwivedi2020] Eigenvectors are only defined up to sign (and up to a basis within repeated eigenvalues), so training flips signs at random, or uses networks built to be invariant to these symmetries, such as SignNet.[^lim2023]
+- **Laplacian eigenvector positional encodings**: give node $v$ the entries $\big((\mathbf{u}_2)_v,\dots,(\mathbf{u}_{J+1})_v\big)$ of the $J$ smoothest non-trivial Laplacian eigenvectors. These are the graph's sines and cosines, the natural generalization of sinusoidal positions.[^dwivedi2020] Eigenvectors are only defined up to sign (and up to a basis within repeated eigenvalues), so training flips signs at random, or uses networks built to be invariant to these symmetries, such as SignNet.[^lim2023]
 - **Random-walk structural encodings** (RWSE): give node $v$ the probabilities that a random walk returns to $v$ after $1,\dots,K$ steps, $\big((\mathbf{P})_{vv},(\mathbf{P}^2)_{vv},\dots,(\mathbf{P}^K)_{vv}\big)$ with $\mathbf{P}=\mathbf{D}^{-1}\mathbf{A}$. They have no sign ambiguity, and they see cycles: a node on a triangle can return in 3 steps, a node on a 12-cycle cannot.[^dwivedi2022] This is what solved Task 2 in Figure 4.
-- **Graphormer** adds three biases to a standard transformer: a learned embedding of each node's degree (*centrality encoding*), a learned bias $b_{\varphi(u,v)}$ added to the attention logit, indexed by the shortest-path distance $\varphi(u,v)$ (*spatial encoding*), and an encoding of the edge features along the shortest path. It won a large-scale molecular property prediction challenge in 2021.[^ying2021]
+- **Graphormer** adds three biases to a standard transformer: a learned embedding of each node's degree (*centrality encoding*), a learned bias $b_{\mathrm{dist}(u,v)}$ added to the attention logit, indexed by the shortest-path distance $\mathrm{dist}(u,v)$ (*spatial encoding*), and an encoding of the edge features along the shortest path. It won a large-scale molecular property prediction challenge in 2021.[^ying2021]
 - **GPS** combines the two worlds in every layer: a local message-passing layer and a global attention layer run in parallel on the same node states and are summed, with positional and structural encodings added to the input. With linear-time attention it scales to graphs with thousands of nodes.[^rampasek2022]
 
 ### Self-supervised learning on graphs
@@ -678,17 +678,17 @@ Both are instances of the contrastive objectives (InfoNCE, positive and negative
 
 ### Relational GNNs for knowledge graphs
 
-A [[Graph Representation Learning|knowledge graph]] has typed edges $(h,r,t)$: *(Marie Curie, born in, Warsaw)*. Shallow models such as TransE and DistMult learn one vector per entity and per relation. A GNN can compute the entity embeddings from their neighbourhoods instead, as long as it respects the edge types.
+A [[Graph Representation Learning|knowledge graph]] has typed edges $(u,r,v)$: *(Marie Curie, born in, Warsaw)*. Shallow models such as TransE and DistMult learn one vector per entity and per relation. A GNN can compute the entity embeddings from their neighbourhoods instead, as long as it respects the edge types.
 
 **R-GCN** gives every relation its own weight matrix:[^schlichtkrull2018]
 
 $$
-\mathbf{h}_v^{(\ell+1)}=\sigma\Big(\mathbf{W}_0^{(\ell)}\mathbf{h}_v^{(\ell)}+\sum_{r}\sum_{u\in\mathcal{N}_r(v)}\frac{1}{c_{v,r}}\mathbf{W}_r^{(\ell)}\mathbf{h}_u^{(\ell)}\Big).
+\mathbf{h}_v^{(\ell+1)}=\sigma\Big(\mathbf{W}_0^{(\ell)}\mathbf{h}_v^{(\ell)}+\sum_{r}\sum_{u\in\mathcal{N}_r(v)}\frac{1}{\lvert\mathcal{N}_r(v)\rvert}\mathbf{W}_r^{(\ell)}\mathbf{h}_u^{(\ell)}\Big).
 $$
 
-Here $\mathcal{N}_r(v)$ is the set of neighbours through relation $r$ (inverse relations count as separate types) and $c_{v,r}$ a normalizer such as $\lvert\mathcal{N}_r(v)\rvert$. With hundreds of relations this has too many parameters, so each $\mathbf{W}_r=\sum_b a_{rb}\mathbf{V}_b$ is written as a combination of a few shared **basis** matrices. For link prediction, the R-GCN encoder feeds a DistMult decoder.
+Here $\mathcal{N}_r(v)$ is the set of neighbours through relation $r$ (inverse relations count as separate types); dividing by its size is one choice of normalizer, and the paper allows others. With hundreds of relations this has too many parameters, so each $\mathbf{W}_r=\sum_b \nu_{rb}\mathbf{V}_b$ is written as a combination of a few shared **basis** matrices. For link prediction, the R-GCN encoder feeds a DistMult decoder.
 
-**CompGCN** also embeds the relations and composes them with the neighbour before the message, $\mathbf{W}_{\text{dir}(r)}\,\varphi(\mathbf{h}_u,\mathbf{z}_r)$. The composition $\varphi$ is subtraction $\mathbf{h}_u-\mathbf{z}_r$ (as in TransE), elementwise multiplication (DistMult) or circular correlation (HolE). The relation embeddings are updated layer by layer too.[^vashishth2020]
+**CompGCN** also embeds the relations and composes them with the neighbour before the message, $\mathbf{W}_{\text{dir}(r)}\,(\mathbf{h}_u\diamond\mathbf{z}_r)$. The composition $\diamond$ is subtraction $\mathbf{h}_u-\mathbf{z}_r$ (as in TransE), elementwise multiplication (DistMult) or circular correlation (HolE). The relation embeddings are updated layer by layer too.[^vashishth2020]
 
 ### Graphs and large language models
 

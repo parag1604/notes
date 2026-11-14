@@ -251,7 +251,7 @@ $$
 \tag{5}
 $$
 
-With the simpler choice $\alpha=1/L$ the rate is $1-1/\kappa$, nearly as good. Either way the error after $t$ steps is about $e^{-2t/\kappa}$ of its initial value, so reducing it by a factor $\varepsilon$ takes about $\frac\kappa2\ln\frac1\varepsilon$ steps. The function value gap $f(\mathbf{w}_t)-f_*=\frac12\sum_i\lambda_ic_{i,t}^2$ shrinks by $\rho^2$ per step.
+With the simpler choice $\alpha=1/L$ the rate is $1-1/\kappa$, nearly as good. With $\alpha^*$ the error after $t$ steps is about $e^{-2t/\kappa}$ of its initial value, so reducing it by a factor $\varepsilon$ takes about $\frac\kappa2\ln\frac1\varepsilon$ steps; with $\alpha=1/L$ it is about $e^{-t/\kappa}$, twice as many steps. The function value gap $f(\mathbf{w}_t)-f_*=\frac12\sum_i\lambda_ic_{i,t}^2$ shrinks by $\rho^2$ per step.
 
 ### Worked example by hand
 
@@ -441,7 +441,7 @@ The crucial difference from GD: at the minimum, $\nabla f(\mathbf{w}_*)=\mathbf{
 
 ### Variance and the noise floor
 
-The noise enters the analysis through one extra term. Repeat the sufficient-decrease argument (2) with a random gradient and take the expectation over $i_t$, using $\mathbb{E}\lVert\mathbf{g}_t\rVert^2=\lVert\nabla f(\mathbf{w}_t)\rVert^2+\sigma^2(\mathbf{w}_t)$:
+The noise enters the analysis through one extra term. Repeat the argument that led from (2) to (3) with a random gradient and take the expectation over $i_t$, using $\mathbb{E}\lVert\mathbf{g}_t\rVert^2=\lVert\nabla f(\mathbf{w}_t)\rVert^2+\sigma^2(\mathbf{w}_t)$:
 
 $$
 \begin{aligned}
@@ -537,7 +537,7 @@ Mini-batches interpolate between the two extremes: average the gradients of $B$ 
 
 ### Variance shrinks like 1/B
 
-The batch gradient is still unbiased, and averaging $B$ independent draws divides the variance by $B$ ([[Joint Distributions#Covariance and correlation|variance of a sum]]). Sampling **without** replacement from a finite dataset does a little better, by the finite-population factor:
+The batch gradient is still unbiased, and averaging $B$ independent draws divides the variance by $B$ ([[Joint Distributions#Variance of a sum|variance of a sum]]). Sampling **without** replacement from a finite dataset does a little better, by the finite-population factor:
 
 $$
 \begin{aligned}
@@ -875,7 +875,7 @@ Two sanity checks catch most bugs before any tuning: a [[Neural Networks#Gradien
 
 - [[Five Factorizations of a Matrix]] ends the series by explaining why deep networks are trained by these methods rather than by matrix factorizations or Newton's method.
 - [[Linear Models]] applies GD, SGD and Newton's method to least squares and logistic regression; [[Support Vector Machines]] solves its problem with specialized solvers but also with SGD on the hinge loss (Pegasos).
-- [[Neural Networks]] computes the gradients by backpropagation and trains with the optimizers above; [[Sequence Models#Inductive bias and data|Sequence Models]] uses AdamW, warm-up and cosine schedules for transformers.
+- [[Neural Networks]] computes the gradients by backpropagation and trains with the optimizers above; [[Sequence Models#Inductive bias and data|Sequence Models]] uses AdamW, warm-up and cosine schedules for Vision Transformers.
 - [[Matrix Factorization and Dimensionality Reduction]] fits NMF by multiplicative updates, which are gradient steps with a per-entry step size, and recommender models by alternating least squares.
 - [[Stochastic Approximation]] gives the general convergence theory behind SGD (the ODE method, Robbins–Monro conditions, two-timescale iterations), which also covers [[Monte Carlo and Temporal-Difference Learning|TD learning]] and [[Q-Learning and SARSA|Q-learning]].
 - [[Policy Gradients]] and [[Actor-Critic Algorithms]] run stochastic gradient ascent on the expected return, where the variance of the gradient estimate is the central difficulty.

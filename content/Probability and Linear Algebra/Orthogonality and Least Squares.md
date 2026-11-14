@@ -68,18 +68,18 @@ $$
 \underbrace{\begin{bmatrix}\cos\theta&-\sin\theta\\\sin\theta&\cos\theta\end{bmatrix}}_{\text{rotation by }\theta,\ \det=+1}\qquad\underbrace{\begin{bmatrix}\cos2\phi&\sin2\phi\\\sin2\phi&-\cos2\phi\end{bmatrix}}_{\text{reflection across the line at angle }\phi,\ \det=-1}
 $$
 
-In any dimension, the **Householder reflection** $\mathbf{H}=\mathbf{I}-2\mathbf{n}\mathbf{n}^\top$ (with $\lVert\mathbf{n}\rVert=1$) flips the component along $\mathbf{n}$ and leaves the hyperplane $\mathbf{n}^\perp$ alone. The three vectors above, as columns, form one:
+In any dimension, the **Householder reflection** $\mathbf{H}=\mathbf{I}-2\mathbf{u}\mathbf{u}^\top$ (with $\lVert\mathbf{u}\rVert=1$) flips the component along $\mathbf{u}$ and leaves the hyperplane $\mathbf{u}^\perp$ alone. The three vectors above, as columns, form one:
 
 $$
-\mathbf{Q}_3=\frac13\begin{bmatrix}1&2&2\\2&1&-2\\2&-2&1\end{bmatrix}=\mathbf{I}-2\mathbf{n}\mathbf{n}^\top,\qquad\mathbf{n}=\tfrac{1}{\sqrt3}(1,-1,-1).
+\mathbf{Q}_3=\frac13\begin{bmatrix}1&2&2\\2&1&-2\\2&-2&1\end{bmatrix}=\mathbf{I}-2\mathbf{u}\mathbf{u}^\top,\qquad\mathbf{u}=\tfrac{1}{\sqrt3}(1,-1,-1).
 $$
 
-Permutation matrices are orthogonal too, and products of orthogonal matrices are orthogonal, since $(\mathbf{Q}_1\mathbf{Q}_2)^\top(\mathbf{Q}_1\mathbf{Q}_2)=\mathbf{Q}_2^\top\mathbf{I}\mathbf{Q}_2=\mathbf{I}$.
+Permutation matrices are orthogonal too, and products of orthogonal matrices are orthogonal: for orthogonal $\mathbf{Q}_a$ and $\mathbf{Q}_b$, $(\mathbf{Q}_a\mathbf{Q}_b)^\top(\mathbf{Q}_a\mathbf{Q}_b)=\mathbf{Q}_b^\top\mathbf{I}\mathbf{Q}_b=\mathbf{I}$.
 
 ![[Probability and Linear Algebra/images/orthogonality-and-least-squares-orthogonal-maps.svg]]
 *Figure 1. The two kinds of orthogonal $2\times2$ matrices. (a) A rotation keeps the shape and its orientation. (b) A reflection keeps the shape but turns it over (the flag now points the other way). Both keep every length and every angle; the determinant ($+1$ or $-1$) records whether orientation is kept.*
 
-**Eigenvalues have $\lvert\lambda\rvert=1$, and $\det\mathbf{Q}=\pm1$.** If $\mathbf{Q}\mathbf{x}=\lambda\mathbf{x}$ with $\mathbf{x}\neq\mathbf{0}$ (allowing complex $\lambda$ and $\mathbf{x}$, with the complex length), then length preservation gives $\lVert\mathbf{x}\rVert=\lVert\mathbf{Q}\mathbf{x}\rVert=\lvert\lambda\rvert\,\lVert\mathbf{x}\rVert$, so $\lvert\lambda\rvert=1$. A rotation by $\theta$ has the complex pair $e^{\pm i\theta}$; a reflection has $+1$ (the mirror) and $-1$ (the normal), and $\mathbf{Q}_3$ has eigenvalues $1,1,-1$. For the determinant, $\det(\mathbf{Q}^\top\mathbf{Q})=(\det\mathbf{Q})^2=\det\mathbf{I}=1$. [[Eigenvalues and Eigenvectors]] develops this further.
+**Eigenvalues have $\lvert\lambda\rvert=1$, and $\det\mathbf{Q}=\pm1$.** If $\mathbf{Q}\mathbf{x}=\lambda\mathbf{x}$ with $\mathbf{x}\neq\mathbf{0}$ (allowing complex $\lambda$ and $\mathbf{x}$, with the complex length), then length preservation gives $\lVert\mathbf{x}\rVert=\lVert\mathbf{Q}\mathbf{x}\rVert=\lvert\lambda\rvert\,\lVert\mathbf{x}\rVert$, so $\lvert\lambda\rvert=1$. A rotation by $\theta$ has the complex pair $\cos\theta\pm i\sin\theta$; a reflection has $+1$ (the mirror) and $-1$ (the normal), and $\mathbf{Q}_3$ has eigenvalues $1,1,-1$. For the determinant, $\det(\mathbf{Q}^\top\mathbf{Q})=(\det\mathbf{Q})^2=\det\mathbf{I}=1$. [[Eigenvalues and Eigenvectors]] develops this further.
 
 > [!tip] Intuition: why numerical analysts love orthogonal matrices
 > Multiplying by $\mathbf{Q}$ cannot make any vector longer, so it cannot amplify rounding errors either. Algorithms built from orthogonal transformations (QR, the SVD, Householder reflections) are stable for this reason, while algorithms that multiply by arbitrary matrices can blow small errors up. The same property is behind orthogonal weight initialization in deep networks: signals neither grow nor shrink as they pass through the layers.
@@ -145,7 +145,7 @@ For a single column this is the line formula again, with the number $\mathbf{a}^
 > Solving $2\hat x_1+\hat x_2=7$, $\hat x_1+2\hat x_2=8$ gives $\hat{\mathbf{x}}=(2,3)$. So $\mathbf{p}=2\mathbf{a}_1+3\mathbf{a}_2=(2,3,5)$ and $\mathbf{e}=\mathbf{b}-\mathbf{p}=(-1,-1,1)$. Check perpendicularity: $\mathbf{a}_1^\top\mathbf{e}=-1+1=0$ and $\mathbf{a}_2^\top\mathbf{e}=-1+1=0$. Pythagoras: $\lVert\mathbf{b}\rVert^2=41=38+3=\lVert\mathbf{p}\rVert^2+\lVert\mathbf{e}\rVert^2$. The projection matrix is
 >
 > $$
-> \mathbf{P}=\frac13\begin{bmatrix}2&-1&1\\-1&2&1\\1&1&2\end{bmatrix}=\mathbf{I}-\frac{\mathbf{n}\mathbf{n}^\top}{\mathbf{n}^\top\mathbf{n}},\qquad\mathbf{n}=(1,1,-1),
+> \mathbf{P}=\frac13\begin{bmatrix}2&-1&1\\-1&2&1\\1&1&2\end{bmatrix}=\mathbf{I}-\frac{\mathbf{u}\mathbf{u}^\top}{\mathbf{u}^\top\mathbf{u}},\qquad\mathbf{u}=(1,1,-1),
 > $$
 >
 > because projecting onto a plane in $\mathbb{R}^3$ is the same as removing the component along its normal.
@@ -184,15 +184,15 @@ Several more facts follow.
 
 ### When Ax = b has no solution
 
-A linear system $\mathbf{A}\mathbf{x}=\mathbf{b}$ is **consistent** if it has at least one solution, which happens exactly when $\mathbf{b}\in C(\mathbf{A})$. Then it has one solution if the columns are independent ($r=n$), and infinitely many if they are not (add anything from the nullspace; see [[Elimination and the Nullspace#The complete solution to Ax = b|the complete solution]]). Otherwise the system is **inconsistent** and has **no** solution at all. (An inconsistent system does not have "no unique solution"; it has none.)
+A linear system $\mathbf{A}\mathbf{x}=\mathbf{b}$ is **consistent** if it has at least one solution, which happens exactly when $\mathbf{b}\in C(\mathbf{A})$. Then it has one solution if the columns are independent (rank $n$), and infinitely many if they are not (add anything from the nullspace; see [[Elimination and the Nullspace#The complete solution to Ax = b|the complete solution]]). Otherwise the system is **inconsistent** and has **no** solution at all. (An inconsistent system does not have "no unique solution"; it has none.)
 
 Inconsistency is the normal situation when there are more equations than unknowns, $m>n$. The column space is an $n$-dimensional subspace of $\mathbb{R}^m$, a thin slice of the whole space, and a vector of noisy measurements $\mathbf{b}$ almost never lands exactly in it. Since no $\mathbf{x}$ makes the error $\mathbf{A}\mathbf{x}-\mathbf{b}$ zero, we make it as small as possible:
 
 $$
-\hat{\mathbf{x}}=\arg\min_{\mathbf{x}}\ \lVert\mathbf{A}\mathbf{x}-\mathbf{b}\rVert^2=\arg\min_{\mathbf{x}}\ \sum_{i=1}^m\big(\mathbf{a}_i^{\top}\mathbf{x}-b_i\big)^2,
+\hat{\mathbf{x}}=\arg\min_{\mathbf{x}}\ \lVert\mathbf{A}\mathbf{x}-\mathbf{b}\rVert^2=\arg\min_{\mathbf{x}}\ \sum_{i=1}^m\big((\mathbf{A}\mathbf{x})_i-b_i\big)^2.
 $$
 
-where $\mathbf{a}_i^\top$ is row $i$ of $\mathbf{A}$. This is **least squares**: the sum of squared errors over all equations is minimized.
+This is **least squares**: the sum of squared errors over all equations is minimized.
 
 **Least squares is projection.** Let $\mathbf{p}$ be the projection of $\mathbf{b}$ onto $C(\mathbf{A})$ and $\mathbf{e}=\mathbf{b}-\mathbf{p}$. For any $\mathbf{x}$, split the error as
 
@@ -234,7 +234,7 @@ These are the **normal equations**; "normal" means perpendicular, and the name r
 
 With independent columns, $\hat{\mathbf{x}}=(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top\mathbf{b}$ is the unique least-squares solution. With dependent columns (a duplicated feature, or fewer equations than unknowns), (1) still has solutions, since it always does, but infinitely many of them; the [[#The four subspaces and least squares|last section]] picks the best one.
 
-**Cost.** Forming $\mathbf{A}^\top\mathbf{A}$ takes about $mn^2$ multiply-adds (each of its $n^2/2$ distinct entries is a dot product of length $m$), forming $\mathbf{A}^\top\mathbf{b}$ takes $mn$, and solving the $n\times n$ system by Cholesky elimination takes about $n^3/3$. The total is $O(mn^2+n^3)$. In machine-learning notation, with a design matrix $\mathbf{X}\in\mathbb{R}^{N\times D}$, that is $O(ND^2+D^3)$: linear in the number of examples, cubic in the number of features. When $D$ is large, iterative methods that only need products with $\mathbf{X}$ and $\mathbf{X}^\top$ take over; see [[Linear Models#Iterative methods|Linear Models]] and [[First-Order Optimization]].
+**Cost.** Forming $\mathbf{A}^\top\mathbf{A}$ takes about $mn^2$ flops (each of its $n^2/2$ distinct entries is a dot product of length $m$, one multiplication and one addition per term), forming $\mathbf{A}^\top\mathbf{b}$ takes $2mn$, and solving the $n\times n$ system by Cholesky elimination takes about $n^3/3$. The total is $O(mn^2+n^3)$. In machine-learning notation, with a design matrix $\mathbf{X}\in\mathbb{R}^{N\times D}$, that is $O(ND^2+D^3)$: linear in the number of examples, cubic in the number of features. When $D$ is large, iterative methods that only need products with $\mathbf{X}$ and $\mathbf{X}^\top$ take over; see [[Linear Models#Iterative methods|Linear Models]] and [[First-Order Optimization]].
 
 ### The calculus derivation
 
@@ -244,7 +244,7 @@ $$
 f(\mathbf{x})=\lVert\mathbf{A}\mathbf{x}-\mathbf{b}\rVert^2=\mathbf{x}^\top\mathbf{A}^\top\mathbf{A}\mathbf{x}-2\,\mathbf{b}^\top\mathbf{A}\mathbf{x}+\mathbf{b}^\top\mathbf{b}.
 $$
 
-Using $\nabla(\mathbf{x}^\top\mathbf{S}\mathbf{x})=2\mathbf{S}\mathbf{x}$ for symmetric $\mathbf{S}$ and $\nabla(\mathbf{c}^\top\mathbf{x})=\mathbf{c}$ from [[Multivariable Calculus#Matrix calculus|matrix calculus]],
+Using $\nabla(\mathbf{x}^\top\mathbf{S}\mathbf{x})=2\mathbf{S}\mathbf{x}$ for symmetric $\mathbf{S}$ and $\nabla(\mathbf{g}^\top\mathbf{x})=\mathbf{g}$ from [[Multivariable Calculus#Matrix calculus|matrix calculus]],
 
 $$
 \nabla f(\mathbf{x})=2\mathbf{A}^\top\mathbf{A}\mathbf{x}-2\mathbf{A}^\top\mathbf{b}=2\mathbf{A}^\top(\mathbf{A}\mathbf{x}-\mathbf{b}),\qquad\nabla^2f(\mathbf{x})=2\mathbf{A}^\top\mathbf{A}.
@@ -288,7 +288,7 @@ Keep the two pictures apart. In Figure 3 the errors are vertical distances in th
 Sometimes the equations deserve different trust: some measurements are more precise, or one data point stands for several. Give equation $i$ a weight $w_i>0$ and minimize
 
 $$
-\sum_{i=1}^m w_i\big(\mathbf{a}_i^\top\mathbf{x}-b_i\big)^2=(\mathbf{A}\mathbf{x}-\mathbf{b})^\top\mathbf{W}(\mathbf{A}\mathbf{x}-\mathbf{b}),
+\sum_{i=1}^m w_i\big((\mathbf{A}\mathbf{x})_i-b_i\big)^2=(\mathbf{A}\mathbf{x}-\mathbf{b})^\top\mathbf{W}(\mathbf{A}\mathbf{x}-\mathbf{b}),
 $$
 
 with $\mathbf{W}=\operatorname{diag}(w_1,\dots,w_m)$. Multiplying row $i$ of $\mathbf{A}$ and entry $i$ of $\mathbf{b}$ by $\sqrt{w_i}$ turns this into ordinary least squares, so the normal equations become
@@ -297,7 +297,7 @@ $$
 \mathbf{A}^\top\mathbf{W}\mathbf{A}\,\hat{\mathbf{x}}=\mathbf{A}^\top\mathbf{W}\mathbf{b}.
 $$
 
-Geometrically, this is still a projection, but perpendicularity is measured in the inner product $\langle\mathbf{u},\mathbf{v}\rangle_{\mathbf{W}}=\mathbf{u}^\top\mathbf{W}\mathbf{v}$: the condition is $\mathbf{A}^\top\mathbf{W}\mathbf{e}=\mathbf{0}$. In the line fit, giving the last point $(3,4)$ weight 4 and the others weight 1 changes $\mathbf{A}^\top\mathbf{W}\mathbf{A}$ to $\begin{bmatrix}7&15\\15&41\end{bmatrix}$ and $\mathbf{A}^\top\mathbf{W}\mathbf{b}$ to $(24,59)$, and the line becomes $b\approx1.60+0.85\,t$: flatter, pulled towards the heavily weighted point, which lay below the old line. [[Linear Models#Weighted linear regression|Weighted linear regression]] uses this for noise of unequal variance and inside Newton's method for logistic regression.
+Geometrically, this is still a projection, but perpendicularity is measured in the inner product $\langle\mathbf{y},\mathbf{z}\rangle_{\mathbf{W}}=\mathbf{y}^\top\mathbf{W}\mathbf{z}$: the condition is $\mathbf{A}^\top\mathbf{W}\mathbf{e}=\mathbf{0}$. In the line fit, giving the last point $(3,4)$ weight 4 and the others weight 1 changes $\mathbf{A}^\top\mathbf{W}\mathbf{A}$ to $\begin{bmatrix}7&15\\15&41\end{bmatrix}$ and $\mathbf{A}^\top\mathbf{W}\mathbf{b}$ to $(24,59)$, and the line becomes $b\approx1.60+0.85\,t$: flatter, pulled towards the heavily weighted point, which lay below the old line. [[Linear Models#Weighted linear regression|Weighted linear regression]] uses this for noise of unequal variance and inside Newton's method for logistic regression.
 
 > [!example]- Code: weighted least squares, two ways
 > ```python
@@ -322,22 +322,22 @@ With orthonormal columns, least squares is easy: $\mathbf{Q}^\top\mathbf{Q}=\mat
 The idea: take the vectors one at a time, subtract from each its projections onto the directions already found, and normalize what is left. What remains is perpendicular to everything before it.
 
 $$
-\mathbf{w}_j=\mathbf{a}_j-\sum_{i<j}(\mathbf{q}_i^\top\mathbf{a}_j)\,\mathbf{q}_i,\qquad\mathbf{q}_j=\frac{\mathbf{w}_j}{\lVert\mathbf{w}_j\rVert}.
+\mathbf{v}_j=\mathbf{a}_j-\sum_{i<j}(\mathbf{q}_i^\top\mathbf{a}_j)\,\mathbf{q}_i,\qquad\mathbf{q}_j=\frac{\mathbf{v}_j}{\lVert\mathbf{v}_j\rVert}.
 $$
 
-Each subtracted term is a [[#Projection onto a line|projection onto a line]], and with unit vectors the denominator $\mathbf{q}_i^\top\mathbf{q}_i$ is 1. If the $\mathbf{a}$'s are independent, $\mathbf{w}_j$ is never zero.
+Each subtracted term is a [[#Projection onto a line|projection onto a line]], and with unit vectors the denominator $\mathbf{q}_i^\top\mathbf{q}_i$ is 1. If the $\mathbf{a}$'s are independent, $\mathbf{v}_j$ is never zero.
 
 ![[Probability and Linear Algebra/images/orthogonality-and-least-squares-gram-schmidt.svg]]
-*Figure 4. One Gram–Schmidt step. $\mathbf{q}_1$ is $\mathbf{a}_1$ rescaled to unit length. Subtracting from $\mathbf{a}_2$ its projection onto $\mathbf{q}_1$ leaves $\mathbf{w}_2$, which is perpendicular to $\mathbf{q}_1$; rescaling it gives $\mathbf{q}_2$.*
+*Figure 4. One Gram–Schmidt step. $\mathbf{q}_1$ is $\mathbf{a}_1$ rescaled to unit length. Subtracting from $\mathbf{a}_2$ its projection onto $\mathbf{q}_1$ leaves $\mathbf{v}_2$, which is perpendicular to $\mathbf{q}_1$; rescaling it gives $\mathbf{q}_2$.*
 
 > [!example] Worked example: three vectors in $\mathbb{R}^3$
 > Orthonormalize $\mathbf{a}_1=(1,2,2)$, $\mathbf{a}_2=(3,3,0)$ and $\mathbf{a}_3=(5,1,1)$.
 >
 > **Step 1.** $\lVert\mathbf{a}_1\rVert=3$, so $\mathbf{q}_1=\frac13(1,2,2)$.
 >
-> **Step 2.** $\mathbf{q}_1^\top\mathbf{a}_2=\frac13(3+6+0)=3$. Subtract: $\mathbf{w}_2=(3,3,0)-3\cdot\frac13(1,2,2)=(2,1,-2)$, of length 3, so $\mathbf{q}_2=\frac13(2,1,-2)$.
+> **Step 2.** $\mathbf{q}_1^\top\mathbf{a}_2=\frac13(3+6+0)=3$. Subtract: $\mathbf{v}_2=(3,3,0)-3\cdot\frac13(1,2,2)=(2,1,-2)$, of length 3, so $\mathbf{q}_2=\frac13(2,1,-2)$.
 >
-> **Step 3.** $\mathbf{q}_1^\top\mathbf{a}_3=\frac13(5+2+2)=3$ and $\mathbf{q}_2^\top\mathbf{a}_3=\frac13(10+1-2)=3$. Subtract both: $\mathbf{w}_3=(5,1,1)-(1,2,2)-(2,1,-2)=(2,-2,1)$, of length 3, so $\mathbf{q}_3=\frac13(2,-2,1)$.
+> **Step 3.** $\mathbf{q}_1^\top\mathbf{a}_3=\frac13(5+2+2)=3$ and $\mathbf{q}_2^\top\mathbf{a}_3=\frac13(10+1-2)=3$. Subtract both: $\mathbf{v}_3=(5,1,1)-(1,2,2)-(2,1,-2)=(2,-2,1)$, of length 3, so $\mathbf{q}_3=\frac13(2,-2,1)$.
 >
 > These are the orthonormal vectors from the start of the lecture.
 
@@ -346,10 +346,10 @@ Each subtracted term is a [[#Projection onto a line|projection onto a line]], an
 Gram–Schmidt records more than the $\mathbf{q}$'s. Reading the update backwards, each original vector is a combination of the $\mathbf{q}$'s found so far:
 
 $$
-\mathbf{a}_j=\sum_{i<j}(\mathbf{q}_i^\top\mathbf{a}_j)\,\mathbf{q}_i+\lVert\mathbf{w}_j\rVert\,\mathbf{q}_j.
+\mathbf{a}_j=\sum_{i<j}(\mathbf{q}_i^\top\mathbf{a}_j)\,\mathbf{q}_i+\lVert\mathbf{v}_j\rVert\,\mathbf{q}_j.
 $$
 
-Vector $\mathbf{a}_j$ uses only $\mathbf{q}_1,\dots,\mathbf{q}_j$, never a later one. In matrix form that is $\mathbf{A}=\mathbf{Q}\mathbf{R}$ with $\mathbf{R}$ **upper triangular**: $r_{ij}=\mathbf{q}_i^\top\mathbf{a}_j$ above the diagonal and $r_{jj}=\lVert\mathbf{w}_j\rVert>0$ on it. Since $\mathbf{Q}^\top\mathbf{Q}=\mathbf{I}$, you can also read $\mathbf{R}=\mathbf{Q}^\top\mathbf{A}$ directly. For the example,
+Vector $\mathbf{a}_j$ uses only $\mathbf{q}_1,\dots,\mathbf{q}_j$, never a later one. In matrix form that is $\mathbf{A}=\mathbf{Q}\mathbf{R}$ with $\mathbf{R}$ **upper triangular**: $r_{ij}=\mathbf{q}_i^\top\mathbf{a}_j$ above the diagonal and $r_{jj}=\lVert\mathbf{v}_j\rVert>0$ on it. Since $\mathbf{Q}^\top\mathbf{Q}=\mathbf{I}$, you can also read $\mathbf{R}=\mathbf{Q}^\top\mathbf{A}$ directly. For the example,
 
 $$
 \underbrace{\begin{bmatrix}1&3&5\\2&3&1\\2&0&1\end{bmatrix}}_{\mathbf{A}}=\underbrace{\frac13\begin{bmatrix}1&2&2\\2&1&-2\\2&-2&1\end{bmatrix}}_{\mathbf{Q}}\underbrace{\begin{bmatrix}3&3&3\\0&3&3\\0&0&3\end{bmatrix}}_{\mathbf{R}}.
@@ -370,7 +370,7 @@ after cancelling the invertible $\mathbf{R}^\top$. The right-hand side is a set 
 > [!example] Worked example: the line fit again, by QR
 > The columns of $\mathbf{A}$ are $\mathbf{1}=(1,1,1,1)$ and $\mathbf{t}=(0,1,2,3)$.
 > - $\lVert\mathbf{1}\rVert=2$, so $\mathbf{q}_1=\frac12(1,1,1,1)$ and $r_{11}=2$.
-> - $r_{12}=\mathbf{q}_1^\top\mathbf{t}=\frac12(0+1+2+3)=3$, and $\mathbf{w}_2=\mathbf{t}-3\mathbf{q}_1=(-1.5,-0.5,0.5,1.5)$: the times, centred at their mean. Its length is $\sqrt5$, so $r_{22}=\sqrt5$.
+> - $r_{12}=\mathbf{q}_1^\top\mathbf{t}=\frac12(0+1+2+3)=3$, and $\mathbf{v}_2=\mathbf{t}-3\mathbf{q}_1=(-1.5,-0.5,0.5,1.5)$: the times, centred at their mean. Its length is $\sqrt5$, so $r_{22}=\sqrt5$.
 >
 > Then $\mathbf{Q}^\top\mathbf{b}=\big(\tfrac12(1+3+4+4),\ \tfrac{1}{\sqrt5}(-1.5-1.5+2+6)\big)=(6,\sqrt5)$, and back-substitution in
 >
@@ -473,7 +473,7 @@ On the input side, if the columns of $\mathbf{A}$ are dependent, the nullspace i
 ![[Probability and Linear Algebra/images/orthogonality-and-least-squares-min-norm.svg]]
 *Figure 6. With two identical columns, every point on the line $x_1+x_2=2$ fits the data equally well. The shortest of them, $\mathbf{x}^+=(1,1)$, is where that line crosses the row space; moving along the line adds a nullspace component and only makes $\mathbf{x}$ longer.*
 
-The map $\mathbf{b}\mapsto\mathbf{x}^+$ is linear, and its matrix is the **pseudo-inverse** $\mathbf{A}^+$: it projects $\mathbf{b}$ onto the column space, then inverts the one-to-one map from the row space onto the column space. When the columns are independent there is no nullspace and $\mathbf{A}^+=(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top$; in general $\mathbf{A}^+$ is computed from the SVD, as in [[Matrix Factorization and Dimensionality Reduction#The pseudo-inverse|Matrix Factorization and Dimensionality Reduction]]. Ridge regression offers another way out of dependent columns: it solves $(\mathbf{A}^\top\mathbf{A}+\lambda\mathbf{I})\mathbf{x}=\mathbf{A}^\top\mathbf{b}$, which is always invertible for $\lambda>0$, and its solution tends to $\mathbf{x}^+$ as $\lambda\to0$ (see [[Linear Models#MAP estimation and regularization|MAP estimation and regularization]]).
+The map $\mathbf{b}\mapsto\mathbf{x}^+$ is linear, and its matrix is the **pseudo-inverse** $\mathbf{A}^+$: it projects $\mathbf{b}$ onto the column space, then inverts the one-to-one map from the row space onto the column space. When the columns are independent there is no nullspace and $\mathbf{A}^+=(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top$; in general $\mathbf{A}^+$ is computed from the SVD, as in [[Matrix Factorization and Dimensionality Reduction#The pseudo-inverse|Matrix Factorization and Dimensionality Reduction]]. Ridge regression offers another way out of dependent columns: it solves $(\mathbf{A}^\top\mathbf{A}+\delta\mathbf{I})\mathbf{x}=\mathbf{A}^\top\mathbf{b}$, which is always invertible for $\delta>0$, and its solution tends to $\mathbf{x}^+$ as $\delta\to0$ (see [[Linear Models#MAP estimation and regularization|MAP estimation and regularization]]).
 
 ## Key takeaways
 

@@ -16,7 +16,7 @@ next: "[[Stochastic Approximation]]"
 >
 > **Planning with a known model.** As in the previous two lectures, we assume the transition model $p(s'\mid s,a)$ and the rewards are **known**: this is planning. In practice they usually are not, which is why the earlier lectures learned from experience. The model can also be learned from data, see [[Model-Based Reinforcement Learning]].
 >
-> **Notation (local deviations).** Non-terminal states are $\mathcal{S}=\{1,\dots,n\}$ and the terminal state is $0$. Value vectors live in $\mathbb{R}^n$, with the convention $V(0)=0$. A stationary deterministic policy is $\mu$, and $\pi=(\mu_0,\mu_1,\dots)$ denotes a general, possibly non-stationary, policy. $\mathbf{1}$ is the all-ones vector, and inequalities between vectors hold componentwise.
+> **Notation (local deviations).** Non-terminal states are $\mathcal{S}=\{1,\dots,n\}$ and the terminal state is $0$. Value vectors live in $\mathbb{R}^n$, with the convention $V(0)=0$. A stationary deterministic policy is written $\pi$, with $a=\pi(s)$. A general, possibly non-stationary, policy is a sequence of **decision rules** $\pi=(d_0,d_1,\dots)$, each $d_t$ a map from states to actions; a stationary policy is the special case $d_t=\pi$ for all $t$. Subscripts on $\pi$ are iteration counters (policy iteration). $\mathbf{1}$ is the all-ones vector, and inequalities between vectors hold componentwise.
 >
 > **TL;DR:** Many tasks end: a maze has an exit, a game has a final move. The natural objective is then the **total, undiscounted** reward until termination. Without $\gamma<1$ the Bellman operator is no longer a sup-norm contraction, and a policy that never terminates can have infinite value. **Stochastic shortest path (SSP)** theory replaces discounting by termination. If (A) some policy terminates surely from every state and (B) every policy that may not terminate collects $-\infty$, then $V^*$ is the unique solution of the Bellman equation, an optimal stationary policy exists, value iteration converges from any start, and policy iteration terminates. If *every* policy terminates, the Bellman operator is a contraction in a max-norm weighted by expected time to termination.
 
@@ -27,7 +27,7 @@ In the [[Dynamic Programming|previous lecture]] everything rested on one fact: w
 Setting $\gamma=1$ breaks things in two ways.
 
 1. **A policy may never end.** A robot that keeps bumping into a wall collects reward forever. Its total reward can be $-\infty$, $+\infty$, or a sum that doesn't converge at all.
-2. **No contraction.** With $\gamma=1$ the operator $\mathcal{T}^\mu V=r_\mu+P^\mu V$ moves every component of $V$ by an *average* of the others. If $P^\mu$ never leaks probability to the terminal state, nothing shrinks, and the Banach argument has nothing to work with.
+2. **No contraction.** With $\gamma=1$ the operator $\mathcal{T}^\pi V=r_\pi+P^\pi V$ moves every component of $V$ by an *average* of the others. If $P^\pi$ never leaks probability to the terminal state, nothing shrinks, and the Banach argument has nothing to work with.
 
 Stochastic shortest path problems[^bertsekastsitsiklis1991]<sup>,</sup>[^bertsekasvol2] are the clean framework for this. The idea is that **termination plays the role of discounting**. Probability that leaks into the terminal state is lost forever, much as a factor $\gamma$ shrinks the future. The price is that we must say exactly which policies terminate and what happens to those that don't. In return, all the results of the discounted case survive, though some with different proofs. Discounted problems even turn out to be a special case ([[Dynamic Programming#Discounting as termination: the SSP view|shown in the DP lecture]]).
 
@@ -50,7 +50,7 @@ $$
 
 ### Policies and their values
 
-A **stationary** policy $\mu$ picks $\mu(s)\in\mathcal{A}(s)$ in each state. A general policy $\pi=(\mu_0,\mu_1,\dots)$ may use a different rule $\mu_t$ at each time. Randomized and history-dependent policies won't help, for the reason given after Proposition 2.
+A **stationary** policy $\pi$ picks $\pi(s)\in\mathcal{A}(s)$ in each state. A general policy $\pi=(d_0,d_1,\dots)$ may use a different decision rule $d_t$ at each time (a stationary one has $d_t=\pi$ for all $t$). Randomized and history-dependent policies won't help, for the reason given after Proposition 2.
 
 The value of $\pi$ is its total expected reward. Since the limit may not exist when $\pi$ doesn't terminate, we take the pessimistic $\liminf$ of the $k$-stage returns:
 
@@ -58,37 +58,37 @@ $$
 V^\pi(s)=\liminf_{k\to\infty}\;\mathbb{E}^\pi\Big[\sum_{t=0}^{k-1}r(s_t,a_t,s_{t+1})\;\Big|\;s_0=s\Big],\qquad V^*(s)=\sup_\pi V^\pi(s).
 $$
 
-Once the episode has ended, every later reward is $0$, so the sum effectively stops at termination. A **stationary** $\mu$ induces a Markov chain on $\{0,\dots,n\}$. Restricted to the non-terminal states, it has the transition matrix $P^\mu(s,s')=p(s'\mid s,\mu(s))$ for $s,s'\ge1$ and the reward vector $r_\mu(s)=r(s,\mu(s))$. The matrix $P^\mu$ is **substochastic**: its row sums $1-p(0\mid s,\mu(s))$ are at most $1$, and the missing mass is the probability of ending the episode in one step. As in [[Introduction to Reinforcement Learning#Matrix form and closed-form policy evaluation|the discounted case]], $\mathbb{E}^\mu[r_t\mid s_0=s]=\big((P^\mu)^t r_\mu\big)(s)$.
+Once the episode has ended, every later reward is $0$, so the sum effectively stops at termination. A **stationary** $\pi$ induces a Markov chain on $\{0,\dots,n\}$. Restricted to the non-terminal states, it has the transition matrix $P^\pi(s,s')=p(s'\mid s,\pi(s))$ for $s,s'\ge1$ and the reward vector $r_\pi(s)=r(s,\pi(s))$. The matrix $P^\pi$ is **substochastic**: its row sums $1-p(0\mid s,\pi(s))$ are at most $1$, and the missing mass is the probability of ending the episode in one step. As in [[Introduction to Reinforcement Learning#Matrix form and closed-form policy evaluation|the discounted case]], $\mathbb{E}^\pi[r_t\mid s_0=s]=\big((P^\pi)^t r_\pi\big)(s)$.
 
 ### Proper and improper policies
 
 > [!note] Definition: proper policy
-> A stationary policy $\mu$ is **proper** if, from every starting state, it reaches the terminal state with probability $1$. Otherwise it is **improper**.
+> A stationary policy $\pi$ is **proper** if, from every starting state, it reaches the terminal state with probability $1$. Otherwise it is **improper**.
 
-Properness is a property of the Markov chain of $\mu$, not of its rewards. It has a useful finite-time characterization. Let
+Properness is a property of the Markov chain of $\pi$, not of its rewards. It has a useful finite-time characterization. Let
 
 $$
-\rho_\mu=\max_{s\in\mathcal{S}}\;\mathbb{P}^\mu(s_n\neq0\mid s_0=s)
+\rho_\pi=\max_{s\in\mathcal{S}}\;\mathbb{P}^\pi(s_n\neq0\mid s_0=s)
 $$
 
 be the worst-case probability of still being alive after $n$ steps, where $n$ is the number of non-terminal states.
 
 > [!note] Lemma (geometric termination)
-> 1. $\mu$ is proper if and only if, from every state, there is a path of positive probability to $0$, if and only if $\rho_\mu<1$.
-> 2. For a proper $\mu$, $\;\mathbb{P}^\mu(s_t\neq0\mid s_0=s)\le\rho_\mu^{\lfloor t/n\rfloor}$ for all $s$ and $t\ge0$.
-> 3. For a proper $\mu$, the value is finite and given by the series below.
+> 1. $\pi$ is proper if and only if, from every state, there is a path of positive probability to $0$, if and only if $\rho_\pi<1$.
+> 2. For a proper $\pi$, $\;\mathbb{P}^\pi(s_t\neq0\mid s_0=s)\le\rho_\pi^{\lfloor t/n\rfloor}$ for all $s$ and $t\ge0$.
+> 3. For a proper $\pi$, the value is finite and given by the series below.
 >
-> In part 3, with $\bar r=\max_{s}\mathbb{E}\big[\,|r(s,\mu(s),s')|\,\big]$ the largest expected absolute one-step reward,
+> In part 3, with $\bar r=\max_{s}\mathbb{E}\big[\,|r(s,\pi(s),s')|\,\big]$ the largest expected absolute one-step reward,
 >
 > $$
 > \begin{aligned}
-> V^\mu&=\sum_{t=0}^{\infty}(P^\mu)^t r_\mu=(I-P^\mu)^{-1}r_\mu,\\
-> \lVert V^\mu\rVert_\infty&\le\frac{n\,\bar r}{1-\rho_\mu}.
+> V^\pi&=\sum_{t=0}^{\infty}(P^\pi)^t r_\pi=(I-P^\pi)^{-1}r_\pi,\\
+> \lVert V^\pi\rVert_\infty&\le\frac{n\,\bar r}{1-\rho_\pi}.
 > \end{aligned}
 > $$
 
 > [!proof]- Proof
-> **1.** If $\mu$ is proper, some path to $0$ must have positive probability. Conversely, suppose that from every $s$ there is a positive-probability path to $0$. Take a shortest one. It never visits a state twice (cutting out a loop gives a shorter path), so it has at most $n$ steps. Hence $\mathbb{P}^\mu(s_n=0\mid s_0=s)>0$ for every $s$, because $0$ is absorbing. A maximum over finitely many states of numbers below $1$ is below $1$, so $\rho_\mu<1$. Finally, $\rho_\mu<1$ implies properness by part 2, letting $t\to\infty$.
+> **1.** If $\pi$ is proper, some path to $0$ must have positive probability. Conversely, suppose that from every $s$ there is a positive-probability path to $0$. Take a shortest one. It never visits a state twice (cutting out a loop gives a shorter path), so it has at most $n$ steps. Hence $\mathbb{P}^\pi(s_n=0\mid s_0=s)>0$ for every $s$, because $0$ is absorbing. A maximum over finitely many states of numbers below $1$ is below $1$, so $\rho_\pi<1$. Finally, $\rho_\pi<1$ implies properness by part 2, letting $t\to\infty$.
 >
 > **2.** By the Markov property and time-homogeneity, for any $m\ge1$,
 >
@@ -96,24 +96,24 @@ be the worst-case probability of still being alive after $n$ steps, where $n$ is
 > \begin{aligned}
 > \mathbb{P}(s_{mn}\neq0\mid s_0=s)&=\sum_{j\ge1}\mathbb{P}(s_{mn}\neq0\mid s_{(m-1)n}=j)\\
 > &\qquad\quad\cdot\mathbb{P}(s_{(m-1)n}=j\mid s_0=s)\\
-> &\le\rho_\mu\,\mathbb{P}(s_{(m-1)n}\neq0\mid s_0=s),
+> &\le\rho_\pi\,\mathbb{P}(s_{(m-1)n}\neq0\mid s_0=s),
 > \end{aligned}
 > $$
 >
-> so by induction $\mathbb{P}(s_{mn}\neq0\mid s_0=s)\le\rho_\mu^m$. Because $0$ is absorbing, $\mathbb{P}(s_t\neq0)$ is non-increasing in $t$. For $mn\le t<(m+1)n$, that gives $\mathbb{P}(s_t\neq0\mid s_0=s)\le\rho_\mu^m$ with $m=\lfloor t/n\rfloor$.
+> so by induction $\mathbb{P}(s_{mn}\neq0\mid s_0=s)\le\rho_\pi^m$. Because $0$ is absorbing, $\mathbb{P}(s_t\neq0)$ is non-increasing in $t$. For $mn\le t<(m+1)n$, that gives $\mathbb{P}(s_t\neq0\mid s_0=s)\le\rho_\pi^m$ with $m=\lfloor t/n\rfloor$.
 >
-> **3.** First show absolute convergence, *then* take the limit. A reward is collected at time $t$ only if $s_t\neq0$, so $\mathbb{E}|r_t|\le\bar r\,\mathbb{P}(s_t\neq0)\le\bar r\,\rho_\mu^{\lfloor t/n\rfloor}$. Each value of $\lfloor t/n\rfloor=m$ occurs $n$ times, so
+> **3.** First show absolute convergence, *then* take the limit. A reward is collected at time $t$ only if $s_t\neq0$, so $\mathbb{E}|r_t|\le\bar r\,\mathbb{P}(s_t\neq0)\le\bar r\,\rho_\pi^{\lfloor t/n\rfloor}$. Each value of $\lfloor t/n\rfloor=m$ occurs $n$ times, so
 >
 > $$
-> \sum_{t=0}^{\infty}\mathbb{E}|r_t|\le\bar r\,n\sum_{m=0}^{\infty}\rho_\mu^m=\frac{n\,\bar r}{1-\rho_\mu}<\infty.
+> \sum_{t=0}^{\infty}\mathbb{E}|r_t|\le\bar r\,n\sum_{m=0}^{\infty}\rho_\pi^m=\frac{n\,\bar r}{1-\rho_\pi}<\infty.
 > $$
 >
-> The series $\sum_t\mathbb{E}[r_t]$ therefore converges absolutely, the $\liminf$ in the definition of $V^\mu$ is a genuine limit, and $V^\mu=\sum_t(P^\mu)^tr_\mu$. Since $(P^\mu)^t\to0$, the Neumann series gives $(I-P^\mu)^{-1}=\sum_t(P^\mu)^t$. $\blacksquare$
+> The series $\sum_t\mathbb{E}[r_t]$ therefore converges absolutely, the $\liminf$ in the definition of $V^\pi$ is a genuine limit, and $V^\pi=\sum_t(P^\pi)^tr_\pi$. Since $(P^\pi)^t\to0$, the Neumann series gives $(I-P^\pi)^{-1}=\sum_t(P^\pi)^t$. $\blacksquare$
 
 So for proper policies, **termination does the job of $\gamma$**. In the discounted case the weights $\gamma^t$ make the series converge; here the survival probabilities $\mathbb{P}(s_t\neq0)$ do.
 
 > [!example] The $4\times4$ gridworld of Sutton and Barto
-> The classic first example of iterative policy evaluation[^suttonbarto] is an SSP. It has 14 non-terminal cells, two terminal corners, a reward of $-1$ per step, $\gamma=1$ and the equiprobable random policy. That policy is proper (every cell has a path to a corner), so its value is $(I-P^\mu)^{-1}r_\mu$. Solving the $14\times14$ system gives, row by row,
+> The classic first example of iterative policy evaluation[^suttonbarto] is an SSP. It has 14 non-terminal cells, two terminal corners, a reward of $-1$ per step, $\gamma=1$ and the equiprobable random policy. That policy is proper (every cell has a path to a corner), so its value is $(I-P^\pi)^{-1}r_\pi$. Solving the $14\times14$ system gives, row by row,
 >
 > $$
 > \begin{pmatrix}0&-14&-20&-22\\-14&-18&-20&-20\\-20&-20&-18&-14\\-22&-20&-14&0\end{pmatrix}.
@@ -123,15 +123,15 @@ So for proper policies, **termination does the job of $\gamma$**. In the discoun
 
 > [!example]- Code: is a policy proper, and what is its value? (NumPy)
 > ```python
-> # assumes: P_mu (n, n) = transition probabilities among the NON-terminal states under mu (row sums <= 1),
-> # r_mu (n,) = expected one-step rewards, including the reward of a step into the terminal state
-> n = len(r_mu)
-> alive = np.linalg.matrix_power(P_mu, n).sum(1)       # P(s_n != 0 | s_0 = s)
-> rho_mu = alive.max()
-> proper = rho_mu < 1                                  # the Lemma: proper iff rho_mu < 1
-> V = np.linalg.solve(np.eye(n) - P_mu, r_mu) if proper else None   # V^mu = (I - P^mu)^{-1} r_mu
+> # assumes: P_pi (n, n) = transition probabilities among the NON-terminal states under pi (row sums <= 1),
+> # r_pi (n,) = expected one-step rewards, including the reward of a step into the terminal state
+> n = len(r_pi)
+> alive = np.linalg.matrix_power(P_pi, n).sum(1)       # P(s_n != 0 | s_0 = s)
+> rho_pi = alive.max()
+> proper = rho_pi < 1                                  # the Lemma: proper iff rho_pi < 1
+> V = np.linalg.solve(np.eye(n) - P_pi, r_pi) if proper else None   # V^pi = (I - P^pi)^{-1} r_pi
 > ```
-> For the equiprobable policy on the $4\times4$ gridworld, `P_mu` is $14\times14$, every `r_mu` entry is $-1$, and `V` reproduces the matrix above.
+> For the equiprobable policy on the $4\times4$ gridworld, `P_pi` is $14\times14$, every `r_pi` entry is $-1$, and `V` reproduces the matrix above.
 
 ![[Reinforcement Learning/images/stochastic-shortest-paths-maze.svg]]
 *Figure 1: a deterministic maze with exit G and a reward of $-1$ per step, including the step onto G. (a) The optimal policy and $V^*$, which is minus the shortest-path distance to G ($V^*(S)=-10$). (b) The same policy, except that two neighbouring cells in the fifth row point at each other. That one change makes the policy improper. The 7 orange cells feed into the loop, never reach G, and have value $-\infty$. The other 18 cells keep their finite values, because properness fails only where the loop is reachable.*
@@ -141,12 +141,12 @@ So for proper policies, **termination does the job of $\gamma$**. In the discoun
 Throughout, we assume:
 
 - **(A)** There is at least one proper stationary policy.
-- **(B)** Every improper stationary policy $\mu$ has $V^\mu(s)=-\infty$ for at least one state $s$.
+- **(B)** Every improper stationary policy $\pi$ has $V^\pi(s)=-\infty$ for at least one state $s$.
 
-(A) says the problem is solvable: the goal can be reached. (B) says that **failing to terminate is infinitely bad**. It does *not* forbid improper policies; the maze has plenty (Figure 1b). It only requires each of them to be catastrophic somewhere. A simple sufficient condition is that every non-terminal step costs something: $r(s,a)\le-\varepsilon<0$ for all $s\ge1$ and all $a$. An improper policy then has a state from which it never terminates, collects at most $-\varepsilon$ per step forever, and so has value $-\infty$. This is the "$-1$ per step" design used in mazes and shortest-path tasks.
+(A) says the problem is solvable: the goal can be reached. (B) says that **failing to terminate is infinitely bad**. It does *not* forbid improper policies; the maze has plenty (Figure 1b). It only requires each of them to be catastrophic somewhere. A simple sufficient condition is that every non-terminal step has a strictly negative reward: $r(s,a)\le-\varepsilon<0$ for all $s\ge1$ and all $a$. An improper policy then has a state from which it never terminates, collects at most $-\varepsilon$ per step forever, and so has value $-\infty$. This is the "$-1$ per step" design used in mazes and shortest-path tasks.
 
 > [!tip] Intuition: why (B) is needed
-> The reward setting has an asymmetry that the cost setting hides. In the cost setting, costs are usually non-negative, so "running forever" automatically costs $+\infty$. With rewards, a loop that never ends could pay $0$, or even $+$ per step. Then:
+> The reward setting has an asymmetry that the cost setting hides. In the cost setting, costs are usually non-negative, so "running forever" automatically costs $+\infty$. With rewards, a loop that never ends could pay $0$ per step, or even a positive amount. Then:
 > - **Positive rewards on a loop:** an improper policy earns $+\infty$. The problem is ill-posed; there is no meaningful optimum.
 > - **Zero reward on a loop:** values stay finite, but the Bellman equation stops pinning down $V^*$.
 >
@@ -155,29 +155,29 @@ Throughout, we assume:
 > - With $r_{\rm stay}=0$, (B) fails. Staying forever is optimal ($V^*=0$, an improper optimal policy), and **every** $V\ge-1$ solves the Bellman equation. Value iteration started at $V_0=3$ stays at $3$ forever. Both uniqueness and the convergence of value iteration are lost (Figure 2).
 
 ![[Reinforcement Learning/images/stochastic-shortest-paths-assumption-b.svg]]
-*Figure 2: the one-state example, with $\mathcal{T}^*V$ plotted against $V$. Fixed points are where the curve meets the diagonal. (a) When staying costs $-1$, the curve crosses the diagonal once, at $V^*=-1$. The cobweb from $V_0=3$ shows value iteration reaching it in 4 steps ($3,2,1,0,-1$). (b) When staying is free, the curve lies on the diagonal for all $V\ge-1$, so every such $V$ is a fixed point, and value iteration from $V_0=3$ never moves.*
+*Figure 2: the one-state example, with $\mathcal{T}^*V$ plotted against $V$. Fixed points are where the curve meets the diagonal. (a) When staying earns reward $-1$, the curve crosses the diagonal once, at $V^*=-1$. The cobweb from $V_0=3$ shows value iteration reaching it in 4 steps ($3,2,1,0,-1$). (b) When staying earns reward $0$, the curve lies on the diagonal for all $V\ge-1$, so every such $V$ is a fixed point, and value iteration from $V_0=3$ never moves.*
 
 ---
 
 ## Bellman operators without discounting
 
-For $V\in\mathbb{R}^n$ (with $V(0)=0$) and a stationary $\mu$, define
+For $V\in\mathbb{R}^n$ (with $V(0)=0$) and a stationary $\pi$, define
 
 $$
 \begin{aligned}
-(\mathcal{T}^\mu V)(s)&=r(s,\mu(s))+\sum_{s'=1}^{n}p(s'\mid s,\mu(s))\,V(s'),\\
+(\mathcal{T}^\pi V)(s)&=r(s,\pi(s))+\sum_{s'=1}^{n}p(s'\mid s,\pi(s))\,V(s'),\\
 (\mathcal{T}^*V)(s)&=\max_{a\in\mathcal{A}(s)}\Big[r(s,a)+\sum_{s'=1}^{n}p(s'\mid s,a)\,V(s')\Big].
 \end{aligned}
 $$
 
-These are the operators of the [[Dynamic Programming#The foundation: Bellman operators are contractions|DP lecture]] with $\gamma=1$. The final transition's reward is already inside $r(s,a)$. In matrix form, $\mathcal{T}^\mu V=r_\mu+P^\mu V$ with a substochastic $P^\mu$.
+These are the operators of the [[Dynamic Programming#The foundation: Bellman operators are contractions|DP lecture]] with $\gamma=1$. The final transition's reward is already inside $r(s,a)$. In matrix form, $\mathcal{T}^\pi V=r_\pi+P^\pi V$ with a substochastic $P^\pi$.
 
-**What the iterates mean.** $(\mathcal{T}^*)^kV$ is the optimal expected reward of a **$k$-stage problem** with terminal value $V$: play $k$ steps, then collect $V(s_k)$ if still alive. Likewise, $(\mathcal{T}^\mu)^kV$ is the $k$-stage return of $\mu$ with terminal value $V$. This is the [[Finite-Horizon Dynamic Programming|finite-horizon DP]] recursion run backwards for $k$ stages. In particular, with $V=\mathbf{0}$ we get the $k$-stage return.
+**What the iterates mean.** $(\mathcal{T}^*)^kV$ is the optimal expected reward of a **$k$-stage problem** with terminal value $V$: play $k$ steps, then collect $V(s_k)$ if still alive. Likewise, $(\mathcal{T}^\pi)^kV$ is the $k$-stage return of $\pi$ with terminal value $V$. This is the [[Finite-Horizon Dynamic Programming|finite-horizon DP]] recursion run backwards for $k$ stages. In particular, with $V=\mathbf{0}$ we get the $k$-stage return.
 
 Two elementary properties carry all the proofs that follow.
 
 > [!note] Lemma 1 (monotonicity)
-> If $V\le V'$, then $\mathcal{T}^\mu V\le\mathcal{T}^\mu V'$ and $\mathcal{T}^*V\le\mathcal{T}^*V'$. By induction, the same holds for $(\mathcal{T}^\mu)^k$ and $(\mathcal{T}^*)^k$ for every $k\ge1$.
+> If $V\le V'$, then $\mathcal{T}^\pi V\le\mathcal{T}^\pi V'$ and $\mathcal{T}^*V\le\mathcal{T}^*V'$. By induction, the same holds for $(\mathcal{T}^\pi)^k$ and $(\mathcal{T}^*)^k$ for every $k\ge1$.
 
 > [!note] Lemma 2 (constant shift)
 > For every scalar $c\ge0$ and every $k\ge0$,
@@ -189,24 +189,24 @@ Two elementary properties carry all the proofs that follow.
 > \end{aligned}
 > $$
 >
-> and the same holds for $\mathcal{T}^\mu$.
+> and the same holds for $\mathcal{T}^\pi$.
 
 > [!proof]- Proofs
 > **Monotonicity.** Transition probabilities are non-negative, so $\sum_{s'}p(s'\mid s,a)V(s')\le\sum_{s'}p(s'\mid s,a)V'(s')$ for every $a$. Adding $r(s,a)$ keeps the order, and if $f(a)\le g(a)$ for every $a$, then $\max_af(a)\le\max_ag(a)$. For $k$ steps, apply the one-step result to $(\mathcal{T}^*)^{k-1}V\le(\mathcal{T}^*)^{k-1}V'$.
 >
-> **Constant shift.** Let $q_a(s)=r(s,a)+\sum_{s'\ge1}p(s'\mid s,a)V(s')$ and $\ell_a(s)=\sum_{s'\ge1}p(s'\mid s,a)\in[0,1]$, the probability of *not* terminating in one step. Then
+> **Constant shift.** Let $u_a(s)=r(s,a)+\sum_{s'\ge1}p(s'\mid s,a)V(s')$ and $\ell_a(s)=\sum_{s'\ge1}p(s'\mid s,a)\in[0,1]$, the probability of *not* terminating in one step. Then
 >
 > $$
-> \big(\mathcal{T}^*(V+c\mathbf{1})\big)(s)=\max_a\big[q_a(s)+c\,\ell_a(s)\big].
+> \big(\mathcal{T}^*(V+c\mathbf{1})\big)(s)=\max_a\big[u_a(s)+c\,\ell_a(s)\big].
 > $$
 >
-> For $c\ge0$ this is at most $\max_aq_a(s)+c$, and for $c\le0$ it is at least $\max_aq_a(s)+c$. For $k$ steps, by induction and Lemma 1:
+> For $c\ge0$ this is at most $\max_au_a(s)+c$, and for $c\le0$ it is at least $\max_au_a(s)+c$. For $k$ steps, by induction and Lemma 1:
 >
 > $$
 > (\mathcal{T}^*)^{k+1}(V+c\mathbf{1})\le\mathcal{T}^*\big((\mathcal{T}^*)^kV+c\mathbf{1}\big)\le(\mathcal{T}^*)^{k+1}V+c\mathbf{1}.
 > $$
 >
-> The proof for $\mathcal{T}^\mu$ is the same with a single action. $\blacksquare$
+> The proof for $\mathcal{T}^\pi$ is the same with a single action. $\blacksquare$
 
 Compare this with the discounted case, where the shift is an **equality**, $\mathcal{T}^*(V+c\mathbf{1})=\mathcal{T}^*V+\gamma c\mathbf{1}$, because every row leaks exactly $1-\gamma$. Here a row leaks $1-\ell_a(s)$, which depends on the state and action and can be $0$. So a shift passes through *at most* unchanged, which is enough for sandwich arguments but not for a contraction.
 
@@ -215,28 +215,28 @@ Compare this with the discounted case, where the shift is an **equality**, $\mat
 ## Evaluating a proper policy
 
 > [!note] Proposition 1 (policy evaluation)
-> **(a)** If $\mu$ is proper, then for every $V\in\mathbb{R}^n$, $(\mathcal{T}^\mu)^kV\to V^\mu$. Moreover, $V^\mu$ is the **unique** solution of $V=\mathcal{T}^\mu V$.
+> **(a)** If $\pi$ is proper, then for every $V\in\mathbb{R}^n$, $(\mathcal{T}^\pi)^kV\to V^\pi$. Moreover, $V^\pi$ is the **unique** solution of $V=\mathcal{T}^\pi V$.
 >
-> **(b)** Under (B): if $V\le\mathcal{T}^\mu V$ for some $V\in\mathbb{R}^n$, then $\mu$ is proper.
+> **(b)** Under (B): if $V\le\mathcal{T}^\pi V$ for some $V\in\mathbb{R}^n$, then $\pi$ is proper.
 
 Part (b) is the workhorse. It says that a policy whose Bellman update can only *raise* some finite value vector cannot be improper, because an improper policy would drag some component to $-\infty$.
 
 > [!proof]- Proof
-> **(a)** Unrolling $\mathcal{T}^\mu V=r_\mu+P^\mu V$ gives
+> **(a)** Unrolling $\mathcal{T}^\pi V=r_\pi+P^\pi V$ gives
 >
 > $$
-> (\mathcal{T}^\mu)^kV=(P^\mu)^kV+\sum_{t=0}^{k-1}(P^\mu)^tr_\mu.
+> (\mathcal{T}^\pi)^kV=(P^\pi)^kV+\sum_{t=0}^{k-1}(P^\pi)^tr_\pi.
 > $$
 >
-> The sum converges to $V^\mu$ by the lemma. For the first term, each row of $(P^\mu)^k$ has total mass $\mathbb{P}(s_k\neq0)\le\rho_\mu^{\lfloor k/n\rfloor}$, so $|(P^\mu)^kV|\le\rho_\mu^{\lfloor k/n\rfloor}\lVert V\rVert_\infty\mathbf{1}\to0$. (The *absolute* value matters: an upper bound alone would not show the term vanishes.) Hence $(\mathcal{T}^\mu)^kV\to V^\mu$. Taking $k\to\infty$ in $(\mathcal{T}^\mu)^{k+1}V=r_\mu+P^\mu(\mathcal{T}^\mu)^kV$ gives $V^\mu=\mathcal{T}^\mu V^\mu$. If also $V=\mathcal{T}^\mu V$, then $V=(\mathcal{T}^\mu)^kV\to V^\mu$, so $V=V^\mu$.
+> The sum converges to $V^\pi$ by the lemma. For the first term, each row of $(P^\pi)^k$ has total mass $\mathbb{P}(s_k\neq0)\le\rho_\pi^{\lfloor k/n\rfloor}$, so $|(P^\pi)^kV|\le\rho_\pi^{\lfloor k/n\rfloor}\lVert V\rVert_\infty\mathbf{1}\to0$. (The *absolute* value matters: an upper bound alone would not show the term vanishes.) Hence $(\mathcal{T}^\pi)^kV\to V^\pi$. Taking $k\to\infty$ in $(\mathcal{T}^\pi)^{k+1}V=r_\pi+P^\pi(\mathcal{T}^\pi)^kV$ gives $V^\pi=\mathcal{T}^\pi V^\pi$. If also $V=\mathcal{T}^\pi V$, then $V=(\mathcal{T}^\pi)^kV\to V^\pi$, so $V=V^\pi$.
 >
-> **(b)** Monotonicity applied repeatedly to $V\le\mathcal{T}^\mu V$ gives $V\le(\mathcal{T}^\mu)^kV$ for every $k$. Since $P^\mu$ is substochastic, $(P^\mu)^kV\le\lVert V\rVert_\infty\mathbf{1}$, so
+> **(b)** Monotonicity applied repeatedly to $V\le\mathcal{T}^\pi V$ gives $V\le(\mathcal{T}^\pi)^kV$ for every $k$. Since $P^\pi$ is substochastic, $(P^\pi)^kV\le\lVert V\rVert_\infty\mathbf{1}$, so
 >
 > $$
-> V\le\lVert V\rVert_\infty\mathbf{1}+\sum_{t=0}^{k-1}(P^\mu)^tr_\mu\qquad\text{for all }k.
+> V\le\lVert V\rVert_\infty\mathbf{1}+\sum_{t=0}^{k-1}(P^\pi)^tr_\pi\qquad\text{for all }k.
 > $$
 >
-> If $\mu$ were improper, (B) would give a state $s$ where the $k$-stage return $\big(\sum_{t<k}(P^\mu)^tr_\mu\big)(s)$ has $\liminf$ equal to $-\infty$. Along those $k$, the right-hand side at $s$ goes to $-\infty$, contradicting $V(s)\in\mathbb{R}$. $\blacksquare$
+> If $\pi$ were improper, (B) would give a state $s$ where the $k$-stage return $\big(\sum_{t<k}(P^\pi)^tr_\pi\big)(s)$ has $\liminf$ equal to $-\infty$. Along those $k$, the right-hand side at $s$ goes to $-\infty$, contradicting $V(s)\in\mathbb{R}$. $\blacksquare$
 
 ---
 
@@ -249,7 +249,7 @@ Part (b) is the workhorse. It says that a policy whose Bellman update can only *
 >
 > **(b)** **Value iteration converges from any start:** $(\mathcal{T}^*)^kV\to V^*$ for every $V\in\mathbb{R}^n$.
 >
-> **(c)** A stationary $\mu$ is optimal if and only if it is greedy with respect to $V^*$, that is $\mathcal{T}^\mu V^*=\mathcal{T}^*V^*$. Hence an optimal **stationary deterministic** policy exists, and every optimal stationary policy is proper.
+> **(c)** A stationary $\pi$ is optimal if and only if it is greedy with respect to $V^*$, that is $\mathcal{T}^\pi V^*=\mathcal{T}^*V^*$. Hence an optimal **stationary deterministic** policy exists, and every optimal stationary policy is proper.
 
 These are exactly the conclusions of the discounted theory. The proof, though, cannot use Banach. It is built from monotonicity, the shift lemma and Proposition 1, in four steps:
 
@@ -259,34 +259,34 @@ These are exactly the conclusions of the discounted theory. The proof, though, c
 4. That fixed point is $V^*$, because no policy, stationary or not, can beat $(\mathcal{T}^*)^k\mathbf{0}$ over $k$ stages.
 
 > [!proof]- Proof of Proposition 2
-> **Step 1 (at most one fixed point).** Let $V=\mathcal{T}^*V$ and $V'=\mathcal{T}^*V'$, and let $\mu,\mu'$ be greedy for them, so $\mathcal{T}^\mu V=V$ and $\mathcal{T}^{\mu'}V'=V'$. By Proposition 1(b) both policies are proper, and by 1(a) $V=V^\mu$ and $V'=V^{\mu'}$. A maximum is at least any particular choice, so $\mathcal{T}^*U\ge\mathcal{T}^{\mu'}U$ for every $U$. With monotonicity this gives $(\mathcal{T}^*)^kU\ge(\mathcal{T}^{\mu'})^kU$ by induction. Hence
+> **Step 1 (at most one fixed point).** Let $V=\mathcal{T}^*V$ and $V'=\mathcal{T}^*V'$, and let $\pi,\pi'$ be greedy for them, so $\mathcal{T}^\pi V=V$ and $\mathcal{T}^{\pi'}V'=V'$. By Proposition 1(b) both policies are proper, and by 1(a) $V=V^\pi$ and $V'=V^{\pi'}$. A maximum is at least any particular choice, so $\mathcal{T}^*U\ge\mathcal{T}^{\pi'}U$ for every $U$. With monotonicity this gives $(\mathcal{T}^*)^kU\ge(\mathcal{T}^{\pi'})^kU$ by induction. Hence
 >
 > $$
-> V=(\mathcal{T}^*)^kV\ge(\mathcal{T}^{\mu'})^kV\xrightarrow[k\to\infty]{}V^{\mu'}=V'.
+> V=(\mathcal{T}^*)^kV\ge(\mathcal{T}^{\pi'})^kV\xrightarrow[k\to\infty]{}V^{\pi'}=V'.
 > $$
 >
 > By symmetry $V'\ge V$, so $V=V'$.
 >
-> **Step 2 (a fixed point exists).** By (A), start from a proper $\mu_0$. Given a proper $\mu_k$, let $\mu_{k+1}$ be greedy with respect to $V^{\mu_k}$. Then
+> **Step 2 (a fixed point exists).** By (A), start from a proper $\pi_0$. Given a proper $\pi_k$, let $\pi_{k+1}$ be greedy with respect to $V^{\pi_k}$. Then
 >
 > $$
-> V^{\mu_k}=\mathcal{T}^{\mu_k}V^{\mu_k}\le\mathcal{T}^*V^{\mu_k}=\mathcal{T}^{\mu_{k+1}}V^{\mu_k}.
+> V^{\pi_k}=\mathcal{T}^{\pi_k}V^{\pi_k}\le\mathcal{T}^*V^{\pi_k}=\mathcal{T}^{\pi_{k+1}}V^{\pi_k}.
 > $$
 >
-> *First* conclude that $\mu_{k+1}$ is proper, by Proposition 1(b). *Then* monotonicity gives $V^{\mu_k}\le\mathcal{T}^{\mu_{k+1}}V^{\mu_k}\le(\mathcal{T}^{\mu_{k+1}})^2V^{\mu_k}\le\cdots\to V^{\mu_{k+1}}$ by 1(a). So the values never decrease. There are finitely many stationary deterministic policies, so some policy repeats, $\mu_j=\mu_{j+m}$. Then $V^{\mu_j}\le V^{\mu_{j+1}}\le\cdots\le V^{\mu_{j+m}}=V^{\mu_j}$, so all of these are equal, and
+> *First* conclude that $\pi_{k+1}$ is proper, by Proposition 1(b). *Then* monotonicity gives $V^{\pi_k}\le\mathcal{T}^{\pi_{k+1}}V^{\pi_k}\le(\mathcal{T}^{\pi_{k+1}})^2V^{\pi_k}\le\cdots\to V^{\pi_{k+1}}$ by 1(a). So the values never decrease. There are finitely many stationary deterministic policies, so some policy repeats, $\pi_j=\pi_{j+m}$. Then $V^{\pi_j}\le V^{\pi_{j+1}}\le\cdots\le V^{\pi_{j+m}}=V^{\pi_j}$, so all of these are equal, and
 >
 > $$
-> V^{\mu_j}\le\mathcal{T}^*V^{\mu_j}=\mathcal{T}^{\mu_{j+1}}V^{\mu_j}\le V^{\mu_{j+1}}=V^{\mu_j}.
+> V^{\pi_j}\le\mathcal{T}^*V^{\pi_j}=\mathcal{T}^{\pi_{j+1}}V^{\pi_j}\le V^{\pi_{j+1}}=V^{\pi_j}.
 > $$
 >
-> So $W:=V^{\mu_j}$ satisfies $W=\mathcal{T}^*W$, and $\bar\mu:=\mu_j$ is a proper policy with $V^{\bar\mu}=W$.
+> So $W:=V^{\pi_j}$ satisfies $W=\mathcal{T}^*W$, and $\bar\pi:=\pi_j$ is a proper policy with $V^{\bar\pi}=W$.
 >
 > **Step 3 (value iteration converges to $W$).** Two facts are used. $\mathcal{T}^*$ is continuous: each component is a maximum of finitely many affine functions. And a bounded monotone sequence in $\mathbb{R}^n$ converges.
 >
-> *From below.* Fix $\delta>0$ and let $\hat V$ be the value of $\bar\mu$ when every reward is lowered by $\delta$. Then $\hat V=W-\delta(I-P^{\bar\mu})^{-1}\mathbf{1}\le W-\delta\mathbf{1}$, because $(I-P^{\bar\mu})^{-1}=\sum_t(P^{\bar\mu})^t\ge I$. Also $\mathcal{T}^{\bar\mu}\hat V=\hat V+\delta\mathbf{1}$. Hence
+> *From below.* Fix $\delta>0$ and let $\hat V$ be the value of $\bar\pi$ when every reward is lowered by $\delta$. Then $\hat V=W-\delta(I-P^{\bar\pi})^{-1}\mathbf{1}\le W-\delta\mathbf{1}$, because $(I-P^{\bar\pi})^{-1}=\sum_t(P^{\bar\pi})^t\ge I$. Also $\mathcal{T}^{\bar\pi}\hat V=\hat V+\delta\mathbf{1}$. Hence
 >
 > $$
-> \hat V\le\mathcal{T}^{\bar\mu}\hat V\le\mathcal{T}^*\hat V\le\mathcal{T}^*W=W.
+> \hat V\le\mathcal{T}^{\bar\pi}\hat V\le\mathcal{T}^*\hat V\le\mathcal{T}^*W=W.
 > $$
 >
 > By monotonicity $(\mathcal{T}^*)^k\hat V$ is non-decreasing and bounded above by $W$. Its limit is a fixed point by continuity, so it equals $W$ by Step 1.
@@ -295,15 +295,15 @@ These are exactly the conclusions of the discounted theory. The proof, though, c
 >
 > *Any start.* Given $V$, take $\delta\ge\lVert V-W\rVert_\infty$. Then $\hat V\le W-\delta\mathbf{1}\le V\le W+\delta\mathbf{1}$. Monotonicity squeezes $(\mathcal{T}^*)^kV$ between two sequences that both converge to $W$.
 >
-> **Step 4 ($W=V^*$).** Let $\pi=(\mu_0,\mu_1,\dots)$ be any policy. Its $k$-stage return with **zero** terminal value is $\mathcal{T}^{\mu_0}\mathcal{T}^{\mu_1}\cdots\mathcal{T}^{\mu_{k-1}}\mathbf{0}$. Using $\mathcal{T}^{\mu}\le\mathcal{T}^*$ and monotonicity, by induction on $k$,
+> **Step 4 ($W=V^*$).** Let $\pi=(d_0,d_1,\dots)$ be any policy. Its $k$-stage return with **zero** terminal value is $\mathcal{T}^{d_0}\mathcal{T}^{d_1}\cdots\mathcal{T}^{d_{k-1}}\mathbf{0}$, where $\mathcal{T}^{d}$ is the operator of the stationary policy $d$. Using $\mathcal{T}^{d}\le\mathcal{T}^*$ and monotonicity, by induction on $k$,
 >
 > $$
-> \mathcal{T}^{\mu_0}\cdots\mathcal{T}^{\mu_{k-1}}\mathbf{0}\le(\mathcal{T}^*)^k\mathbf{0}.
+> \mathcal{T}^{d_0}\cdots\mathcal{T}^{d_{k-1}}\mathbf{0}\le(\mathcal{T}^*)^k\mathbf{0}.
 > $$
 >
-> Taking $\liminf_k$ and using Step 3 with $V=\mathbf{0}$ gives $V^\pi\le W$. (The terminal value must be $\mathbf{0}$ here: only then is the left side the $k$-stage return of $\pi$.) So $V^*\le W$. Also $W=V^{\bar\mu}\le V^*$, hence $V^*=W$. This proves (a) and (b).
+> Taking $\liminf_k$ and using Step 3 with $V=\mathbf{0}$ gives $V^\pi\le W$. (The terminal value must be $\mathbf{0}$ here: only then is the left side the $k$-stage return of $\pi$.) So $V^*\le W$. Also $W=V^{\bar\pi}\le V^*$, hence $V^*=W$. This proves (a) and (b).
 >
-> **(c).** If $\mu$ is optimal, $V^\mu=V^*$ is finite, so $\mu$ is proper: by (B) an improper policy is $-\infty$ somewhere. Then $\mathcal{T}^\mu V^*=\mathcal{T}^\mu V^\mu=V^\mu=V^*=\mathcal{T}^*V^*$. Conversely, if $\mathcal{T}^\mu V^*=\mathcal{T}^*V^*=V^*$, then $V^*\le\mathcal{T}^\mu V^*$, so $\mu$ is proper by 1(b), and $V^*$ is a fixed point of $\mathcal{T}^\mu$. By 1(a), $V^*=V^\mu$. $\blacksquare$
+> **(c).** If $\pi$ is optimal, $V^\pi=V^*$ is finite, so $\pi$ is proper: by (B) an improper policy is $-\infty$ somewhere. Then $\mathcal{T}^\pi V^*=\mathcal{T}^\pi V^\pi=V^\pi=V^*=\mathcal{T}^*V^*$. Conversely, if $\mathcal{T}^\pi V^*=\mathcal{T}^*V^*=V^*$, then $V^*\le\mathcal{T}^\pi V^*$, so $\pi$ is proper by 1(b), and $V^*$ is a fixed point of $\mathcal{T}^\pi$. By 1(a), $V^*=V^\pi$. $\blacksquare$
 
 **Stationary policies suffice.** Step 4 compares $V^*$ with *every* policy, including non-stationary ones. The bound $(\mathcal{T}^*)^k\mathbf{0}$ is the optimal $k$-stage return over *all* policies, even randomized or history-dependent ones, by [[Finite-Horizon Dynamic Programming|finite-horizon DP]]. So nothing beats the best stationary deterministic policy. The [[Introduction to Reinforcement Learning|introduction]] quoted this fact for discounted MDPs; here we have proved it for SSPs.
 
@@ -313,15 +313,15 @@ These are exactly the conclusions of the discounted theory. The proof, though, c
 The optimistic run in Figure 3(a) is worth remembering. In the discounted case, an error of $50$ shrinks by a factor $\gamma$ per sweep. In an SSP an over-estimate decays only as fast as the rewards can "pay it off", here $1$ per step. Starting from below is safer: $V_0=0$ is a natural pessimistic start when all rewards are negative.
 
 > [!example] A worked example: the spider and the fly
-> This is a version of the spider-and-fly example in Bertsekas's textbook.[^bertsekasvol1] A spider and a fly sit on a line, at distance $x\in\{1,\dots,n\}$. Each step, the fly moves one unit away with probability $p$, one unit towards the spider with probability $p$, and stays with probability $1-2p$ (with $0<p<\tfrac12$). When the distance is $2$ or more, the spider always moves one unit towards the fly. At distance $1$ it has a choice: **move** onto the fly's current position, or **wait**. Both move at once, the new distance is $|x-m+f|$ for spider move $m\in\{0,1\}$ and fly move $f\in\{-1,0,1\}$, and capture means distance $0$. The reward is $-1$ per step, so $-V$ is the expected capture time.
+> This is a version of the spider-and-fly example in Bertsekas's textbook.[^bertsekasvol1] A spider and a fly sit on a line, at distance $x\in\{1,\dots,n\}$. Each step, the fly moves one unit away with probability $q$, one unit towards the spider with probability $q$, and stays with probability $1-2q$ (with $0<q<\tfrac12$). When the distance is $2$ or more, the spider always moves one unit towards the fly. At distance $1$ it has a choice: **move** onto the fly's current position, or **wait**. Both move at once, the new distance is $|x-a+w|$ for spider move $a\in\{0,1\}$ and fly move $w\in\{-1,0,1\}$, and capture means distance $0$. The reward is $-1$ per step, so $-V$ is the expected capture time.
 >
 > At distance $1$:
-> - **Move:** the spider lands on the fly's old spot. It catches the fly only if the fly stayed (probability $1-2p$); otherwise they cross or separate, back to distance $1$. With $t_1$ the expected capture time from distance $1$ under "always move", $t_1=1+2p\,t_1$, so $t_1=1/(1-2p)$.
-> - **Wait:** the fly walks into the spider with probability $p$, stays at distance $1$ with probability $1-2p$, and moves to distance $2$ with probability $p$. From distance $2$ the spider moves, and the distance becomes $0$, $1$ or $2$, so $t_2=\big(1+(1-2p)\,t_1\big)/(1-p)$. Solving with $t_1=1+(1-2p)\,t_1+p\,t_2$ gives $t_1=1/p$.
+> - **Move:** the spider lands on the fly's old spot. It catches the fly only if the fly stayed (probability $1-2q$); otherwise they cross or separate, back to distance $1$. With $h_1$ the expected capture time from distance $1$ under "always move", $h_1=1+2q\,h_1$, so $h_1=1/(1-2q)$.
+> - **Wait:** the fly walks into the spider with probability $q$, stays at distance $1$ with probability $1-2q$, and moves to distance $2$ with probability $q$. From distance $2$ the spider moves, and the distance becomes $0$, $1$ or $2$, so $h_2=\big(1+(1-2q)\,h_1\big)/(1-q)$. Solving with $h_1=1+(1-2q)\,h_1+q\,h_2$ gives $h_1=1/q$.
 >
-> So moving is optimal if and only if $1/(1-2p)<1/p$, i.e. $p<\tfrac13$, and waiting is optimal for $p>\tfrac13$ (Figure 4a). By Proposition 2(c), the greedy policy with respect to $V^*$ is optimal, and the computation confirms it: at $p=0.2$, moving takes $1.67$ steps against $5$ for waiting; at $p=0.4$, waiting takes $2.5$ against $5$.
+> So moving is optimal if and only if $1/(1-2q)<1/q$, i.e. $q<\tfrac13$, and waiting is optimal for $q>\tfrac13$ (Figure 4a). By Proposition 2(c), the greedy policy with respect to $V^*$ is optimal, and the computation confirms it: at $q=0.2$, moving takes $1.67$ steps against $5$ for waiting; at $q=0.4$, waiting takes $2.5$ against $5$.
 >
-> At $p=\tfrac12$ the fly never stays. "Always move" then never catches it: an **improper** policy with value $-\infty$. "Wait" is still proper. This is (A) and (B) at work in a natural problem.
+> At $q=\tfrac12$ the fly never stays. "Always move" then never catches it: an **improper** policy with value $-\infty$. "Wait" is still proper. This is (A) and (B) at work in a natural problem.
 
 ---
 
@@ -336,7 +336,7 @@ Under (A) and (B) alone, $\mathcal{T}^*$ need not be a contraction in *any* norm
 > \sum_{s'=1}^{n}p(s'\mid s,a)\,\xi(s')\le\beta\,\xi(s)\qquad\text{for all }s\in\mathcal{S},\ a\in\mathcal{A}(s),
 > $$
 >
-> and $\mathcal{T}^*$ and every $\mathcal{T}^\mu$ are $\beta$-contractions in the weighted max-norm
+> and $\mathcal{T}^*$ and every $\mathcal{T}^\pi$ are $\beta$-contractions in the weighted max-norm
 >
 > $$
 > \lVert V\rVert_\xi=\max_{s}\frac{|V(s)|}{\xi(s)}.
@@ -347,7 +347,7 @@ Under (A) and (B) alone, $\mathcal{T}^*$ need not be a contraction in *any* norm
 **Why these weights work.** Dividing by $\xi(s)$ measures an error at $s$ *relative to how long the process can still run from $s$*. After one step, the expected remaining time has dropped by at least one unit out of $\xi(s)$. So the weighted error shrinks by the factor $(\xi(s)-1)/\xi(s)$ or better. States far from termination get large weights, which lets their errors be large without breaking the contraction.
 
 > [!proof]- Proof
-> **The weights.** Consider an auxiliary SSP with the same transitions and reward $+1$ for every non-terminal step. Its value is the expected number of steps to termination. Since every policy is proper, (A) holds and (B) is vacuous, so Proposition 2 applies (positive rewards are harmless when no policy can loop). Let $\xi$ be its optimal value: $\xi(s)=\max_\mu\mathbb{E}^\mu[\tau\mid s_0=s]\ge1$, where $\tau$ is the termination time. The Bellman equation $\xi=\mathcal{T}^*_{\rm aux}\xi$ gives, for **every** action $a$,
+> **The weights.** Consider an auxiliary SSP with the same transitions and reward $+1$ for every non-terminal step. Its value is the expected number of steps to termination. Since every policy is proper, (A) holds and (B) is vacuous, so Proposition 2 applies (positive rewards are harmless when no policy can loop). Let $\xi$ be its optimal value: $\xi(s)=\max_\pi\mathbb{E}^\pi[\tau\mid s_0=s]\ge1$, where $\tau$ is the termination time. The Bellman equation $\xi=\mathcal{T}^*_{\rm aux}\xi$ gives, for **every** action $a$,
 >
 > $$
 > \begin{aligned}
@@ -358,11 +358,11 @@ Under (A) and (B) alone, $\mathcal{T}^*$ need not be a contraction in *any* norm
 >
 > with $\beta=\max_s(\xi(s)-1)/\xi(s)<1$ (finitely many states, each $\xi(s)<\infty$).
 >
-> **Contraction of $\mathcal{T}^\mu$.** For any $U,V$ and state $s$,
+> **Contraction of $\mathcal{T}^\pi$.** For any $U,V$ and state $s$,
 >
 > $$
 > \begin{aligned}
-> |(\mathcal{T}^\mu U)(s)-(\mathcal{T}^\mu V)(s)|&\le\sum_{s'}p(s'\mid s,\mu(s))\,\xi(s')\,\frac{|U(s')-V(s')|}{\xi(s')}\\
+> |(\mathcal{T}^\pi U)(s)-(\mathcal{T}^\pi V)(s)|&\le\sum_{s'}p(s'\mid s,\pi(s))\,\xi(s')\,\frac{|U(s')-V(s')|}{\xi(s')}\\
 > &\le\beta\,\xi(s)\,\lVert U-V\rVert_\xi.
 > \end{aligned}
 > $$
@@ -373,15 +373,15 @@ Under (A) and (B) alone, $\mathcal{T}^*$ need not be a contraction in *any* norm
 
 With Banach, Proposition 3 gives everything at once: a unique fixed point, value iteration converging at the geometric rate $\lVert V_k-V^*\rVert_\xi\le\beta^k\lVert V_0-V^*\rVert_\xi$, and the same for policy evaluation.
 
-**Why it fails with an improper policy.** Suppose $\mu$ is improper. Then there is a set $C$ of states that the chain of $\mu$ never leaves and from which it never terminates, so $P^\mu\mathbf{1}_C=\mathbf{1}$ on $C$. Take $U=V+c\,\mathbf{1}_C$. For $s\in C$, $(\mathcal{T}^\mu U-\mathcal{T}^\mu V)(s)=c\,(P^\mu\mathbf{1}_C)(s)=c$, so $\lVert\mathcal{T}^\mu U-\mathcal{T}^\mu V\rVert_\xi\ge\max_{s\in C}c/\xi(s)=\lVert U-V\rVert_\xi$. For **every** choice of weights, the modulus is $1$. Without leakage nothing shrinks, so no weighting can create a contraction.
+**Why it fails with an improper policy.** Suppose $\pi$ is improper. Then there is a set $C$ of states that the chain of $\pi$ never leaves and from which it never terminates, so $P^\pi\mathbf{1}_C=\mathbf{1}$ on $C$. Take $U=V+c\,\mathbf{1}_C$. For $s\in C$, $(\mathcal{T}^\pi U-\mathcal{T}^\pi V)(s)=c\,(P^\pi\mathbf{1}_C)(s)=c$, so $\lVert\mathcal{T}^\pi U-\mathcal{T}^\pi V\rVert_\xi\ge\max_{s\in C}c/\xi(s)=\lVert U-V\rVert_\xi$. For **every** choice of weights, the modulus is $1$. Without leakage nothing shrinks, so no weighting can create a contraction.
 
-**Discounting is the special case $\xi=\text{const}$.** In the SSP that mimics a discounted MDP (next section), every policy terminates with probability $1-\gamma$ at each step. The expected termination time is then $1/(1-\gamma)$ from every state, the weights are constant, $\lVert\cdot\rVert_\xi$ is the ordinary max-norm up to scale, and $\beta=\gamma$. The DP lecture's contraction is Proposition 3 in disguise.
+**Discounting is the special case $\xi=\text{const}$.** In the SSP that mimics a discounted MDP ([[#Discounted problems are SSPs|last section]]), every policy terminates with probability $1-\gamma$ at each step. The expected termination time is then $1/(1-\gamma)$ from every state, the weights are constant, $\lVert\cdot\rVert_\xi$ is the ordinary max-norm up to scale, and $\beta=\gamma$. The DP lecture's contraction is Proposition 3 in disguise.
 
 ![[Reinforcement Learning/images/stochastic-shortest-paths-spider-fly.svg]]
-*Figure 4: the spider and the fly. (a) Expected capture time from distance 1 if the spider moves ($1/(1-2p)$) or waits ($1/p$); the optimal action switches at $p=1/3$. (b) Contraction weights for $p=0.3$ and $n=10$. Every policy is proper, and $\xi(x)$, the worst-case expected capture time, grows from $3.33$ at distance 1 to $11.33$ at distance 10. The expected weight after one "move" step (black) stays below $\beta\,\xi(x)$ (orange), with $\beta=0.912$.*
+*Figure 4: the spider and the fly. (a) Expected capture time from distance 1 if the spider moves ($1/(1-2q)$) or waits ($1/q$); the optimal action switches at $q=1/3$. (b) Contraction weights for $q=0.3$ and $n=10$. Every policy is proper, and $\xi(x)$, the worst-case expected capture time, grows from $3.33$ at distance 1 to $11.33$ at distance 10. The expected weight after one "move" step (black) stays below $\beta\,\xi(x)$ (orange), with $\beta=0.912$.*
 
 ![[Reinforcement Learning/images/stochastic-shortest-paths-contraction.svg]]
-*Figure 5: value iteration on the spider and fly ($p=0.3$), log scale. In the weighted norm, the error shrinks by a factor of at most $0.907$ per sweep over the first 40 sweeps, within the guaranteed $\beta=0.912$ (dashed). The plain max-norm error (dotted) has no such guarantee. From $V_0=-30$ it shrank by as little as a factor $0.996$ in one sweep. The worst-case bound is loose: the actual rate is set by the slowest-decaying mode of the dynamics, not by the worst state.*
+*Figure 5: value iteration on the spider and fly ($q=0.3$), log scale. In the weighted norm, the error shrinks by a factor of at most $0.907$ per sweep over the first 40 sweeps, within the guaranteed $\beta=0.912$ (dashed). The plain max-norm error (dotted) has no such guarantee. From $V_0=-30$ it shrank by as little as a factor $0.996$ in one sweep. The worst-case bound is loose: the actual rate is set by the slowest-decaying mode of the dynamics, not by the worst state.*
 
 > [!warning] A qualitative guarantee
 > The modulus $\beta$ can be extremely close to $1$. In the slippery maze of Figure 3(b), every policy is proper, because random slips eventually reach the exit. But the worst policy, which keeps pushing away from the exit, needs about $1.9\times10^{11}$ steps on average. So $\beta=1-5\times10^{-12}$, yet value iteration converged in 46 sweeps. Proposition 3 guarantees convergence; it is a poor predictor of speed.
@@ -436,81 +436,81 @@ Gauss–Seidel is *often* faster, because good news travels further in one sweep
 ### Policy iteration
 
 > [!example] Algorithm: policy iteration for SSPs
-> **Input:** model $p$, rewards $r$. Initialize $\mu_0$ to a **proper** policy.
+> **Input:** model $p$, rewards $r$. Initialize $\pi_0$ to a **proper** policy.
 > **For** $k=0,1,2,\dots$:
-> 1. **Evaluate:** solve the linear system $(I-P^{\mu_k})V=r_{\mu_k}$ for $V^{\mu_k}$.
-> 2. **Improve:** for every $s$, set $\mu_{k+1}(s)\in\arg\max_a\big[r(s,a)+\sum_{s'\ge1}p(s'\mid s,a)V^{\mu_k}(s')\big]$, keeping $\mu_k(s)$ when it is among the maximizers.
-> 3. If $\mu_{k+1}=\mu_k$, **stop**: $\mu_k$ is optimal and $V^{\mu_k}=V^*$.
+> 1. **Evaluate:** solve the linear system $(I-P^{\pi_k})V=r_{\pi_k}$ for $V^{\pi_k}$.
+> 2. **Improve:** for every $s$, set $\pi_{k+1}(s)\in\arg\max_a\big[r(s,a)+\sum_{s'\ge1}p(s'\mid s,a)V^{\pi_k}(s')\big]$, keeping $\pi_k(s)$ when it is among the maximizers.
+> 3. If $\pi_{k+1}=\pi_k$, **stop**: $\pi_k$ is optimal and $V^{\pi_k}=V^*$.
 
-The only change from [[Dynamic Programming#Policy iteration|discounted policy iteration]] is the word **proper**, and it matters. For an improper $\mu_0$ the evaluation step has no finite answer, and the linear system is typically singular. In the maze, "always up" is improper, and $I-P^\mu$ has rank 16 instead of 25.
+The only change from [[Dynamic Programming#Policy iteration|discounted policy iteration]] is the word **proper**, and it matters. For an improper $\pi_0$ the evaluation step has no finite answer, and the linear system is typically singular. In the maze, "always up" is improper, and $I-P^\pi$ has rank 16 instead of 25.
 
 > [!note] Proposition 5 (policy iteration)
-> Under (A) and (B), starting from a proper $\mu_0$, every $\mu_k$ is proper, $V^{\mu_{k+1}}\ge V^{\mu_k}$, and the inequality is strict in at least one state unless $\mu_k$ is optimal. Policy iteration therefore terminates after finitely many iterations with an optimal proper policy.
+> Under (A) and (B), starting from a proper $\pi_0$, every $\pi_k$ is proper, $V^{\pi_{k+1}}\ge V^{\pi_k}$, and the inequality is strict in at least one state unless $\pi_k$ is optimal. Policy iteration therefore terminates after finitely many iterations with an optimal proper policy.
 
 > [!proof]- Proof
-> Let $\mu$ be proper and $\mu'$ greedy with respect to $V^\mu$. The order of the argument matters.
+> Let $\pi$ be proper and $\pi'$ greedy with respect to $V^\pi$. The order of the argument matters.
 >
-> 1. **Properness first.** $V^\mu=\mathcal{T}^\mu V^\mu\le\mathcal{T}^*V^\mu=\mathcal{T}^{\mu'}V^\mu$. By Proposition 1(b), $\mu'$ is proper. Only now may we take limits of $(\mathcal{T}^{\mu'})^k$.
-> 2. **Improvement.** By monotonicity, $V^\mu\le\mathcal{T}^{\mu'}V^\mu\le(\mathcal{T}^{\mu'})^2V^\mu\le\cdots\to V^{\mu'}$, using Proposition 1(a). So $V^{\mu'}\ge V^\mu$.
-> 3. **Strictness.** If $V^{\mu'}=V^\mu$, then $V^\mu\le\mathcal{T}^*V^\mu=\mathcal{T}^{\mu'}V^\mu\le V^{\mu'}=V^\mu$, so $V^\mu=\mathcal{T}^*V^\mu$, and $V^\mu=V^*$ by Proposition 2(a).
-> 4. **Termination.** Values strictly increase until optimality, so no policy repeats before then, and there are finitely many deterministic stationary policies. With the tie-breaking rule, once $\mu_k$ is optimal the greedy step returns $\mu_k$ itself. Otherwise the algorithm could switch forever between equally good policies, even though the values have stopped changing. $\blacksquare$
+> 1. **Properness first.** $V^\pi=\mathcal{T}^\pi V^\pi\le\mathcal{T}^*V^\pi=\mathcal{T}^{\pi'}V^\pi$. By Proposition 1(b), $\pi'$ is proper. Only now may we take limits of $(\mathcal{T}^{\pi'})^k$.
+> 2. **Improvement.** By monotonicity, $V^\pi\le\mathcal{T}^{\pi'}V^\pi\le(\mathcal{T}^{\pi'})^2V^\pi\le\cdots\to V^{\pi'}$, using Proposition 1(a). So $V^{\pi'}\ge V^\pi$.
+> 3. **Strictness.** If $V^{\pi'}=V^\pi$, then $V^\pi\le\mathcal{T}^*V^\pi=\mathcal{T}^{\pi'}V^\pi\le V^{\pi'}=V^\pi$, so $V^\pi=\mathcal{T}^*V^\pi$, and $V^\pi=V^*$ by Proposition 2(a).
+> 4. **Termination.** Values strictly increase until optimality, so no policy repeats before then, and there are finitely many deterministic stationary policies. With the tie-breaking rule, once $\pi_k$ is optimal the greedy step returns $\pi_k$ itself. Otherwise the algorithm could switch forever between equally good policies, even though the values have stopped changing. $\blacksquare$
 
-Notice how *(B) protects the algorithm*. The greedy step can never switch to a policy that loops forever, because such a policy would have $-\infty$ somewhere, and Proposition 1(b) rules that out. On the slippery maze, starting from "always left" (proper only thanks to the slips, with $V^{\mu_0}(S)\approx-3.6\times10^{8}$), policy iteration needed 5 improvements. The value of the start cell went $-3.6\times10^{8}\to-2217\to-12.71\to-12.66\to-12.65$, which equals $V^*(S)$ to two decimals.
+Notice how *(B) protects the algorithm*. The greedy step can never switch to a policy that loops forever, because such a policy would have $-\infty$ somewhere, and Proposition 1(b) rules that out. On the slippery maze, starting from "always left" (proper only thanks to the slips, with $V^{\pi_0}(S)\approx-3.6\times10^{8}$), policy iteration needed 5 improvements. The value of the start cell went $-3.6\times10^{8}\to-2217\to-12.71\to-12.66\to-12.65$, which equals $V^*(S)$ to two decimals.
 
 ### Modified and asynchronous policy iteration
 
-Exact evaluation costs a linear solve per iteration. Practical variants evaluate only partially, and possibly only some states at a time. **Asynchronous policy iteration** keeps a pair $(V_k,\mu_k)$. At each step it picks a subset $S_k$ of states and does *one* of two things:
+Exact evaluation costs a linear solve per iteration. Practical variants evaluate only partially, and possibly only some states at a time. **Asynchronous policy iteration** keeps a pair $(V_k,\pi_k)$. At each step it picks a subset $B_k$ of states and does *one* of two things:
 
-- **Value update:** $V_{k+1}(s)=(\mathcal{T}^{\mu_k}V_k)(s)$ for $s\in S_k$, other components unchanged, and $\mu_{k+1}=\mu_k$.
-- **Policy update:** $\mu_{k+1}(s)\in\arg\max_a\big[r(s,a)+\sum_{s'}p(s'\mid s,a)V_k(s')\big]$ for $s\in S_k$, other states unchanged, and $V_{k+1}=V_k$.
+- **Value update:** $V_{k+1}(s)=(\mathcal{T}^{\pi_k}V_k)(s)$ for $s\in B_k$, other components unchanged, and $\pi_{k+1}=\pi_k$.
+- **Policy update:** $\pi_{k+1}(s)\in\arg\max_a\big[r(s,a)+\sum_{s'}p(s'\mid s,a)V_k(s')\big]$ for $s\in B_k$, other states unchanged, and $V_{k+1}=V_k$.
 
-This one scheme contains all the earlier algorithms, with $S_k$ equal to all states unless stated otherwise:
+This one scheme contains all the earlier algorithms, with $B_k$ equal to all states unless stated otherwise:
 
 | Schedule | Algorithm |
 |---|---|
 | infinitely many value updates, then one policy update | policy iteration |
 | $m_k$ value updates, then one policy update | modified (optimistic) policy iteration[^putermanshin1978] |
 | one value update, then one policy update | value iteration |
-| $S_k$ a single state, each value update followed by a policy update | asynchronous value iteration |
+| $B_k$ a single state, each value update followed by a policy update | asynchronous value iteration |
 
 > [!note] Proposition 6 (asynchronous policy iteration)
 > Assume (A) and (B), that value updates and policy updates are each performed infinitely often at every state, and that the initial pair satisfies
 >
 > $$
-> \mathcal{T}^{\mu_0}V_0\ge V_0.
+> \mathcal{T}^{\pi_0}V_0\ge V_0.
 > $$
 >
 > Then $V_k$ is non-decreasing and converges to $V^*$.
 
-The initial condition says that $V_0$ is a *pessimistic* estimate for $\mu_0$: one Bellman step of $\mu_0$ can only raise it. By Proposition 1(b) it forces $\mu_0$ to be proper. The easy way to satisfy it is to take $\mu_0$ proper and $V_0=V^{\mu_0}$, which satisfies it with equality.
+The initial condition says that $V_0$ is a *pessimistic* estimate for $\pi_0$: one Bellman step of $\pi_0$ can only raise it. By Proposition 1(b) it forces $\pi_0$ to be proper. The easy way to satisfy it is to take $\pi_0$ proper and $V_0=V^{\pi_0}$, which satisfies it with equality.
 
 > [!proof]- Proof
 > **Invariant.** We show by induction that, for all $k$,
 >
 > $$
-> \mathcal{T}^{\mu_k}V_k\ge V_k,\qquad V_{k+1}\ge V_k,\qquad \mathcal{T}^{\mu_{k+1}}V_{k+1}\ge\mathcal{T}^{\mu_k}V_k.
+> \mathcal{T}^{\pi_k}V_k\ge V_k,\qquad V_{k+1}\ge V_k,\qquad \mathcal{T}^{\pi_{k+1}}V_{k+1}\ge\mathcal{T}^{\pi_k}V_k.
 > $$
 >
-> Assume $\mathcal{T}^{\mu_k}V_k\ge V_k$.
+> Assume $\mathcal{T}^{\pi_k}V_k\ge V_k$.
 >
-> *Value update.* On $S_k$, $V_{k+1}=\mathcal{T}^{\mu_k}V_k\ge V_k$; elsewhere $V_{k+1}=V_k$. So $V_{k+1}\ge V_k$, and also $\mathcal{T}^{\mu_k}V_k\ge V_{k+1}$ (with equality on $S_k$). Since $\mu_{k+1}=\mu_k$, monotonicity gives $\mathcal{T}^{\mu_{k+1}}V_{k+1}=\mathcal{T}^{\mu_k}V_{k+1}\ge\mathcal{T}^{\mu_k}V_k\ge V_{k+1}$.
+> *Value update.* On $B_k$, $V_{k+1}=\mathcal{T}^{\pi_k}V_k\ge V_k$; elsewhere $V_{k+1}=V_k$. So $V_{k+1}\ge V_k$, and also $\mathcal{T}^{\pi_k}V_k\ge V_{k+1}$ (with equality on $B_k$). Since $\pi_{k+1}=\pi_k$, monotonicity gives $\mathcal{T}^{\pi_{k+1}}V_{k+1}=\mathcal{T}^{\pi_k}V_{k+1}\ge\mathcal{T}^{\pi_k}V_k\ge V_{k+1}$.
 >
-> *Policy update.* Here $V_{k+1}=V_k$. On $S_k$, $(\mathcal{T}^{\mu_{k+1}}V_k)(s)=(\mathcal{T}^*V_k)(s)\ge(\mathcal{T}^{\mu_k}V_k)(s)$. Off $S_k$ the action is unchanged, so the two are equal. Hence $\mathcal{T}^{\mu_{k+1}}V_{k+1}\ge\mathcal{T}^{\mu_k}V_k\ge V_k=V_{k+1}$.
+> *Policy update.* Here $V_{k+1}=V_k$. On $B_k$, $(\mathcal{T}^{\pi_{k+1}}V_k)(s)=(\mathcal{T}^*V_k)(s)\ge(\mathcal{T}^{\pi_k}V_k)(s)$. Off $B_k$ the action is unchanged, so the two are equal. Hence $\mathcal{T}^{\pi_{k+1}}V_{k+1}\ge\mathcal{T}^{\pi_k}V_k\ge V_k=V_{k+1}$.
 >
-> **Bounded above by $V^*$.** $\mathcal{T}^*V_k\ge\mathcal{T}^{\mu_k}V_k\ge V_k$. Monotonicity makes $(\mathcal{T}^*)^mV_k$ non-decreasing in $m$, and it tends to $V^*$ by Proposition 2(b). So $V_k\le V^*$. A non-decreasing bounded sequence converges, say $V_k\uparrow\bar V\le V^*$. Passing to the limit in $\mathcal{T}^*V_k\ge V_k$ (continuity) gives $\mathcal{T}^*\bar V\ge\bar V$.
+> **Bounded above by $V^*$.** $\mathcal{T}^*V_k\ge\mathcal{T}^{\pi_k}V_k\ge V_k$. Monotonicity makes $(\mathcal{T}^*)^mV_k$ non-decreasing in $m$, and it tends to $V^*$ by Proposition 2(b). So $V_k\le V^*$. A non-decreasing bounded sequence converges, say $V_k\uparrow\bar V\le V^*$. Passing to the limit in $\mathcal{T}^*V_k\ge V_k$ (continuity) gives $\mathcal{T}^*\bar V\ge\bar V$.
 >
 > **No strict inequality survives.** Suppose $(\mathcal{T}^*\bar V)(s)>\bar V(s)$ for some $s$. By continuity there is $\bar k$ with $(\mathcal{T}^*V_k)(s)>\bar V(s)$ for all $k\ge\bar k$. Pick a time $k\ge\bar k$ at which a policy update is done at $s$, and let $k'>k$ be the first later time at which a value update is done at $s$. Both exist because each kind of update happens infinitely often at $s$. Chaining the third part of the invariant from $k+1$ to $k'$,
 >
 > $$
 > \begin{aligned}
-> V_{k'+1}(s)&=(\mathcal{T}^{\mu_{k'}}V_{k'})(s)\ge(\mathcal{T}^{\mu_{k+1}}V_{k+1})(s)\\
-> &=(\mathcal{T}^{\mu_{k+1}}V_k)(s)=(\mathcal{T}^*V_k)(s)>\bar V(s).
+> V_{k'+1}(s)&=(\mathcal{T}^{\pi_{k'}}V_{k'})(s)\ge(\mathcal{T}^{\pi_{k+1}}V_{k+1})(s)\\
+> &=(\mathcal{T}^{\pi_{k+1}}V_k)(s)=(\mathcal{T}^*V_k)(s)>\bar V(s).
 > \end{aligned}
 > $$
 >
 > This contradicts $V_{k'+1}\le\bar V$. Hence $\mathcal{T}^*\bar V=\bar V$, and $\bar V=V^*$ by uniqueness. $\blacksquare$
 
-The monotonicity condition is what holds the proof together. Without it, natural asynchronous variants of policy iteration can fail to converge, even in favourable settings; Bertsekas and Yu discuss an example of Williams and Baird and give a modified scheme that converges without it.[^bertsekasyu2010] In a check on the slippery maze, 20,000 random asynchronous steps (3 random states per step, value and policy updates equally likely, started from $V_0=V^{\mu_0}$) kept the invariant $\mathcal{T}^{\mu_k}V_k\ge V_k$ at every step and ended within $2\times10^{-15}$ of $V^*$.
+The monotonicity condition is what holds the proof together. Without it, natural asynchronous variants of policy iteration can fail to converge, even in favourable settings; Bertsekas and Yu discuss an example of Williams and Baird and give a modified scheme that converges without it.[^bertsekasyu2010] In a check on the slippery maze, 20,000 random asynchronous steps (3 random states per step, value and policy updates equally likely, started from $V_0=V^{\pi_0}$) kept the invariant $\mathcal{T}^{\pi_k}V_k\ge V_k$ at every step and ended within $2\times10^{-15}$ of $V^*$.
 
 This scheme is the precise version of [[Dynamic Programming#Generalized policy iteration (GPI)|generalized policy iteration]]: any interleaving of partial evaluation and partial improvement works, *provided we start pessimistic*. [[Actor-Critic Algorithms|Actor-critic methods]] are its sampled, approximate descendants.
 
@@ -523,12 +523,12 @@ The [[Dynamic Programming#Discounting as termination: the SSP view|DP lecture]] 
 ## Key takeaways
 
 - An **SSP** maximizes total undiscounted reward until an absorbing, reward-free terminal state. The expected reward $r(s,a)$ must include the final transition into the terminal state.
-- A policy is **proper** if it terminates with probability 1 from every state, equivalently $\rho_\mu<1$. Then termination is geometric and $V^\mu=(I-P^\mu)^{-1}r_\mu$ is finite: **termination plays the role of $\gamma$**.
+- A policy is **proper** if it terminates with probability 1 from every state, equivalently $\rho_\pi<1$. Then termination is geometric and $V^\pi=(I-P^\pi)^{-1}r_\pi$ is finite: **termination plays the role of $\gamma$**.
 - Assume **(A)** a proper policy exists and **(B)** every improper policy has value $-\infty$ somewhere. In the reward setting (B) must be imposed (for example, $-1$ per step), because a free or rewarding loop makes $V^*$ ill-defined or the Bellman equation non-unique.
 - Under (A) and (B): $V^*$ is the unique solution of $V=\mathcal{T}^*V$, an optimal **stationary deterministic** policy exists and is proper, value iteration converges from any start (including the Gauss–Seidel and asynchronous variants), and policy iteration started from a proper policy terminates.
 - The proofs use **monotonicity**, the **constant-shift inequality** and **sandwiching**, not contraction. Optimistic initializations can converge only linearly.
 - If **all** policies are proper, the Bellman operators are contractions in a max-norm **weighted by the expected time to termination**. Discounting is the special case of constant weights, with $\beta=\gamma$.
-- **Asynchronous policy iteration** converges from a pessimistic start, $\mathcal{T}^{\mu_0}V_0\ge V_0$. It unifies PI, modified PI, VI and asynchronous VI.
+- **Asynchronous policy iteration** converges from a pessimistic start, $\mathcal{T}^{\pi_0}V_0\ge V_0$. It unifies PI, modified PI, VI and asynchronous VI.
 
 ## Where this shows up next
 

@@ -371,7 +371,7 @@ Two things to note:
 
 ## Where this shows up next
 
-- [[Actor-Critic Algorithms]]: off-policy actor-critic methods learn their critics with exactly these tools (importance ratios, emphatic or gradient-TD corrections) and inherit the same stability questions.
+- [[Actor-Critic Algorithms]] (earlier in the series): its off-policy methods (DDPG, TD3, SAC) train bootstrapped critics with function approximation on replay data, so they sit inside the deadly triad; target networks and clipped targets only mitigate it. Importance ratios, emphatic and gradient-TD corrections are the principled responses, as in the off-policy actor-critic of Degris, White and Sutton cited there.
 - Next, the second half of the series asks what these methods approximate, assuming the model is known: [[Finite-Horizon Dynamic Programming]], [[Dynamic Programming]], [[Stochastic Shortest Path Problems]], and [[Model-Based Reinforcement Learning]], where the deadly triad reappears when a learned model is used to generate off-policy data.
 - [[Stochastic Approximation]]: the Markov-noise ODE theorem and two-timescale schemes behind every convergence claim here.
 

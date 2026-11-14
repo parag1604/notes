@@ -20,6 +20,8 @@ next: "[[Introduction to Reinforcement Learning]]"
 >   - **UCB** ("optimism in the face of uncertainty") provably achieves **logarithmic regret**.
 >   - **Gradient bandits** are REINFORCE with a one-step horizon.
 >   - **Thompson sampling** is a strong Bayesian alternative.
+>
+> **Local notation.** Following the bandit literature, rounds are counted from $t=1$ (the rest of the series starts at $t=0$). Arm values are $q_*(a)$ and their estimates $q_t(a)$; with a single state, $q_*(a)$ plays the role of $Q^*(s,a)$.
 
 ## Motivation
 
@@ -214,7 +216,7 @@ Where does the bonus come from? It is the half-width of a confidence interval, a
 ![[Reinforcement Learning/images/multi-armed-bandits-subgaussian.svg]]
 *Figure 3: tail probabilities on a log scale. The standard Gaussian's two-sided tail lies below $2e^{-u^2/2}$. The centred uniform on $[-\frac12,\frac12]$ has tails that vanish entirely beyond $\frac12$, comfortably below its Hoeffding-lemma bound $2e^{-2u^2}$.*
 
-**Hoeffding's inequality.**[^hoeffding1963] Let $X_1,\dots,X_n$ be i.i.d. in $[0,1]$ with mean $\mu$, and $\bar X_n=\frac1n\sum_iX_i$. Then, for $u>0$,
+**Hoeffding's inequality** (proved in [[Sample Statistics#Hoeffding's inequality]]).[^hoeffding1963] Let $X_1,\dots,X_n$ be i.i.d. in $[0,1]$ with mean $\mu$, and $\bar X_n=\frac1n\sum_iX_i$. Then, for $u>0$,
 
 $$
 \mathbb{P}\big(\bar X_n-\mu\ge u\big)\le e^{-2nu^2},\qquad\mathbb{P}\big(\bar X_n-\mu\le-u\big)\le e^{-2nu^2}.
@@ -415,7 +417,7 @@ What the experiment shows:
 ## Beyond: from bandits to reinforcement learning
 
 - **Contextual bandits.** Before each pull the agent sees a context $x_t$ (a user, a patient), and the best arm depends on it. LinUCB and its relatives extend UCB to rewards that are linear in features of the context.[^li2010] This is an MDP with $\gamma=0$: states exist, but actions do not affect future states.
-- **Full RL** adds the last ingredient: actions change the next state, so exploration must be planned over time. The ideas from this lecture carry over: incremental estimates, $\varepsilon$-greedy, optimism (UCT in Monte-Carlo tree search, optimistic model-based RL), softmax policies, and gradients with baselines.
+- **Full RL** adds the last ingredient: actions change the next state, so exploration must be planned over time. The ideas from this lecture carry over: incremental estimates, $\varepsilon$-greedy, optimism (UCT in Monte Carlo tree search, optimistic model-based RL), softmax policies, and gradients with baselines.
 
 ## Key takeaways
 

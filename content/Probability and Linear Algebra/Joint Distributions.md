@@ -34,7 +34,7 @@ $$
 p_{X,Y}(x,y)=\mathbb{P}(X=x,\ Y=y)
 $$
 
-assigns a probability to every cell of a grid, and the probability of any event is the sum over its cells. For continuous variables, a **joint density** $f_{X,Y}$ is a surface over the plane, and probabilities are volumes under it: $\mathbb{P}\big((X,Y)\in R\big)=\iint_Rf_{X,Y}(x,y)\,dx\,dy$.
+assigns a probability to every cell of a grid, and the probability of any event is the sum over its cells. For continuous variables, a **joint density** $f_{X,Y}$ is a surface over the plane, and probabilities are volumes under it: $\mathbb{P}\big((X,Y)\in\mathcal{R}\big)=\iint_{\mathcal{R}}f_{X,Y}(x,y)\,dx\,dy$.
 
 Figure 1 shows an example. Roll two dice; let $X$ be the first die and $Y$ the larger of the two. If the first die shows $x$, then $Y=x$ when the second die is at most $x$ ($x$ ways), and $Y=y$ for each larger $y$ (one way each). $Y$ can never be smaller than $X$, so half of the table is empty.
 
@@ -123,7 +123,7 @@ Summing out the other variable leaves the marginals, and **no independence was n
 > print(fixed.mean(), fixed.var())        # both about 1, for any n
 > ```
 
-**Products are different.** If $X$ and $Y$ are independent, the joint factorizes and so does the sum: $\mathbb{E}[XY]=\mathbb{E}[X]\,\mathbb{E}[Y]$, and more generally $\mathbb{E}[g(X)h(Y)]=\mathbb{E}[g(X)]\,\mathbb{E}[h(Y)]$. Without independence this generally fails.
+**Products are different.** If $X$ and $Y$ are independent, the joint factorizes and so does the sum: $\mathbb{E}[XY]=\mathbb{E}[X]\,\mathbb{E}[Y]$, and more generally $\mathbb{E}[g_1(X)\,g_2(Y)]=\mathbb{E}[g_1(X)]\,\mathbb{E}[g_2(Y)]$. Without independence this generally fails.
 
 ### Covariance and correlation
 
@@ -141,7 +141,7 @@ $$
 \rho_{X,Y}=\frac{\operatorname{Cov}(X,Y)}{\sigma_X\,\sigma_Y}\in[-1,1].
 $$
 
-There is a geometric way to see why $|\rho|\le1$. Treat the centred variables $U=X-\mu_X$ and $V=Y-\mu_Y$ as vectors, with inner product $\langle U,V\rangle=\mathbb{E}[UV]$. Then $\operatorname{Var}$ is a squared length, $\operatorname{Cov}$ is an inner product, and $\rho$ is the **cosine of the angle** between them. The Cauchy–Schwarz inequality $|\mathbb{E}[UV]|\le\sqrt{\mathbb{E}[U^2]\,\mathbb{E}[V^2]}$ is the statement $|\cos\theta|\le1$. The extremes $\rho=\pm1$ occur exactly when $Y$ is a linear function of $X$, $\rho=0$ when the centred variables are "orthogonal". Figure 3 shows what different correlations look like.
+There is a geometric way to see why $|\rho|\le1$. Treat the centred variables $U=X-\mu_X$ and $V=Y-\mu_Y$ as vectors, with inner product $\langle U,V\rangle=\mathbb{E}[UV]$. Then $\operatorname{Var}$ is a squared length, $\operatorname{Cov}$ is an inner product, and $\rho$ is the **cosine of the angle** $\alpha$ between them. The Cauchy–Schwarz inequality $|\mathbb{E}[UV]|\le\sqrt{\mathbb{E}[U^2]\,\mathbb{E}[V^2]}$ is the statement $|\cos\alpha|\le1$. The extremes $\rho=\pm1$ occur exactly when $Y$ is a linear function of $X$, $\rho=0$ when the centred variables are "orthogonal". Figure 3 shows what different correlations look like.
 
 > [!proof]- Proof of the Cauchy–Schwarz inequality
 > For every real $t$, $\mathbb{E}\big[(tU+V)^2\big]=t^2\,\mathbb{E}[U^2]+2t\,\mathbb{E}[UV]+\mathbb{E}[V^2]\ge0$. A quadratic in $t$ that is never negative has at most one real root, so its discriminant is not positive: $4\,\mathbb{E}[UV]^2-4\,\mathbb{E}[U^2]\,\mathbb{E}[V^2]\le0$. Equality holds exactly when $tU+V=0$ for some $t$, that is, when $V$ is a multiple of $U$.
@@ -240,22 +240,22 @@ Picture $X$ as a group label (Figure 5). $Y$ varies for two reasons. Within each
 > The second term is $\operatorname{Var}(h(X))$, because $\mathbb{E}[h(X)]=\mathbb{E}[Y]$ by the tower rule. The first is $\mathbb{E}\big[\mathbb{E}[(Y-h(X))^2\mid X]\big]=\mathbb{E}[\operatorname{Var}(Y\mid X)]$, again by the tower rule.
 
 > [!example] Example: random sums
-> An insurer receives a random number $N$ of claims in a year, and the claim sizes $X_1,X_2,\dots$ are i.i.d. with mean $\mu$ and variance $\sigma^2$, independent of $N$. The total payout is $S=X_1+\cdots+X_N$, a sum with a random number of terms. Condition on $N$:
-> - given $N=n$, $S$ is a sum of $n$ terms, so $\mathbb{E}[S\mid N]=N\mu$ and $\operatorname{Var}(S\mid N)=N\sigma^2$;
-> - the tower rule gives $\mathbb{E}[S]=\mathbb{E}[N]\,\mu$ (**Wald's identity**[^wald1944]);
-> - total variance gives $\operatorname{Var}(S)=\mathbb{E}[N]\,\sigma^2+\operatorname{Var}(N)\,\mu^2$.
+> An insurer receives a random number $K$ of claims in a year, and the claim sizes $X_1,X_2,\dots$ are i.i.d. with mean $\mu$ and variance $\sigma^2$, independent of $K$. The total payout is $S=X_1+\cdots+X_K$, a sum with a random number of terms. Condition on $K$:
+> - given $K=k$, $S$ is a sum of $k$ terms, so $\mathbb{E}[S\mid K]=K\mu$ and $\operatorname{Var}(S\mid K)=K\sigma^2$;
+> - the tower rule gives $\mathbb{E}[S]=\mathbb{E}[K]\,\mu$ (**Wald's identity**[^wald1944]);
+> - total variance gives $\operatorname{Var}(S)=\mathbb{E}[K]\,\sigma^2+\operatorname{Var}(K)\,\mu^2$.
 >
-> The two parts of the variance have clear meanings: uncertainty in the claim sizes, and uncertainty in how many claims there are. With $N\sim\text{Poisson}(\lambda)$, $\operatorname{Var}(S)=\lambda(\sigma^2+\mu^2)$. The same calculation gives the size of a family tree in a [[Random Variables#Hawkes processes: self-exciting events|Hawkes process]].
+> The two parts of the variance have clear meanings: uncertainty in the claim sizes, and uncertainty in how many claims there are. With $K\sim\text{Poisson}(\lambda)$, $\operatorname{Var}(S)=\lambda(\sigma^2+\mu^2)$. The same calculation gives the size of a family tree in a [[Random Variables#Hawkes processes: self-exciting events|Hawkes process]].
 
 > [!example]- Code: checking the random-sum formulas
 > ```python
 > import numpy as np
 > rng = np.random.default_rng(0)
-> lam, mu, sigma = 4.0, 2.0, 0.5           # N ~ Poisson(lam), X_i ~ N(mu, sigma^2)
-> N = rng.poisson(lam, 200_000)
-> S = np.array([rng.normal(mu, sigma, k).sum() for k in N])
-> print(S.mean(), lam * mu)                           # tower rule: E[N] E[X]
-> print(S.var(), lam * sigma**2 + lam * mu**2)        # total variance: E[N]Var(X) + Var(N)E[X]^2
+> lam, mu, sigma = 4.0, 2.0, 0.5           # K ~ Poisson(lam), X_i ~ N(mu, sigma^2)
+> K = rng.poisson(lam, 200_000)
+> S = np.array([rng.normal(mu, sigma, k).sum() for k in K])
+> print(S.mean(), lam * mu)                           # tower rule: E[K] E[X]
+> print(S.var(), lam * sigma**2 + lam * mu**2)        # total variance: E[K]Var(X) + Var(K)E[X]^2
 > ```
 
 ## Sums of independent random variables
@@ -318,10 +318,10 @@ $$
 \mathbf{x}=\boldsymbol\mu+\mathbf{U}\boldsymbol\Lambda^{1/2}\boldsymbol\epsilon.
 $$
 
-This stretches the cloud by $\sqrt{\lambda_i}$ along each axis, rotates it by $\mathbf{U}$, and shifts it by $\boldsymbol\mu$ (Figure 7). By the affine rule its covariance is $\mathbf{U}\boldsymbol\Lambda^{1/2}\mathbf{I}\boldsymbol\Lambda^{1/2}\mathbf{U}^\top=\boldsymbol\Sigma$. So the density contours are ellipses whose axes point along the eigenvectors of $\boldsymbol\Sigma$, with half-lengths $\sqrt{\lambda_i}$. Any matrix $\mathbf{L}$ with $\mathbf{L}\mathbf{L}^\top=\boldsymbol\Sigma$ works in place of $\mathbf{U}\boldsymbol\Lambda^{1/2}$; in practice the Cholesky factor is used. Running the recipe backwards, $\boldsymbol\epsilon=\mathbf{L}^{-1}(\mathbf{x}-\boldsymbol\mu)$, **whitens** the data: it turns correlated Gaussian data into independent standard Gaussians. This construction is the reparameterization trick of the [[Variational Autoencoders|VAE]].
+This stretches the cloud by $\sqrt{\Lambda_{ii}}$ along each axis, rotates it by $\mathbf{U}$, and shifts it by $\boldsymbol\mu$ (Figure 7). By the affine rule its covariance is $\mathbf{U}\boldsymbol\Lambda^{1/2}\mathbf{I}\boldsymbol\Lambda^{1/2}\mathbf{U}^\top=\boldsymbol\Sigma$. So the density contours are ellipses whose axes point along the eigenvectors of $\boldsymbol\Sigma$, with half-lengths $\sqrt{\Lambda_{ii}}$. Any matrix $\mathbf{L}$ with $\mathbf{L}\mathbf{L}^\top=\boldsymbol\Sigma$ works in place of $\mathbf{U}\boldsymbol\Lambda^{1/2}$; in practice the Cholesky factor is used. Running the recipe backwards, $\boldsymbol\epsilon=\mathbf{L}^{-1}(\mathbf{x}-\boldsymbol\mu)$, **whitens** the data: it turns correlated Gaussian data into independent standard Gaussians. This construction is the reparameterization trick of the [[Variational Autoencoders|VAE]].
 
 ![[Probability and Linear Algebra/images/joint-distributions-gaussian-transform.svg]]
-*Figure 7. Building a Gaussian. (a) 500 samples of $\boldsymbol\epsilon\sim\mathcal{N}(\mathbf{0},\mathbf{I})$, with the unit circle. (b) Stretching by $\boldsymbol\Lambda^{1/2}$ turns the circle into an axis-aligned ellipse. (c) Rotating by $\mathbf{U}$ and shifting by $\boldsymbol\mu$ gives $\mathcal{N}(\boldsymbol\mu,\boldsymbol\Sigma)$; the arrows are the eigenvectors of $\boldsymbol\Sigma$ scaled by $\sqrt{\lambda_i}$.*
+*Figure 7. Building a Gaussian. (a) 500 samples of $\boldsymbol\epsilon\sim\mathcal{N}(\mathbf{0},\mathbf{I})$, with the unit circle. (b) Stretching by $\boldsymbol\Lambda^{1/2}$ turns the circle into an axis-aligned ellipse. (c) Rotating by $\mathbf{U}$ and shifting by $\boldsymbol\mu$ gives $\mathcal{N}(\boldsymbol\mu,\boldsymbol\Sigma)$; the arrows are the eigenvectors of $\boldsymbol\Sigma$ scaled by $\sqrt{\Lambda_{ii}}$.*
 
 > [!example]- Code: sampling and whitening a multivariate Gaussian
 > ```python
@@ -374,7 +374,7 @@ The conditional mean is **linear** in what we observe, and the conditional covar
 > The last line is a useful identity: the conditional covariance is the inverse of the corresponding block of the precision matrix $\boldsymbol\Sigma^{-1}$, which is why Gaussian graphical models are read off the precision.
 
 > [!warning] For Gaussians, uncorrelated does mean independent, but only jointly
-> If $(X,Y)$ is **jointly** Gaussian and $\rho=0$, then $\boldsymbol\Sigma$ is diagonal, the density factorizes, and $X$ and $Y$ are independent. This is special to the Gaussian. It also needs the *pair* to be Gaussian, not just each variable. Let $X\sim\mathcal{N}(0,1)$ and $Y=SX$ with an independent random sign $S=\pm1$. Then $Y$ is also $\mathcal{N}(0,1)$ and $\operatorname{Cov}(X,Y)=\mathbb{E}[S]\,\mathbb{E}[X^2]=0$, yet $|Y|=|X|$ always.
+> If $(X,Y)$ is **jointly** Gaussian and $\rho=0$, then $\boldsymbol\Sigma$ is diagonal, the density factorizes, and $X$ and $Y$ are independent. This is special to the Gaussian. It also needs the *pair* to be Gaussian, not just each variable. Let $X\sim\mathcal{N}(0,1)$ and $Y=\xi X$ with an independent random sign $\xi=\pm1$. Then $Y$ is also $\mathcal{N}(0,1)$ and $\operatorname{Cov}(X,Y)=\mathbb{E}[\xi]\,\mathbb{E}[X^2]=0$, yet $|Y|=|X|$ always.
 
 > [!example] Example: a signal in noise
 > A quantity $X\sim\mathcal{N}(0,\tau^2)$ is measured with independent noise, $Y=X+\varepsilon$ with $\varepsilon\sim\mathcal{N}(0,\sigma^2)$. Having seen $Y=y$, what is our best estimate of $X$? The pair $(X,Y)$ is jointly Gaussian with $\operatorname{Var}(Y)=\tau^2+\sigma^2$ and $\operatorname{Cov}(X,Y)=\tau^2$, so (4) gives

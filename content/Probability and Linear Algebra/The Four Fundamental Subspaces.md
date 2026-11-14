@@ -16,7 +16,7 @@ next: "[[Orthogonality and Least Squares]]"
 > **TL;DR:**
 > - Every $m\times n$ matrix $\mathbf{A}$ of rank $r$ comes with four subspaces: the **column space** $C(\mathbf{A})$ and the **left nullspace** $N(\mathbf{A}^\top)$ in $\mathbb{R}^m$, the **row space** $C(\mathbf{A}^\top)$ and the **nullspace** $N(\mathbf{A})$ in $\mathbb{R}^n$. Their dimensions are $r$, $m-r$, $r$ and $n-r$.
 > - The pairs are **orthogonal complements**: the nullspace is exactly the set of vectors perpendicular to every row, and the left nullspace is exactly the set perpendicular to every column. This follows in one line from $\mathbf{A}\mathbf{x}=\mathbf{0}$.
-> - Every input splits as $\mathbf{x}=\mathbf{x}_r+\mathbf{x}_n$. $\mathbf{A}$ kills $\mathbf{x}_n$ and maps the row space **one-to-one** onto the column space. That invertible core is what the pseudo-inverse inverts.
+> - Every input splits as $\mathbf{x}=\mathbf{x}_{\mathrm{row}}+\mathbf{x}_{\mathrm{null}}$. $\mathbf{A}$ kills $\mathbf{x}_{\mathrm{null}}$ and maps the row space **one-to-one** onto the column space. That invertible core is what the pseudo-inverse inverts.
 > - A rank-$r$ matrix is a sum of $r$ rank-one matrices (column times row). For a graph's incidence matrix, the four subspaces are potentials, potential differences, loops of current and balanced flows, and the counting theorem becomes Euler's formula.
 
 ## Motivation
@@ -97,34 +97,34 @@ The left nullspace gives a **test for solvability**. Since $\mathbf{y}^\top\math
 
 ### Orthogonal vectors
 
-Two vectors $\mathbf{x},\mathbf{y}\in\mathbb{R}^n$ are **orthogonal** (perpendicular), written $\mathbf{x}\perp\mathbf{y}$, when their dot product is zero:
+Two vectors $\mathbf{x},\mathbf{z}\in\mathbb{R}^n$ are **orthogonal** (perpendicular), written $\mathbf{x}\perp\mathbf{z}$, when their dot product is zero:
 
 $$
-\mathbf{x}^\top\mathbf{y}=x_1y_1+\dots+x_ny_n=0.
+\mathbf{x}^\top\mathbf{z}=x_1z_1+\dots+x_nz_n=0.
 $$
 
 Why does a zero dot product mean a right angle? Expand the squared length of the sum:
 
 $$
-\lVert\mathbf{x}+\mathbf{y}\rVert^2=(\mathbf{x}+\mathbf{y})^\top(\mathbf{x}+\mathbf{y})=\lVert\mathbf{x}\rVert^2+\lVert\mathbf{y}\rVert^2+2\,\mathbf{x}^\top\mathbf{y}.
+\lVert\mathbf{x}+\mathbf{z}\rVert^2=(\mathbf{x}+\mathbf{z})^\top(\mathbf{x}+\mathbf{z})=\lVert\mathbf{x}\rVert^2+\lVert\mathbf{z}\rVert^2+2\,\mathbf{x}^\top\mathbf{z}.
 $$
 
-**Pythagoras' theorem**, $\lVert\mathbf{x}+\mathbf{y}\rVert^2=\lVert\mathbf{x}\rVert^2+\lVert\mathbf{y}\rVert^2$, holds exactly when the cross term $\mathbf{x}^\top\mathbf{y}$ vanishes. In two or three dimensions this is the right-angled triangle; in $\mathbb{R}^n$ we take it as the definition of a right angle. More generally, $\mathbf{x}^\top\mathbf{y}=\lVert\mathbf{x}\rVert\lVert\mathbf{y}\rVert\cos\theta$, the same cosine that defined the correlation in [[Joint Distributions]].
+**Pythagoras' theorem**, $\lVert\mathbf{x}+\mathbf{z}\rVert^2=\lVert\mathbf{x}\rVert^2+\lVert\mathbf{z}\rVert^2$, holds exactly when the cross term $\mathbf{x}^\top\mathbf{z}$ vanishes. In two or three dimensions this is the right-angled triangle; in $\mathbb{R}^n$ we take it as the definition of a right angle. More generally, $\mathbf{x}^\top\mathbf{z}=\lVert\mathbf{x}\rVert\lVert\mathbf{z}\rVert\cos\theta$, the same cosine that reappears as the correlation coefficient in [[Joint Distributions]].
 
 For example, $(1,2,2)$ and $(2,1,-2)$ are orthogonal: $2+2-4=0$. Their lengths are both 3, and the sum $(3,3,0)$ has squared length $18=9+9$.
 
 > [!note] Orthogonal vectors are independent
-> If $\mathbf{v}_1,\dots,\mathbf{v}_k$ are nonzero and mutually orthogonal, they are linearly independent. Suppose $c_1\mathbf{v}_1+\dots+c_k\mathbf{v}_k=\mathbf{0}$. Take the dot product with $\mathbf{v}_j$: every cross term vanishes, leaving $c_j\lVert\mathbf{v}_j\rVert^2=0$, so $c_j=0$. Orthogonality is the cleanest possible form of independence, and [[Orthogonality and Least Squares]] exploits it.
+> If $\mathbf{q}_1,\dots,\mathbf{q}_k$ are nonzero and mutually orthogonal, they are linearly independent. Suppose $d_1\mathbf{q}_1+\dots+d_k\mathbf{q}_k=\mathbf{0}$. Take the dot product with $\mathbf{q}_j$: every cross term vanishes, leaving $d_j\lVert\mathbf{q}_j\rVert^2=0$, so $d_j=0$. Orthogonality is the cleanest possible form of independence, and [[Orthogonality and Least Squares]] exploits it.
 
 > [!tip] Intuition: what the dot product measures
-> The dot product $\mathbf{x}^\top\mathbf{y}$ is how much of $\mathbf{y}$ points along $\mathbf{x}$, scaled by the length of $\mathbf{x}$. Zero means none of it: moving along $\mathbf{y}$ does not change your position as measured along $\mathbf{x}$. 3Blue1Brown's "Dot products and duality" shows why this projection picture and the sum-of-products formula agree.[^3b1bdot]
+> The dot product $\mathbf{x}^\top\mathbf{z}$ is how much of $\mathbf{z}$ points along $\mathbf{x}$, scaled by the length of $\mathbf{x}$. Zero means none of it: moving along $\mathbf{z}$ does not change your position as measured along $\mathbf{x}$. 3Blue1Brown's "Dot products and duality" shows why this projection picture and the sum-of-products formula agree.[^3b1bdot]
 
 ### Orthogonal subspaces
 
 Two subspaces $\mathbf{V}$ and $\mathbf{W}$ of $\mathbb{R}^n$ are **orthogonal** if every vector in $\mathbf{V}$ is orthogonal to every vector in $\mathbf{W}$. It is enough to check the basis vectors, because dot products are linear in each argument.
 
 Two consequences follow immediately.
-- Orthogonal subspaces meet only at $\mathbf{0}$: a vector in both would be orthogonal to itself, and $\mathbf{v}^\top\mathbf{v}=\lVert\mathbf{v}\rVert^2=0$ forces $\mathbf{v}=\mathbf{0}$.
+- Orthogonal subspaces meet only at $\mathbf{0}$: a vector in both would be orthogonal to itself, and $\mathbf{p}^\top\mathbf{p}=\lVert\mathbf{p}\rVert^2=0$ forces $\mathbf{p}=\mathbf{0}$.
 - Their dimensions add up to at most $n$: putting a basis of $\mathbf{V}$ next to a basis of $\mathbf{W}$ gives orthogonal, hence independent, vectors, and $\mathbb{R}^n$ holds at most $n$ of those.
 
 > [!warning] Perpendicular in everyday speech is not orthogonal here
@@ -133,7 +133,7 @@ Two consequences follow immediately.
 The **orthogonal complement** of a subspace $\mathbf{V}\subseteq\mathbb{R}^n$ is the set of *all* vectors orthogonal to it:
 
 $$
-\mathbf{V}^\perp=\{\mathbf{w}\in\mathbb{R}^n:\ \mathbf{w}^\top\mathbf{v}=0\text{ for every }\mathbf{v}\in\mathbf{V}\}.
+\mathbf{V}^\perp=\{\mathbf{z}\in\mathbb{R}^n:\ \mathbf{z}^\top\mathbf{p}=0\text{ for every }\mathbf{p}\in\mathbf{V}\}.
 $$
 
 It is the largest subspace orthogonal to $\mathbf{V}$. In $\mathbb{R}^3$ the complement of a plane through the origin is its normal line, and the complement of a line is the plane perpendicular to it.
@@ -165,19 +165,19 @@ $$
 \end{aligned}
 $$
 
-> [!proof]- The two complements fill their spaces: every $\mathbf{x}$ splits uniquely as $\mathbf{x}_r+\mathbf{x}_n$
+> [!proof]- The two complements fill their spaces: every $\mathbf{x}$ splits uniquely as $\mathbf{x}_{\mathrm{row}}+\mathbf{x}_{\mathrm{null}}$
 > Take a basis of the row space ($r$ vectors) and a basis of the nullspace ($n-r$ vectors). Every vector of the first set is orthogonal to every vector of the second. Within each set the vectors are independent, and a combination of the first set can only cancel a combination of the second if both are zero (the subspaces meet only at $\mathbf{0}$). So all $n$ vectors together are independent, and $n$ independent vectors in $\mathbb{R}^n$ form a basis. Hence every $\mathbf{x}\in\mathbb{R}^n$ is a combination of them: a row-space part plus a nullspace part.
 >
-> The split is unique. If $\mathbf{x}=\mathbf{x}_r+\mathbf{x}_n=\mathbf{x}_r'+\mathbf{x}_n'$, then $\mathbf{x}_r-\mathbf{x}_r'=\mathbf{x}_n'-\mathbf{x}_n$ lies in both subspaces, so it is $\mathbf{0}$.
+> The split is unique. If $\mathbf{x}=\mathbf{x}_{\mathrm{row}}+\mathbf{x}_{\mathrm{null}}=\mathbf{x}_{\mathrm{row}}'+\mathbf{x}_{\mathrm{null}}'$, then $\mathbf{x}_{\mathrm{row}}-\mathbf{x}_{\mathrm{row}}'=\mathbf{x}_{\mathrm{null}}'-\mathbf{x}_{\mathrm{null}}$ lies in both subspaces, so it is $\mathbf{0}$.
 >
 > The same argument in $\mathbb{R}^m$ splits every $\mathbf{b}$ into a column-space part plus a left-nullspace part. That split is exactly what least squares computes in [[Orthogonality and Least Squares]].
 
 ## The big picture
 
-Put the four subspaces together (Figure 2). On the input side, $\mathbb{R}^n$ is split into two perpendicular pieces, the row space and the nullspace. On the output side, $\mathbb{R}^m$ is split into the column space and the left nullspace. Now follow an input $\mathbf{x}=\mathbf{x}_r+\mathbf{x}_n$ through the machine:
+Put the four subspaces together (Figure 2). On the input side, $\mathbb{R}^n$ is split into two perpendicular pieces, the row space and the nullspace. On the output side, $\mathbb{R}^m$ is split into the column space and the left nullspace. Now follow an input $\mathbf{x}=\mathbf{x}_{\mathrm{row}}+\mathbf{x}_{\mathrm{null}}$ through the machine:
 
 $$
-\mathbf{A}\mathbf{x}=\mathbf{A}\mathbf{x}_r+\mathbf{A}\mathbf{x}_n=\mathbf{A}\mathbf{x}_r+\mathbf{0}.
+\mathbf{A}\mathbf{x}=\mathbf{A}\mathbf{x}_{\mathrm{row}}+\mathbf{A}\mathbf{x}_{\mathrm{null}}=\mathbf{A}\mathbf{x}_{\mathrm{row}}+\mathbf{0}.
 $$
 
 - The **nullspace part is destroyed**. It contributes nothing to the output.
@@ -187,21 +187,21 @@ $$
 ![[Probability and Linear Algebra/images/the-four-fundamental-subspaces-big-picture.svg]]
 *Figure 2. The big picture. The input space $\mathbb{R}^n$ splits into the row space (dimension $r$) and the nullspace (dimension $n-r$), at right angles. The output space $\mathbb{R}^m$ splits into the column space (dimension $r$) and the left nullspace (dimension $m-r$). $\mathbf{A}$ sends the nullspace part of $\mathbf{x}$ to $\mathbf{0}$ and carries the row-space part one-to-one onto the column space.*
 
-**$\mathbf{A}$ is one-to-one from the row space onto the column space.** Two different row-space vectors never give the same output. If $\mathbf{A}\mathbf{x}_r=\mathbf{A}\mathbf{x}_r'$, then $\mathbf{x}_r-\mathbf{x}_r'$ is in the nullspace (it maps to $\mathbf{0}$) and in the row space (it is a difference of row-space vectors). Only $\mathbf{0}$ lies in both, so $\mathbf{x}_r=\mathbf{x}_r'$. And every column-space vector is reached, since $\mathbf{A}\mathbf{x}=\mathbf{A}\mathbf{x}_r$. So hidden inside every matrix, however rectangular or singular, is an **invertible $r\times r$ map** between two $r$-dimensional spaces. Everything else is padding: dimensions that are destroyed (nullspace) or never reached (left nullspace).
+**$\mathbf{A}$ is one-to-one from the row space onto the column space.** Two different row-space vectors never give the same output. If $\mathbf{A}\mathbf{x}_{\mathrm{row}}=\mathbf{A}\mathbf{x}_{\mathrm{row}}'$, then $\mathbf{x}_{\mathrm{row}}-\mathbf{x}_{\mathrm{row}}'$ is in the nullspace (it maps to $\mathbf{0}$) and in the row space (it is a difference of row-space vectors). Only $\mathbf{0}$ lies in both, so $\mathbf{x}_{\mathrm{row}}=\mathbf{x}_{\mathrm{row}}'$. And every column-space vector is reached, since $\mathbf{A}\mathbf{x}=\mathbf{A}\mathbf{x}_{\mathrm{row}}$. So hidden inside every matrix, however rectangular or singular, is an **invertible $r\times r$ map** between two $r$-dimensional spaces. Everything else is padding: dimensions that are destroyed (nullspace) or never reached (left nullspace).
 
 > [!example] Example: splitting an input
 > In the $3\times4$ example, take $\mathbf{x}=(-1,3,1,3)$. It splits as
 >
 > $$
-> \mathbf{x}=\underbrace{(1,2,1,3)}_{\mathbf{x}_r}+\underbrace{(-2,1,0,0)}_{\mathbf{x}_n}.
+> \mathbf{x}=\underbrace{(1,2,1,3)}_{\mathbf{x}_{\mathrm{row}}}+\underbrace{(-2,1,0,0)}_{\mathbf{x}_{\mathrm{null}}}.
 > $$
 >
-> The first piece is in the row space, since it is the sum of the two rref rows $(1,2,0,1)+(0,0,1,2)$. The second is the special solution $\mathbf{s}_1$. They are perpendicular: $-2+2+0+0=0$. So Pythagoras holds, $\lVert\mathbf{x}\rVert^2=20=15+5$, and $\mathbf{A}\mathbf{x}=\mathbf{A}\mathbf{x}_r=(8,23,31)$. (Finding the split for a given $\mathbf{x}$ is a projection onto the row space, the subject of the next lecture.) The output satisfies the solvability test: $8+23-31=0$.
+> The first piece is in the row space, since it is the sum of the two rref rows $(1,2,0,1)+(0,0,1,2)$. The second is the special solution $\mathbf{s}_1$. They are perpendicular: $-2+2+0+0=0$. So Pythagoras holds, $\lVert\mathbf{x}\rVert^2=20=15+5$, and $\mathbf{A}\mathbf{x}=\mathbf{A}\mathbf{x}_{\mathrm{row}}=(8,23,31)$. (Finding the split for a given $\mathbf{x}$ is a projection onto the row space, the subject of the next lecture.) The output satisfies the solvability test: $8+23-31=0$.
 
 Figure 3 shows the same picture with actual coordinates, for a $2\times2$ matrix of rank 1, where every subspace is a line and the right angles are visible.
 
 ![[Probability and Linear Algebra/images/the-four-fundamental-subspaces-rank-one-example.svg]]
-*Figure 3. The four subspaces of $\mathbf{B}=\begin{bmatrix}2&1\\4&2\end{bmatrix}$ (rank 1). (a) In the input plane, the row space (multiples of $(2,1)$) is perpendicular to the nullspace (multiples of $(1,-2)$). The input $\mathbf{x}=(1.3,-0.6)$ splits into $\mathbf{x}_r=(0.8,0.4)$ and $\mathbf{x}_n=(0.5,-1)$. (b) In the output plane, $\mathbf{B}\mathbf{x}=\mathbf{B}\mathbf{x}_r=(2,4)$ lands on the column space (multiples of $(1,2)$), and the left nullspace (multiples of $(2,-1)$) is never reached.*
+*Figure 3. The four subspaces of $\mathbf{B}=\begin{bmatrix}2&1\\4&2\end{bmatrix}$ (rank 1). (a) In the input plane, the row space (multiples of $(2,1)$) is perpendicular to the nullspace (multiples of $(1,-2)$). The input $\mathbf{x}=(1.3,-0.6)$ splits into $\mathbf{x}_{\mathrm{row}}=(0.8,0.4)$ and $\mathbf{x}_{\mathrm{null}}=(0.5,-1)$. (b) In the output plane, $\mathbf{B}\mathbf{x}=\mathbf{B}\mathbf{x}_{\mathrm{row}}=(2,4)$ lands on the column space (multiples of $(1,2)$), and the left nullspace (multiples of $(2,-1)$) is never reached.*
 
 > [!tip] Intuition: watch a matrix squash space
 > For a square matrix of rank $r<n$, the nullspace is the set of directions squashed flat, and the column space is the lower-dimensional sheet that everything lands on. 3Blue1Brown's "Inverse matrices, column space and null space" animates exactly this.[^3b1binv]
@@ -241,7 +241,7 @@ $$
 $$
 
 ![[Probability and Linear Algebra/images/the-four-fundamental-subspaces-graph.svg]]
-*Figure 5. A directed graph with 4 nodes and 5 edges. The numbers $x_v$ are potentials at the nodes; each edge carries the potential difference $(\mathbf{A}\mathbf{x})_k=x_{\text{head}}-x_{\text{tail}}$. The two small loops span the left nullspace of the incidence matrix.*
+*Figure 5. A directed graph with 4 nodes and 5 edges. The numbers $x_j$ are potentials at the nodes; each edge carries the potential difference $(\mathbf{A}\mathbf{x})_k=x_{\text{head}}-x_{\text{tail}}$. The two small loops span the left nullspace of the incidence matrix.*
 
 All four subspaces have a physical meaning, and they are the heart of Kirchhoff's analysis of electrical networks.[^kirchhoff1847]
 
@@ -249,7 +249,7 @@ All four subspaces have a physical meaning, and they are the heart of Kirchhoff'
 
 **Column space: differences that are consistent around loops.** Which edge vectors $\mathbf{b}$ are potential differences of some $\mathbf{x}$? With $\mathbf{x}=(0,3,5,6)$ we get $\mathbf{b}=\mathbf{A}\mathbf{x}=(3,5,2,3,1)$. Going around the loop $1\to2\to3\to1$, the differences add to $b_1+b_3-b_2=3+2-5=0$. That is **Kirchhoff's voltage law**: potential differences sum to zero around every loop. The column space is the 3-dimensional set of $\mathbf{b}$ that pass this test on every loop.
 
-**Left nullspace: currents around loops.** Think of $\mathbf{y}\in\mathbb{R}^5$ as currents on the edges. Entry $v$ of $\mathbf{A}^\top\mathbf{y}$ adds the currents entering node $v$ and subtracts those leaving it, so $\mathbf{A}^\top\mathbf{y}=\mathbf{0}$ is **Kirchhoff's current law**: at every node, current in equals current out. Such balanced currents flow around loops. The two small loops in Figure 5 give
+**Left nullspace: currents around loops.** Think of $\mathbf{y}\in\mathbb{R}^5$ as currents on the edges. Entry $j$ of $\mathbf{A}^\top\mathbf{y}$ adds the currents entering node $j$ and subtracts those leaving it, so $\mathbf{A}^\top\mathbf{y}=\mathbf{0}$ is **Kirchhoff's current law**: at every node, current in equals current out. Such balanced currents flow around loops. The two small loops in Figure 5 give
 
 $$
 \begin{aligned}
@@ -264,7 +264,7 @@ Now the orthogonality $C(\mathbf{A})\perp N(\mathbf{A}^\top)$ **is** the voltage
 
 **Row space: what the nodes can absorb.** The row space has dimension $r=3$ and is orthogonal to $(1,1,1,1)$: it consists of the vectors whose entries sum to zero. These are the net inflows at the nodes that a flow on the edges can produce; the total must be zero, because whatever enters the network at one node must leave at another.
 
-**The counting theorem is Euler's formula.** The number of independent loops is $m-r=m-(n-1)$. Rearranged, $(\text{nodes})-(\text{edges})+(\text{loops})=n-m+(m-n+1)=1$ for every connected graph. For a planar graph the independent loops are the bounded faces, and this is Euler's formula $V-E+F=2$ once the outer face is counted.
+**The counting theorem is Euler's formula.** The number of independent loops is $m-r=m-(n-1)$. Rearranged, $(\text{nodes})-(\text{edges})+(\text{loops})=n-m+(m-n+1)=1$ for every connected graph. For a planar graph the independent loops are the bounded faces, and this is Euler's formula, $(\text{vertices})-(\text{edges})+(\text{faces})=2$, once the outer face is counted.
 
 Finally, $\mathbf{A}^\top\mathbf{A}$ is the **graph Laplacian**: degrees on the diagonal, $-1$ for each edge off the diagonal. Here
 
@@ -303,12 +303,12 @@ For a design matrix $\mathbf{X}\in\mathbb{R}^{N\times D}$ in [[Linear Models]], 
 
 ### A teaser: the pseudo-inverse
 
-A matrix with a nonzero nullspace or left nullspace has no inverse. But the big picture shows an invertible core: $\mathbf{A}$ maps the row space one-to-one onto the column space. The **pseudo-inverse** $\mathbf{A}^+$ inverts exactly that core and gives up gracefully on the rest. It maps the column space back to the row space, undoing $\mathbf{A}$, and it sends the left nullspace (which $\mathbf{A}$ never reaches) to $\mathbf{0}$. As a result, $\mathbf{A}^+\mathbf{A}\mathbf{x}=\mathbf{x}_r$: it recovers the row-space part of the input, the only part that survived.
+A matrix with a nonzero nullspace or left nullspace has no inverse. But the big picture shows an invertible core: $\mathbf{A}$ maps the row space one-to-one onto the column space. The **pseudo-inverse** $\mathbf{A}^+$ inverts exactly that core and gives up gracefully on the rest. It maps the column space back to the row space, undoing $\mathbf{A}$, and it sends the left nullspace (which $\mathbf{A}$ never reaches) to $\mathbf{0}$. As a result, $\mathbf{A}^+\mathbf{A}\mathbf{x}=\mathbf{x}_{\mathrm{row}}$: it recovers the row-space part of the input, the only part that survived.
 
 For the rank-one $\mathbf{B}=\mathbf{u}\mathbf{v}^\top$ of Figure 3, the pseudo-inverse is $\mathbf{B}^+=\mathbf{v}\mathbf{u}^\top/(\lVert\mathbf{u}\rVert^2\lVert\mathbf{v}\rVert^2)$. With $\lVert\mathbf{u}\rVert^2=\lVert\mathbf{v}\rVert^2=5$,
 
 $$
-\mathbf{B}^+=\frac{1}{25}\begin{bmatrix}2&4\\1&2\end{bmatrix},\qquad\mathbf{B}^+\begin{bmatrix}2\\4\end{bmatrix}=\frac{1}{25}\begin{bmatrix}20\\10\end{bmatrix}=\begin{bmatrix}0.8\\0.4\end{bmatrix}=\mathbf{x}_r.
+\mathbf{B}^+=\frac{1}{25}\begin{bmatrix}2&4\\1&2\end{bmatrix},\qquad\mathbf{B}^+\begin{bmatrix}2\\4\end{bmatrix}=\frac{1}{25}\begin{bmatrix}20\\10\end{bmatrix}=\begin{bmatrix}0.8\\0.4\end{bmatrix}=\mathbf{x}_{\mathrm{row}}.
 $$
 
 The pseudo-inverse returned the row-space part of $\mathbf{x}$, not $\mathbf{x}$ itself: the nullspace part $(0.5,-1)$ was lost for good. [[Orthogonality and Least Squares#The four subspaces and least squares|The next lecture]] shows that $\mathbf{A}^+\mathbf{b}$ is the minimum-norm least-squares solution, and [[Matrix Factorization and Dimensionality Reduction#The pseudo-inverse|the SVD]] computes it.
@@ -316,9 +316,9 @@ The pseudo-inverse returned the row-space part of $\mathbf{x}$, not $\mathbf{x}$
 ## Key takeaways
 
 - Every $m\times n$ matrix of rank $r$ has four fundamental subspaces: column space ($r$) and left nullspace ($m-r$) in $\mathbb{R}^m$; row space ($r$) and nullspace ($n-r$) in $\mathbb{R}^n$.
-- $\mathbf{x}\perp\mathbf{y}$ means $\mathbf{x}^\top\mathbf{y}=0$, which is exactly when Pythagoras holds. Orthogonal subspaces meet only at $\mathbf{0}$ and their dimensions add to at most $n$.
+- $\mathbf{x}\perp\mathbf{z}$ means $\mathbf{x}^\top\mathbf{z}=0$, which is exactly when Pythagoras holds. Orthogonal subspaces meet only at $\mathbf{0}$ and their dimensions add to at most $n$.
 - $\mathbf{A}\mathbf{x}=\mathbf{0}$ says, row by row, that $\mathbf{x}$ is perpendicular to every row. So the nullspace is the orthogonal complement of the row space, and the left nullspace is the orthogonal complement of the column space.
-- Every $\mathbf{x}$ splits uniquely as $\mathbf{x}_r+\mathbf{x}_n$. $\mathbf{A}$ kills $\mathbf{x}_n$ and maps the row space one-to-one onto the column space; the left nullspace is never reached. $\mathbf{A}\mathbf{x}=\mathbf{b}$ is solvable iff $\mathbf{b}$ is perpendicular to the left nullspace.
+- Every $\mathbf{x}$ splits uniquely as $\mathbf{x}_{\mathrm{row}}+\mathbf{x}_{\mathrm{null}}$. $\mathbf{A}$ kills $\mathbf{x}_{\mathrm{null}}$ and maps the row space one-to-one onto the column space; the left nullspace is never reached. $\mathbf{A}\mathbf{x}=\mathbf{b}$ is solvable iff $\mathbf{b}$ is perpendicular to the left nullspace.
 - Rank one means column times row, $\mathbf{u}\mathbf{v}^\top$. Rank $r$ means a sum of $r$ such pieces, and no fewer; $\mathbf{A}=\mathbf{C}\mathbf{R}$ and the SVD are two ways of writing that sum.
 - For a graph, the four subspaces are constant potentials, consistent potential differences (voltage law), loop currents (current law) and balanced node inflows, and the counting theorem is Euler's formula.
 

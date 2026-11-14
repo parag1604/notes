@@ -44,7 +44,7 @@ The goal of **graph representation learning** is to compute, for each node, a sh
 |---|---|---|
 | node classification | what is the label of node $v$? | logistic regression on $\mathbf{z}_v$ |
 | link prediction | is there (or will there be) an edge $u$–$v$? | a score of the pair, such as $\mathbf{z}_u^\top\mathbf{z}_v$ |
-| community detection | which nodes belong together? | K-means on the $\mathbf{z}_v$ |
+| community detection | which nodes belong together? | K-Means on the $\mathbf{z}_v$ |
 | visualization | what does the graph look like? | $D=2$, or t-SNE of the $\mathbf{z}_v$ |
 | graph classification | is this whole molecule toxic? | pool the node vectors into one vector per graph |
 
@@ -52,7 +52,7 @@ This lecture covers **shallow** methods, which need no neural networks: each nod
 
 ## Graphs and what we can measure on them
 
-A graph $G=(\mathcal{V},\mathcal{E})$ has nodes $\mathcal{V}=\{1,\dots,N\}$ and edges $\mathcal{E}$. Its **adjacency matrix** has $A_{uv}=1$ if $u$–$v$ is an edge (or the edge weight $w_{uv}$), and $0$ otherwise. Graphs come in several flavours.
+A graph $G=(\mathcal{V},\mathcal{E})$ has nodes $\mathcal{V}=\{1,\dots,N\}$ and edges $\mathcal{E}$. Its **adjacency matrix** has $A_{uv}=1$ if $u$–$v$ is an edge (or the edge weight, on a weighted graph), and $0$ otherwise. Graphs come in several flavours.
 
 - **Undirected** graphs (friendship) have a symmetric $\mathbf{A}$. **Directed** graphs (citations, links, "follows") do not: $A_{uv}$ means an edge from $u$ to $v$.
 - **Weighted** graphs carry a strength on each edge (number of messages, similarity).
@@ -62,12 +62,12 @@ A graph $G=(\mathcal{V},\mathcal{E})$ has nodes $\mathcal{V}=\{1,\dots,N\}$ and 
 The **degree** $d_v=\sum_uA_{uv}$ counts neighbours, and the **graph Laplacian** $\mathbf{L}=\operatorname{diag}(\mathbf{d})-\mathbf{A}$ measures how much a function on the nodes varies across edges:
 
 $$
-\mathbf{s}^\top\mathbf{L}\,\mathbf{s}=\frac12\sum_{u,v}A_{uv}(s_u-s_v)^2 .
+\mathbf{y}^\top\mathbf{L}\,\mathbf{y}=\frac12\sum_{u,v}A_{uv}(y_u-y_v)^2 .
 $$
 
 [[Clustering and Expectation Maximization#Cuts as quadratic forms|The clustering lecture]] derived this identity and used it to find balanced cuts. Here it will measure how far apart an embedding puts neighbouring nodes.
 
-Finally, a **random walk** moves from a node to a uniformly random neighbour. Its transition matrix is $\mathbf{P}=\operatorname{diag}(\mathbf{d})^{-1}\mathbf{A}$, and $(\mathbf{P}^r)_{uv}$ is the probability of being at $v$ after $r$ steps from $u$. On a connected undirected graph its stationary distribution is $\pi_v=d_v/\operatorname{vol}(G)$, and the chain is reversible: $d_u(\mathbf{P}^r)_{uv}=d_v(\mathbf{P}^r)_{vu}$ (see [[Markov Chains#The stationary distribution]]). Both facts appear in the NetMF derivation below.
+Finally, a **random walk** moves from a node to a uniformly random neighbour. Its transition matrix is $\mathbf{P}=\operatorname{diag}(\mathbf{d})^{-1}\mathbf{A}$, and $(\mathbf{P}^j)_{uv}$ is the probability of being at $v$ after $j$ steps from $u$. On a connected undirected graph its stationary distribution puts probability $d_v/\operatorname{vol}(G)$ on node $v$, and the chain is reversible: $d_u(\mathbf{P}^j)_{uv}=d_v(\mathbf{P}^j)_{vu}$ (see [[Markov Chains#The stationary distribution]]). Both facts appear in the NetMF derivation below.
 
 ## Which nodes matter: centrality
 
@@ -87,10 +87,10 @@ $$
 
 the inverse of the average distance to the other nodes.[^freeman1978]
 
-**Betweenness centrality** asks how often a node sits *between* others. If $\sigma_{st}$ is the number of shortest paths from $s$ to $t$ and $\sigma_{st}(v)$ the number that pass through $v$,
+**Betweenness centrality** asks how often a node sits *between* others. If $g_{ab}$ is the number of shortest paths from $a$ to $b$ and $g_{ab}(v)$ the number that pass through $v$,
 
 $$
-C_B(v)=\sum_{s\ne v\ne t}\frac{\sigma_{st}(v)}{\sigma_{st}},
+C_B(v)=\sum_{a\ne v\ne b}\frac{g_{ab}(v)}{g_{ab}},
 $$
 
 usually divided by the number of pairs, $\binom{N-1}{2}$, so that it lies in $[0,1]$.[^freeman1977] A node with high betweenness is a **broker**: remove it and many pairs drift apart. Brandes' algorithm computes it for all nodes in $O(N\lvert\mathcal{E}\rvert)$ time on an unweighted graph.[^brandes2001]
@@ -98,15 +98,15 @@ usually divided by the number of pairs, $\binom{N-1}{2}$, so that it lies in $[0
 **Eigenvector centrality** makes importance recursive: a node is central if its neighbours are central.[^bonacich1972] Asking each score to be proportional to the sum of the neighbours' scores gives
 
 $$
-\lambda\,c_v=\sum_uA_{vu}\,c_u
+\lambda\,\xi_v=\sum_uA_{vu}\,\xi_u
 \quad\Longleftrightarrow\quad
-\mathbf{A}\mathbf{c}=\lambda\,\mathbf{c}.
+\mathbf{A}\boldsymbol{\xi}=\lambda\,\boldsymbol{\xi}.
 $$
 
-Which eigenvector? For a connected graph, the **Perron–Frobenius theorem** says the eigenvector of the largest eigenvalue $\lambda_1$ is the only one whose entries can all be chosen positive, so it is the only sensible set of scores. [[Eigenvalues and Eigenvectors#Power iteration and the QR algorithm|Power iteration]] finds it by repeatedly passing scores to neighbours, $\mathbf{c}\leftarrow\mathbf{A}\mathbf{c}/\lVert\mathbf{A}\mathbf{c}\rVert$. On the karate club $\lambda_1=6.73$ and $\lambda_2=4.98$, so the error shrinks by a factor $\lambda_2/\lambda_1=0.74$ per step.
+Which eigenvector? For a connected graph, the **Perron–Frobenius theorem** says the eigenvector of the largest eigenvalue $\lambda_1$ is the only one whose entries can all be chosen positive, so it is the only sensible set of scores. [[Eigenvalues and Eigenvectors#Power iteration and the QR algorithm|Power iteration]] finds it by repeatedly passing scores to neighbours, $\boldsymbol{\xi}\leftarrow\mathbf{A}\boldsymbol{\xi}/\lVert\mathbf{A}\boldsymbol{\xi}\rVert$. On the karate club $\lambda_1=6.73$ and $\lambda_2=4.98$, so the error shrinks by a factor $\lambda_2/\lambda_1=0.74$ per step.
 
 > [!note] Katz centrality and PageRank
-> Eigenvector centrality breaks on directed graphs, where nodes with no incoming edges get score 0 and pass nothing on. **Katz centrality** gives every node a baseline, $\mathbf{c}=\alpha\mathbf{A}\mathbf{c}+\beta\mathbf{1}$ with $\alpha<1/\lambda_1$, which sums walks of every length with weight $\alpha^r$.[^katz1953] **PageRank** also divides each node's vote among its out-neighbours: it is the stationary distribution of a random walk that teleports to a random node with probability $1-\alpha$ (see [[Markov Chains#PageRank: the stationary distribution of the web|PageRank]]). On an undirected graph without teleporting, that stationary distribution is $d_v/\operatorname{vol}(G)$, so PageRank is close to degree: on the karate club their rank correlation is 0.98 ($\alpha=0.85$).
+> Eigenvector centrality breaks on directed graphs, where nodes with no incoming edges get score 0 and pass nothing on. **Katz centrality** gives every node a baseline, $\boldsymbol{\xi}=\alpha\mathbf{A}\boldsymbol{\xi}+\beta\mathbf{1}$ with $\alpha<1/\lambda_1$, which sums walks of every length $j$ with weight $\alpha^j$.[^katz1953] **PageRank** also divides each node's vote among its out-neighbours: it is the stationary distribution of a random walk that teleports to a random node with a fixed probability, typically 0.15 (see [[Markov Chains#PageRank: the stationary distribution of the web|PageRank]]). On an undirected graph without teleporting, that stationary distribution is $d_v/\operatorname{vol}(G)$, so PageRank is close to degree: on the karate club their rank correlation is 0.98 (teleport probability 0.15).
 
 ### Centrality on the karate club
 
@@ -131,7 +131,7 @@ The leaders top every list, which is reassuring: centrality finds them without b
 
 Centrality answers "who matters?". The karate club's real question was "who will go with whom?", which is **graph partitioning**. The two questions use the same tools.
 
-**Betweenness finds the cut.** If two communities are joined by few edges, every shortest path between them must use one of those edges, so the edges *between* communities have high **edge betweenness** (the same formula with $\sigma_{st}(e)$ counting paths through edge $e$). The **Girvan–Newman algorithm** turns this into a divisive clustering method: repeatedly delete the edge of highest betweenness, recomputing betweenness after each deletion, and watch the graph fall apart.[^girvan2002] On the karate club, the graph splits into two pieces (15 and 19 members) after 11 deletions, and the split matches the factions for all members but two, 3 and 9 (Figure 2a).
+**Betweenness finds the cut.** If two communities are joined by few edges, every shortest path between them must use one of those edges, so the edges *between* communities have high **edge betweenness** (the same formula, counting the shortest paths that use a given edge instead of a given node). The **Girvan–Newman algorithm** turns this into a divisive clustering method: repeatedly delete the edge of highest betweenness, recomputing betweenness after each deletion, and watch the graph fall apart.[^girvan2002] On the karate club, the graph splits into two pieces (15 and 19 members) after 11 deletions, and the split matches the factions for all members but two, 3 and 9 (Figure 2a).
 
 **The eigenvectors divide the work.** Eigenvector centrality is the *top* eigenvector of $\mathbf{A}$, with all entries positive: it ranks nodes but cannot split them. [[Clustering and Expectation Maximization#Spectral clustering|Spectral clustering]] uses the eigenvector of the *second-smallest* eigenvalue of the Laplacian, the Fiedler vector, which must change sign because it is orthogonal to the constant vector. Its sign gives exactly the same split as Girvan–Newman, with the same two members misplaced. That split cuts 10 friendships, one fewer than the real faction boundary (11), so by the cut criterion it is the better partition; members 3 and 9 chose their side for reasons the friendship graph does not record.
 
@@ -147,7 +147,7 @@ This is the bridge to the rest of the lecture. A centrality is a single hand-pic
 Hamilton, Ying and Leskovec proposed a common frame that fits almost every method in this lecture.[^hamilton2017review] It has four parts (Figure 3).
 
 1. **An encoder** maps a node to its vector. For shallow methods it is a **lookup table**: $\operatorname{enc}(v)=\mathbf{z}_v$, row $v$ of a parameter matrix $\mathbf{Z}\in\mathbb{R}^{N\times D}$.
-2. **A similarity** $S_{uv}$ that we read off the graph: adjacency, $k$-step reachability, co-occurrence on random walks, or "shares a community".
+2. **A similarity** $S_{uv}$ that we read off the graph: adjacency, multi-step reachability, co-occurrence on random walks, or "shares a community".
 3. **A decoder** maps a pair of vectors back to a similarity, usually $\operatorname{dec}(\mathbf{z}_u,\mathbf{z}_v)=\mathbf{z}_u^\top\mathbf{z}_v$ or a function of $\lVert\mathbf{z}_u-\mathbf{z}_v\rVert$.
 4. **A loss** compares the two over (some of) the pairs:
 
@@ -171,7 +171,7 @@ $$
 \sum_{u,v}A_{uv}\,\lVert\mathbf{z}_u-\mathbf{z}_v\rVert^2=2\operatorname{tr}\big(\mathbf{Z}^\top\mathbf{L}\,\mathbf{Z}\big),
 $$
 
-which is the Laplacian quadratic form, applied column by column. On its own it is minimized by putting every node at the same point, so we add a scale constraint, $\mathbf{Z}^\top\operatorname{diag}(\mathbf{d})\mathbf{Z}=\mathbf{I}$, and exclude the constant vector. The solution, by the same [[Eigenvalues and Eigenvectors#The Rayleigh quotient|Rayleigh-quotient]] argument as spectral clustering, is given by the generalized eigenvectors $\mathbf{L}\mathbf{y}=\lambda\operatorname{diag}(\mathbf{d})\mathbf{y}$ with the smallest non-zero eigenvalues. This is **Laplacian eigenmaps**,[^belkin2003] which [[Matrix Factorization and Dimensionality Reduction#Other dimensionality-reduction methods|the dimensionality-reduction lecture]] used on a nearest-neighbour graph built from data. Spectral clustering is Laplacian eigenmaps followed by K-means.
+which is the Laplacian quadratic form, applied column by column. On its own it is minimized by putting every node at the same point, so we add a scale constraint, $\mathbf{Z}^\top\operatorname{diag}(\mathbf{d})\mathbf{Z}=\mathbf{I}$, and exclude the constant vector. The solution, by the same [[Eigenvalues and Eigenvectors#The Rayleigh quotient|Rayleigh-quotient]] argument as spectral clustering, is given by the generalized eigenvectors $\mathbf{L}\mathbf{y}=\lambda\operatorname{diag}(\mathbf{d})\mathbf{y}$ with the smallest non-zero eigenvalues. This is **Laplacian eigenmaps**,[^belkin2003] which [[Matrix Factorization and Dimensionality Reduction#Other dimensionality-reduction methods|the dimensionality-reduction lecture]] used on a nearest-neighbour graph built from data. Spectral clustering is Laplacian eigenmaps followed by K-Means.
 
 > [!example]- Code: Laplacian eigenmaps (tested)
 > ```python
@@ -198,8 +198,8 @@ $$
 which is a low-rank approximation of $\mathbf{S}$. If we allow separate "source" and "target" vectors, $\mathbf{S}\approx\mathbf{Z}\mathbf{C}^\top$, the best answer is the truncated SVD of $\mathbf{S}$ ([[Matrix Factorization and Dimensionality Reduction#Best low-rank approximation: Eckart–Young|Eckart–Young]]). Several methods are this recipe with different $\mathbf{S}$:
 
 - **Graph factorization** uses $\mathbf{S}=\mathbf{A}$ and fits only the observed edges, with regularization, so that it scales to very large graphs.[^ahmed2013]
-- **GraRep** factorizes the $r$-step transition matrices $\mathbf{P}^r$ for $r=1,\dots,R$ (after a log transform), one SVD each, and concatenates the results. Each block captures relations at a different distance.[^cao2015]
-- **HOPE** targets *directed* graphs. It factorizes higher-order proximities such as the Katz index $(\mathbf{I}-\beta\mathbf{A})^{-1}\beta\mathbf{A}$, which counts paths of every length with weight $\beta^{\text{length}}$, and keeps separate source and target vectors so that $S_{uv}\neq S_{vu}$ can be represented.[^ou2016]
+- **GraRep** factorizes the $j$-step transition matrices $\mathbf{P}^j$ for $j=1,\dots,J$ (after a log transform), one SVD each, and concatenates the results. Each block captures relations at a different distance.[^cao2015]
+- **HOPE** targets *directed* graphs. It factorizes higher-order proximities such as the Katz index $(\mathbf{I}-\alpha\mathbf{A})^{-1}\alpha\mathbf{A}$, which counts paths of every length with weight $\alpha^{\text{length}}$, as in Katz centrality, and keeps separate source and target vectors so that $S_{uv}\neq S_{vu}$ can be represented.[^ou2016]
 
 The appeal is that exact solvers exist. The problem is that $\mathbf{S}$ is $N\times N$ and, for multi-step proximities, **dense**: $\mathbf{P}^3$ of a sparse graph is already mostly non-zero. For a million nodes that matrix has $10^{12}$ entries. The random-walk methods of the next section avoid ever forming it, by sampling.
 
@@ -210,7 +210,7 @@ The appeal is that exact solvers exist. The problem is that $\mathbf{S}$ is $N\t
 Perozzi, Al-Rfou and Skiena noticed that node frequencies in short random walks on social graphs follow a power law, like word frequencies in text.[^perozzi2014] So they treated **walks as sentences and nodes as words**, and trained word2vec on them.
 
 > [!example] Algorithm: DeepWalk
-> 1. From every node, start $\gamma$ random walks of length $L$ (typically $\gamma=10$, $L=40$–$80$). Each step moves to a uniformly random neighbour.
+> 1. From every node, start a fixed number of random walks of length $L$ (typically 10 walks per node, $L=40$–$80$). Each step moves to a uniformly random neighbour.
 > 2. Slide a window of size $m$ over each walk. Every pair of nodes at most $m$ steps apart in a walk is a (centre, context) training pair.
 > 3. Train **skip-gram**: give each node a vector $\mathbf{z}_v$ (as a centre) and a vector $\mathbf{c}_v$ (as a context), and maximize the probability of the observed context nodes.
 
@@ -221,27 +221,27 @@ Two nodes end up with similar vectors when they appear in similar contexts, that
 Skip-gram models the probability that $v$ appears in the window of $u$ as a softmax over all nodes,
 
 $$
-p(v\mid u)=\frac{\exp(\mathbf{z}_u^\top\mathbf{c}_v)}{\sum_{w\in\mathcal{V}}\exp(\mathbf{z}_u^\top\mathbf{c}_w)} ,
+p(v\mid u)=\frac{\exp(\mathbf{z}_u^\top\mathbf{c}_v)}{\sum_{v'\in\mathcal{V}}\exp(\mathbf{z}_u^\top\mathbf{c}_{v'})} ,
 $$
 
 which is [[Linear Models#More than two classes: softmax regression|softmax regression]] with $N$ classes and learned inputs. The normalizer touches all $N$ nodes for every pair, which is far too slow. **Negative sampling** replaces the $N$-way classification by a binary one: is $(u,v)$ a real pair from the walks, or a fake pair whose context was drawn at random from a noise distribution $P_n$?[^mikolov2013] For each real pair, draw $k$ noise nodes and maximize
 
 $$
-\log\sigma(\mathbf{z}_u^\top\mathbf{c}_v)+\sum_{i=1}^{k}\log\sigma(-\mathbf{z}_u^\top\mathbf{c}_{w_i}),\qquad w_i\sim P_n .
+\log\sigma(\mathbf{z}_u^\top\mathbf{c}_v)+\sum_{i=1}^{k}\log\sigma(-\mathbf{z}_u^\top\mathbf{c}_{v'_i}),\qquad v'_i\sim P_n .
 \tag{2}
 $$
 
-The first term pulls real pairs together, the second pushes random pairs apart: the same push–pull that [[Self-Supervised Representation Learning#From energy to contrast|contrastive learning]] derives from an energy view. Word2vec uses $P_n(w)\propto(\text{frequency})^{3/4}$; on graphs the frequency of a node in the walks is proportional to its degree. [[Language Representations and Language Models#Negative sampling|The language-models lecture]] develops skip-gram, negative sampling and their connection to noise-contrastive estimation in depth.
+The first term pulls real pairs together, the second pushes random pairs apart: the same push–pull that [[Self-Supervised Representation Learning#From energy to contrast|contrastive learning]] derives from an energy view. Word2vec uses $P_n(v)\propto(\text{frequency})^{3/4}$; on graphs the frequency of a node in the walks is proportional to its degree. [[Language Representations and Language Models#Negative sampling|The language-models lecture]] develops skip-gram, negative sampling and their connection to noise-contrastive estimation in depth.
 
 > [!example]- Code: the negative-sampling loss (2) in PyTorch (tested)
 > ```python
 > import torch
 > import torch.nn.functional as F
 > # assumes: Z, C (N, D) centre and context vectors; u, v (B,) real pairs; noise (N,) = P_n; k
-> negs = torch.multinomial(noise, len(u) * k, replacement=True).view(-1, k)   # w_1..w_k per pair
+> negs = torch.multinomial(noise, len(u) * k, replacement=True).view(-1, k)   # v'_1..v'_k per pair
 > zu = Z[u]                                                                  # (B, D)
 > pos = F.logsigmoid((zu * C[v]).sum(-1))                                    # log sigma(z_u . c_v)
-> neg = F.logsigmoid(-(zu.unsqueeze(1) * C[negs]).sum(-1)).sum(-1)           # sum_i log sigma(-z_u . c_wi)
+> neg = F.logsigmoid(-(zu.unsqueeze(1) * C[negs]).sum(-1)).sum(-1)           # sum_i log sigma(-z_u . c_v'i)
 > loss = -(pos + neg).mean()                                                 # minimize = maximize (2)
 > ```
 > One `loss.backward()` and optimizer step per batch of pairs is the whole of DeepWalk's training; the walks only supply `u` and `v`.
@@ -253,13 +253,13 @@ DeepWalk's walks are uniform. Grover and Leskovec asked what *kind* of neighbour
 - **Breadth-first** exploration stays close to the start node and samples its immediate neighbourhood. The idea is that this reveals a node's local *role* (a hub, a bridge, a leaf), which they linked to **structural equivalence**.
 - **Depth-first** exploration wanders far, and samples a whole region of the graph. Nodes in the same region then look alike: **homophily**, or community membership.
 
-node2vec interpolates with a **second-order** walk: the next step depends on the current node $v$ *and* the previous node $s$. For each neighbour $x$ of $v$, the unnormalized transition weight is $w_{vx}\,\alpha_{pq}(s,x)$, where $w_{vx}$ is the edge weight and
+node2vec interpolates with a **second-order** walk: the next step depends on the current node $v$ *and* the previous node $s$. For each neighbour $u$ of $v$, the unnormalized transition weight is $A_{vu}\,\omega_{pq}(s,u)$, where $A_{vu}$ is the edge weight and
 
 $$
-\alpha_{pq}(s,x)=
+\omega_{pq}(s,u)=
 \begin{cases}
-1/p & \text{if } x=s\quad(\text{go back}),\\
-1 & \text{if } x \text{ is a neighbour of } s\quad(\text{stay at distance 1 from } s),\\
+1/p & \text{if } u=s\quad(\text{go back}),\\
+1 & \text{if } u \text{ is a neighbour of } s\quad(\text{stay at distance 1 from } s),\\
 1/q & \text{otherwise}\quad(\text{move to distance 2 from } s).
 \end{cases}
 \tag{3}
@@ -303,10 +303,10 @@ With $p=q=1$, node2vec is DeepWalk. The return parameter $p$ controls backtracki
 
 LINE (Large-scale Information Network Embedding) skips the walks and works with edges directly.[^tang2015] It defines two notions of proximity and trains one embedding for each.
 
-- **First-order proximity:** connected nodes should be similar. Model the probability of an edge as $p_1(u,v)=\sigma(\mathbf{z}_u^\top\mathbf{z}_v)$ and maximize $\sum_{(u,v)\in\mathcal{E}}w_{uv}\log p_1(u,v)$, with negative sampling. This is a logistic version of Laplacian eigenmaps.
+- **First-order proximity:** connected nodes should be similar. Model the probability of an edge as $p_1(u,v)=\sigma(\mathbf{z}_u^\top\mathbf{z}_v)$ and maximize $\sum_{(u,v)\in\mathcal{E}}A_{uv}\log p_1(u,v)$, with negative sampling. This is a logistic version of Laplacian eigenmaps.
 - **Second-order proximity:** nodes with similar *neighbourhoods* should be similar, even if they are not adjacent. Give each node a context vector and model $p_2(v\mid u)$ as a softmax of $\mathbf{z}_u^\top\mathbf{c}_v$ over all $v$. This is skip-gram with a window of size 1, trained on the edges.
 
-The two embeddings are trained separately and concatenated. Edge sampling with probability proportional to $w_{uv}$ keeps the stochastic gradients well scaled on graphs with very uneven weights.
+The two embeddings are trained separately and concatenated. Edge sampling with probability proportional to $A_{uv}$ keeps the stochastic gradients well scaled on graphs with very uneven weights.
 
 ### Random walks secretly factorize a matrix
 
@@ -315,7 +315,7 @@ Levy and Goldberg showed that skip-gram with negative sampling on text is, at it
 > [!note] Theorem (NetMF)
 > Run DeepWalk with window $m$ and $k$ negative samples drawn from the degree distribution, on a connected, undirected, non-bipartite graph, with walks long enough that pair frequencies converge. If the embedding dimension is large enough that each inner product can be set freely, the optimal embeddings satisfy
 > $$
-> \mathbf{Z}\mathbf{C}^\top=\log\Big(\frac{\operatorname{vol}(G)}{k\,m}\Big(\sum_{r=1}^{m}\mathbf{P}^r\Big)\operatorname{diag}(\mathbf{d})^{-1}\Big),
+> \mathbf{Z}\mathbf{C}^\top=\log\Big(\frac{\operatorname{vol}(G)}{k\,m}\Big(\sum_{j=1}^{m}\mathbf{P}^j\Big)\operatorname{diag}(\mathbf{d})^{-1}\Big),
 > \tag{4}
 > $$
 > with the logarithm taken entry by entry. LINE (second-order) is the case $m=1$: $\log\big(\operatorname{vol}(G)\operatorname{diag}(\mathbf{d})^{-1}\mathbf{A}\operatorname{diag}(\mathbf{d})^{-1}\big)-\log k$.
@@ -326,27 +326,27 @@ Levy and Goldberg showed that skip-gram with negative sampling on text is, at it
 > \mathbf{z}_u^\top\mathbf{c}_v=\log\frac{\#(u,v)}{\#(u)\,k\,P_n(v)} ,
 > $$
 > where $\#(u,v)$ counts the pair and $\#(u)$ counts $u$ as a centre. Set $P_n(v)=\#(v)/|\mathcal{D}|$ (the degree distribution, see step 3).
-> 2. **Pair frequencies.** A walk started from the stationary distribution is at $u$ with probability $d_u/\operatorname{vol}(G)$ at every step. The pair $(u,v)$ at distance $r$ in the window arises when the walk is at $u$ and reaches $v$ after $r$ steps, or is at $v$ and reaches $u$ after $r$ steps. Averaging over $r=1,\dots,m$ and both directions,
+> 2. **Pair frequencies.** A walk started from the stationary distribution is at $u$ with probability $d_u/\operatorname{vol}(G)$ at every step. The pair $(u,v)$ at distance $j$ in the window arises when the walk is at $u$ and reaches $v$ after $j$ steps, or is at $v$ and reaches $u$ after $j$ steps. Averaging over $j=1,\dots,m$ and both directions,
 > $$
-> \frac{\#(u,v)}{|\mathcal{D}|}\to\frac{1}{2m}\sum_{r=1}^{m}\Big(\frac{d_u}{\operatorname{vol}(G)}(\mathbf{P}^r)_{uv}+\frac{d_v}{\operatorname{vol}(G)}(\mathbf{P}^r)_{vu}\Big)=\frac{1}{m}\sum_{r=1}^{m}\frac{d_u(\mathbf{P}^r)_{uv}}{\operatorname{vol}(G)} ,
+> \frac{\#(u,v)}{|\mathcal{D}|}\to\frac{1}{2m}\sum_{j=1}^{m}\Big(\frac{d_u}{\operatorname{vol}(G)}(\mathbf{P}^j)_{uv}+\frac{d_v}{\operatorname{vol}(G)}(\mathbf{P}^j)_{vu}\Big)=\frac{1}{m}\sum_{j=1}^{m}\frac{d_u(\mathbf{P}^j)_{uv}}{\operatorname{vol}(G)} ,
 > $$
 > because reversibility makes the two terms equal. Long walks forget their starting node, which is why the stationary start can be assumed.
 > 3. **Marginals.** Each node appears as a centre (and as a context) in proportion to its stationary probability, so $\#(u)/|\mathcal{D}|\to d_u/\operatorname{vol}(G)$, and likewise for $v$.
 > 4. **Assemble.** Substituting steps 2 and 3 into step 1, the $d_u$ cancels:
 > $$
-> \mathbf{z}_u^\top\mathbf{c}_v=\log\Big(\frac{\operatorname{vol}(G)}{k\,m}\sum_{r=1}^{m}\frac{(\mathbf{P}^r)_{uv}}{d_v}\Big),
+> \mathbf{z}_u^\top\mathbf{c}_v=\log\Big(\frac{\operatorname{vol}(G)}{k\,m}\sum_{j=1}^{m}\frac{(\mathbf{P}^j)_{uv}}{d_v}\Big),
 > $$
 > which is entry $(u,v)$ of (4). With $m=1$, $(\mathbf{P})_{uv}/d_v=A_{uv}/(d_ud_v)$, which gives the LINE matrix.
 
-What does (4) say? $\sum_r\mathbf{P}^r$ counts how likely a short walk is to connect $u$ and $v$. Dividing by $d_v$ discounts hubs, which every walk visits; this is the graph's version of PMI's division by $p(v)$. So random-walk embeddings are **low-rank factorizations of a log-transformed multi-hop proximity matrix**, and the encoder–decoder frame covers them exactly. Two practical consequences:
+What does (4) say? $\sum_j\mathbf{P}^j$ counts how likely a short walk is to connect $u$ and $v$. Dividing by $d_v$ discounts hubs, which every walk visits; this is the graph's version of PMI's division by $p(v)$. So random-walk embeddings are **low-rank factorizations of a log-transformed multi-hop proximity matrix**, and the encoder–decoder frame covers them exactly. Two practical consequences:
 
-- For graphs small enough to form the matrix, **NetMF** computes (4) and takes a truncated SVD of $\log\max(\mathbf{M},1)$ instead of sampling walks. Qiu et al. report that it matches or beats DeepWalk and LINE on their benchmarks.[^qiu2018]
+- For graphs small enough to form the matrix, **NetMF** computes (4) and takes a truncated SVD of $\log\max(\mathbf{B},1)$, where $\mathbf{B}$ is the matrix inside the logarithm of (4), instead of sampling walks. Qiu et al. report that it matches or beats DeepWalk and LINE on their benchmarks.[^qiu2018]
 - Undefined entries ($\log 0$ for pairs further apart than $m$ steps) explain why sampled methods push those pairs to strongly negative inner products.
 
 We can check (4) directly. Figure 5 trains DeepWalk on the karate club (34 nodes, 78 edges) with enough dimensions to fit any matrix, and compares the learned inner products with the right-hand side of (4).
 
 ![[Machine Learning/images/graph-representation-learning-netmf.svg]]
-*Figure 5: DeepWalk implicitly factorizes the NetMF matrix. On the karate club (window $m=3$, $k=5$ negatives from the degree distribution, $D=34$, 3.2 million walk pairs), each dot is a node pair reachable within 3 steps (86% of pairs). Learned $\mathbf{z}_u^\top\mathbf{c}_v$ against $\log M_{uv}$ from (4): correlation 0.996, mean absolute difference 0.085. Pairs that are not reachable within 3 steps, where (4) is $-\infty$, get a mean inner product of $-7.1$.*
+*Figure 5: DeepWalk implicitly factorizes the NetMF matrix. On the karate club (window $m=3$, $k=5$ negatives from the degree distribution, $D=34$, 3.2 million walk pairs), each dot is a node pair reachable within 3 steps (86% of pairs). Learned $\mathbf{z}_u^\top\mathbf{c}_v$ against $\log B_{uv}$ from (4): correlation 0.996, mean absolute difference 0.085. Pairs that are not reachable within 3 steps, where (4) is $-\infty$, get a mean inner product of $-7.1$.*
 
 > [!example]- Code: the NetMF matrix and embedding (tested)
 > ```python
@@ -375,7 +375,7 @@ We return to the karate club from [[#Which nodes matter: centrality|the centrali
 ![[Machine Learning/images/graph-representation-learning-karate.svg]]
 *Figure 6: karate-club embeddings coloured by the faction each member joined (labels not used in training). (a) Laplacian eigenmaps in 2-D. (b–d) DeepWalk and node2vec in 16-D, shown by their first two principal components, with $q=2$ (local walks) and $q=0.5$ (outward walks); $p=1$, window 5, 20 walks of length 40 per node. Accuracies are for a linear probe trained on 20% of the nodes (2-D for Laplacian eigenmaps, 16-D for the walk methods; walk methods averaged over 3 seeds). On this homophilous task all methods do well, and the choice of $q$ changes little.*
 
-Some honest observations, all from the script that made Figure 6:
+Some honest observations from the runs behind Figure 6:
 
 - Every method separates the factions: probe accuracy is 0.94 for 2-D Laplacian eigenmaps and 0.94–0.96 for the walk methods in 16-D. The karate split follows the community structure, so any homophily-preserving embedding works.
 - Laplacian eigenmaps get **worse** with more dimensions: 0.61 in 16-D. The extra eigenvectors are high-frequency functions with the same scale as the useful ones, and a probe trained on six people overfits them. The walk methods weight directions by how much co-occurrence they explain, so they do not suffer from this.
@@ -402,7 +402,7 @@ An **inductive** method instead learns a *function* $\mathbf{z}_v=f_\theta(\math
 
 ### Facts as triples
 
-A **knowledge graph** (KG) stores facts as triples $(h,r,t)$: a **head** entity, a **relation** and a **tail** entity, such as (Marie Curie, born_in, Warsaw) or (Warsaw, capital_of, Poland).[^nickel2016]<sup>,</sup>[^hogan2021] Write $\mathcal{E}$ for the set of entities and $\mathcal{R}$ for the set of relations. Large public KGs such as Freebase and Wikidata hold millions of entities and billions of facts, and they are **incomplete**: most true facts are missing. The central task is **link prediction**, also called **KG completion**: answer queries $(h,r,?)$ and $(?,r,t)$ by ranking candidate entities.
+A **knowledge graph** (KG) stores facts as triples $(h,r,t)$: a **head** entity, a **relation** and a **tail** entity, such as (Marie Curie, born_in, Warsaw) or (Warsaw, capital_of, Poland).[^nickel2016]<sup>,</sup>[^hogan2021] The entities are the nodes of the graph, so we write $\mathcal{V}$ for the set of entities and $\mathcal{R}$ for the set of relations. Large public KGs such as Freebase and Wikidata hold millions of entities and billions of facts, and they are **incomplete**: most true facts are missing. The central task is **link prediction**, also called **KG completion**: answer queries $(h,r,?)$ and $(?,r,t)$ by ranking candidate entities.
 
 A KG embedding gives each entity a vector $\mathbf{e}$ (we write $\mathbf{h}$, $\mathbf{t}$ for the head's and tail's vectors) and each relation some parameters, and defines a **score** $f_r(h,t)$ that is high for true triples. The encoder is still a lookup table; what is new is that the decoder depends on the relation.
 
@@ -411,7 +411,7 @@ Relations have patterns, and a good model should be able to express them. Our to
 - **Symmetric:** $(h,r,t)\Rightarrow(t,r,h)$. spouse_of, sibling_of.
 - **Antisymmetric:** $(h,r,t)\Rightarrow\neg(t,r,h)$. father_of.
 - **Inverse:** $(h,r_1,t)\Leftrightarrow(t,r_2,h)$. father_of and child_of.
-- **Composition:** $(x,r_1,y)\wedge(y,r_2,z)\Rightarrow(x,r_3,z)$. lives_in then city_in gives citizen_of.
+- **Composition:** $(e_1,r_1,e_2)\wedge(e_2,r_2,e_3)\Rightarrow(e_1,r_3,e_3)$. lives_in then city_in gives citizen_of.
 - **Mapping cardinality:** a relation is **1-to-N** if a head has many tails (father_of), **N-to-1** if many heads share a tail (lives_in), and **N-to-N** if both (sibling_of).
 
 ![[Machine Learning/images/graph-representation-learning-toy-kg.svg]]
@@ -425,7 +425,7 @@ $$
 \mathbf{h}+\mathbf{r}\approx\mathbf{t},\qquad f_r(h,t)=-\lVert\mathbf{h}+\mathbf{r}-\mathbf{t}\rVert ,
 $$
 
-with the $L_1$ or $L_2$ norm. The analogy with word vectors is direct: "king − man + woman ≈ queen" is a translation too. TransE has only $|\mathcal{E}|D+|\mathcal{R}|D$ parameters, trains fast, and handles antisymmetry, inversion ($\mathbf{r}_2=-\mathbf{r}_1$) and composition ($\mathbf{r}_3=\mathbf{r}_1+\mathbf{r}_2$) naturally.
+with the $L_1$ or $L_2$ norm. The analogy with word vectors is direct: "king − man + woman ≈ queen" is a translation too. TransE has only $|\mathcal{V}|D+|\mathcal{R}|D$ parameters, trains fast, and handles antisymmetry, inversion ($\mathbf{r}_2=-\mathbf{r}_1$) and composition ($\mathbf{r}_3=\mathbf{r}_1+\mathbf{r}_2$) naturally.
 
 ### Training: the margin ranking loss
 
@@ -484,17 +484,17 @@ The fixes all give each relation a way to treat entities *differently*, so that 
 ![[Machine Learning/images/graph-representation-learning-translation-models.svg]]
 *Figure 9: the translation family. (a) TransE translates in the entity space. (b) TransH projects both entities onto a relation-specific hyperplane, then translates within it. (c) TransR maps entities into a relation-specific space with a matrix $\mathbf{M}_r$, then translates. (d) TransD builds the map from two vectors, one belonging to the relation and one to the entity, so head and tail get different maps.*
 
-**TransH** gives each relation a hyperplane with unit normal $\mathbf{w}_r$ and a translation $\mathbf{d}_r$ lying in it.[^wang2014] Entities are projected onto the hyperplane before translating:
+**TransH** gives each relation a hyperplane with unit normal $\mathbf{w}_r$ and a translation $\mathbf{r}$ lying in it.[^wang2014] Entities are projected onto the hyperplane before translating:
 
 $$
 \begin{aligned}
 \mathbf{h}_\perp&=\mathbf{h}-(\mathbf{w}_r^\top\mathbf{h})\mathbf{w}_r,\qquad
 \mathbf{t}_\perp=\mathbf{t}-(\mathbf{w}_r^\top\mathbf{t})\mathbf{w}_r,\\
-f_r(h,t)&=-\lVert\mathbf{h}_\perp+\mathbf{d}_r-\mathbf{t}_\perp\rVert .
+f_r(h,t)&=-\lVert\mathbf{h}_\perp+\mathbf{r}-\mathbf{t}_\perp\rVert .
 \end{aligned}
 $$
 
-Now the children of one father only need the same **projection**: they may differ along $\mathbf{w}_r$. A symmetric relation needs $\mathbf{d}_r=\mathbf{0}$ and $\mathbf{h}_\perp=\mathbf{t}_\perp$, which again leaves $\mathbf{h}$ and $\mathbf{t}$ free to differ along $\mathbf{w}_r$.
+Now the children of one father only need the same **projection**: they may differ along $\mathbf{w}_r$. A symmetric relation needs $\mathbf{r}=\mathbf{0}$ and $\mathbf{h}_\perp=\mathbf{t}_\perp$, which again leaves $\mathbf{h}$ and $\mathbf{t}$ free to differ along $\mathbf{w}_r$.
 
 **TransR** goes further: entities live in $\mathbb{R}^{D}$, each relation has its own space $\mathbb{R}^{D_r}$ and a projection matrix $\mathbf{M}_r\in\mathbb{R}^{D_r\times D}$,[^lin2015]
 
@@ -562,16 +562,16 @@ Swapping $h$ and $t$ conjugates the sum, which flips the sign of its imaginary p
 > ```
 > `distmult_score(h, r, t) == distmult_score(t, r, h)` for any input; `complex_score` with a purely imaginary `r` flips sign when $h$ and $t$ swap.
 
-**RotatE** combines the two ideas: complex vectors, but a relation is a **rotation**, not a product with an arbitrary complex number.[^sun2019] Each coordinate of $\mathbf{r}$ has modulus 1, $r_i=e^{\mathrm{i}\theta_{r,i}}$, and
+**RotatE** combines the two ideas: complex vectors, but a relation is a **rotation**, not a product with an arbitrary complex number.[^sun2019] Each coordinate of $\mathbf{r}$ has modulus 1, $r_i=e^{\mathrm{i}\phi_{r,i}}$, and
 
 $$
 \mathbf{t}\approx\mathbf{h}\circ\mathbf{r},\qquad f_r(h,t)=-\lVert\mathbf{h}\circ\mathbf{r}-\mathbf{t}\rVert ,
 $$
 
-where $\circ$ is the element-wise product: coordinate $i$ of $\mathbf{h}$ is rotated by the angle $\theta_{r,i}$ in its own complex plane (Figure 10). Rotations compose by adding angles, invert by negating them, and a rotation by $\pi$ is its own inverse: exactly the algebra of composition, inversion and symmetry.
+where $\circ$ is the element-wise product: coordinate $i$ of $\mathbf{h}$ is rotated by the angle $\phi_{r,i}$ in its own complex plane (Figure 10). Rotations compose by adding angles, invert by negating them, and a rotation by $\pi$ is its own inverse: exactly the algebra of composition, inversion and symmetry.
 
 ![[Machine Learning/images/graph-representation-learning-rotate.svg]]
-*Figure 10: RotatE in one complex coordinate. (a) The relation rotates the head's coordinate by $\theta_{r,i}$ to reach the tail's. (b) A rotation by $\pi$ maps $h_i$ to $t_i=-h_i$ and $t_i$ back to $h_i$, so the relation is symmetric without forcing $h_i=t_i$, unlike TransE's zero translation.*
+*Figure 10: RotatE in one complex coordinate. (a) The relation rotates the head's coordinate by $\phi_{r,i}$ to reach the tail's. (b) A rotation by $\pi$ maps $h_i$ to $t_i=-h_i$ and $t_i$ back to $h_i$, so the relation is symmetric without forcing $h_i=t_i$, unlike TransE's zero translation.*
 
 ### Which model can express which pattern
 
@@ -588,11 +588,11 @@ The first four pattern columns follow the analysis of Sun et al.;[^sun2019] "✗
 > [!proof]- Proofs for a few entries
 > **DistMult is always symmetric**, so no antisymmetric relation can be represented: $\sum_ih_ir_it_i=\sum_it_ir_ih_i$ for every $\mathbf{h},\mathbf{r},\mathbf{t}$.
 >
-> **ComplEx can be antisymmetric.** Let $s=\sum_ih_ir_i\bar t_i$. Swapping $h$ and $t$ gives $\sum_it_ir_i\bar h_i$, which equals $\bar s$ when $\mathbf{r}$ is real and differs from it otherwise. With purely imaginary $\mathbf{r}$, $\sum_it_ir_i\bar h_i=-\bar s$, so the swapped score is $\operatorname{Re}(-\bar s)=-\operatorname{Re}(s)$: a high score for $(h,r,t)$ forces a low one for $(t,r,h)$.
+> **ComplEx can be antisymmetric.** Let $\zeta=\sum_ih_ir_i\bar t_i$. Swapping $h$ and $t$ gives $\sum_it_ir_i\bar h_i$, which equals $\bar\zeta$ when $\mathbf{r}$ is real and differs from it otherwise. With purely imaginary $\mathbf{r}$, $\sum_it_ir_i\bar h_i=-\bar\zeta$, so the swapped score is $\operatorname{Re}(-\bar\zeta)=-\operatorname{Re}(\zeta)$: a high score for $(h,r,t)$ forces a low one for $(t,r,h)$.
 >
-> **RotatE: symmetry, inversion and composition.** Assume the facts hold exactly. *Symmetry:* $\mathbf{t}=\mathbf{h}\circ\mathbf{r}$ and $\mathbf{h}=\mathbf{t}\circ\mathbf{r}$ give $\mathbf{h}=\mathbf{h}\circ\mathbf{r}\circ\mathbf{r}$, so $r_i^2=1$ wherever $h_i\neq0$, i.e. $r_i=\pm1$. Choosing $r_i=-1$ in some coordinates allows $\mathbf{h}\neq\mathbf{t}$. *Inversion:* $\mathbf{t}=\mathbf{h}\circ\mathbf{r}_1$ and $\mathbf{h}=\mathbf{t}\circ\mathbf{r}_2$ hold for all such pairs iff $\mathbf{r}_2=\bar{\mathbf{r}}_1$ (opposite angles). *Composition:* $\mathbf{y}=\mathbf{x}\circ\mathbf{r}_1$ and $\mathbf{z}=\mathbf{y}\circ\mathbf{r}_2$ give $\mathbf{z}=\mathbf{x}\circ(\mathbf{r}_1\circ\mathbf{r}_2)$, so $\mathbf{r}_3=\mathbf{r}_1\circ\mathbf{r}_2$ (angles add).
+> **RotatE: symmetry, inversion and composition.** Assume the facts hold exactly. *Symmetry:* $\mathbf{t}=\mathbf{h}\circ\mathbf{r}$ and $\mathbf{h}=\mathbf{t}\circ\mathbf{r}$ give $\mathbf{h}=\mathbf{h}\circ\mathbf{r}\circ\mathbf{r}$, so $r_i^2=1$ wherever $h_i\neq0$, i.e. $r_i=\pm1$. Choosing $r_i=-1$ in some coordinates allows $\mathbf{h}\neq\mathbf{t}$. *Inversion:* $\mathbf{t}=\mathbf{h}\circ\mathbf{r}_1$ and $\mathbf{h}=\mathbf{t}\circ\mathbf{r}_2$ hold for all such pairs iff $\mathbf{r}_2=\bar{\mathbf{r}}_1$ (opposite angles). *Composition:* $\mathbf{e}_2=\mathbf{e}_1\circ\mathbf{r}_1$ and $\mathbf{e}_3=\mathbf{e}_2\circ\mathbf{r}_2$ give $\mathbf{e}_3=\mathbf{e}_1\circ(\mathbf{r}_1\circ\mathbf{r}_2)$, so $\mathbf{r}_3=\mathbf{r}_1\circ\mathbf{r}_2$ (angles add).
 >
-> **TransH: symmetry.** With $\mathbf{d}_r=\mathbf{0}$, the score $-\lVert\mathbf{h}_\perp-\mathbf{t}_\perp\rVert$ is unchanged by swapping $h$ and $t$, and it is perfect whenever $\mathbf{h}-\mathbf{t}$ is parallel to $\mathbf{w}_r$. So $\mathbf{h}\neq\mathbf{t}$ is allowed.
+> **TransH: symmetry.** With $\mathbf{r}=\mathbf{0}$, the score $-\lVert\mathbf{h}_\perp-\mathbf{t}_\perp\rVert$ is unchanged by swapping $h$ and $t$, and it is perfect whenever $\mathbf{h}-\mathbf{t}$ is parallel to $\mathbf{w}_r$. So $\mathbf{h}\neq\mathbf{t}$ is allowed.
 
 ### The patterns in an experiment
 
@@ -603,7 +603,7 @@ Figure 11 trains all seven models on the toy KG. For each of 3 random seeds we r
 
 What the numbers say, relation by relation:
 
-- **Symmetric relations (spouse_of, sibling_of).** All four translation models sit at an MRR of about 0.5, and the reason is exactly the proof above: for 96–99% of these test queries the top-ranked candidate is the query entity *itself*, with the correct answer second. The same argument applies to the whole family. If $g$ is the map a translation model applies before translating, symmetry requires $g(\mathbf{h})+\mathbf{r}=g(\mathbf{t})$ and $g(\mathbf{t})+\mathbf{r}=g(\mathbf{h})$, hence $\mathbf{r}=\mathbf{0}$, and then $(h,r,h)$ gets the best possible score. TransH, TransR and TransD can express symmetry without forcing $\mathbf{h}=\mathbf{t}$, but they cannot stop a symmetric relation from looking reflexive. DistMult (1.00 on spouse_of), ComplEx and RotatE do not have this problem: the self-candidate comes first in only 2%, 4% and 28% of these queries.
+- **Symmetric relations (spouse_of, sibling_of).** All four translation models sit at an MRR of about 0.5, and the reason is exactly the proof above: for 96–99% of these test queries the top-ranked candidate is the query entity *itself*, with the correct answer second. The same argument applies to the whole family. If $\psi$ is the map a translation model applies before translating, symmetry requires $\psi(\mathbf{h})+\mathbf{r}=\psi(\mathbf{t})$ and $\psi(\mathbf{t})+\mathbf{r}=\psi(\mathbf{h})$, hence $\mathbf{r}=\mathbf{0}$, and then $(h,r,h)$ gets the best possible score. TransH, TransR and TransD can express symmetry without forcing $\mathbf{h}=\mathbf{t}$, but they cannot stop a symmetric relation from looking reflexive. DistMult (1.00 on spouse_of), ComplEx and RotatE do not have this problem: the self-candidate comes first in only 2%, 4% and 28% of these queries.
 - **Composition (citizen_of).** DistMult and ComplEx, which cannot compose relations, score 0.37 and 0.36; TransE and RotatE, which can, score 1.00, and TransR, which cannot, 0.56. TransH (1.00) and TransD (0.96) do better than the table suggests. Our toy graph offers a second route: every family member's citizenship is also in training, and family members end up with similar vectors. Real knowledge graphs are full of such side routes, which is one reason pattern tables and benchmark scores do not always agree.
 - **Antisymmetric and inverse relations (father_of, mother_of, child_of).** Everyone does well, DistMult included (0.90–0.99), although it cannot represent antisymmetry. Its symmetric score would wrongly accept (child, father_of, father), but no test query asks for that: the true answer to (father, father_of, ?) is a child, and the child-to-father direction is never queried for father_of. A test set measures the patterns it contains, nothing more.
 - **RotatE** has the best overall MRR (0.89 against 0.84 for TransE and TransH). Its weakest column, sibling_of (0.71), is the one where its 1-to-N limitation bites: in a family of three children, each child must be a rotation of each sibling by the *same* $\mathbf{r}$, which forces two of them to coincide.
@@ -618,11 +618,11 @@ What the numbers say, relation by relation:
 For each test triple $(h,r,t)$, score every entity as a candidate tail for $(h,r,?)$, find the **rank** of the true $t$, and do the same for the head. Report
 
 $$
-\mathrm{MRR}=\frac{1}{|\mathcal{Q}|}\sum_{q\in\mathcal{Q}}\frac{1}{\operatorname{rank}_q},\qquad
-\mathrm{Hits@}k=\frac{1}{|\mathcal{Q}|}\sum_{q\in\mathcal{Q}}\mathbb{1}\{\operatorname{rank}_q\le k\},
+\mathrm{MRR}=\frac{1}{|\mathcal{Q}|}\sum_{i=1}^{|\mathcal{Q}|}\frac{1}{\operatorname{rank}_i},\qquad
+\mathrm{Hits@}n=\frac{1}{|\mathcal{Q}|}\sum_{i=1}^{|\mathcal{Q}|}\mathbb{1}\{\operatorname{rank}_i\le n\},
 $$
 
-over the set of queries $\mathcal{Q}$. MRR (mean reciprocal rank) is dominated by the top of the list: rank 1 counts 1, rank 2 counts 0.5, rank 100 almost nothing. Hits@1, @3 and @10 are the fractions answered within the top 1, 3 or 10.
+over the set of queries $\mathcal{Q}$, where $\operatorname{rank}_i$ is the rank of the answer to query $i$. MRR (mean reciprocal rank) is dominated by the top of the list: rank 1 counts 1, rank 2 counts 0.5, rank 100 almost nothing. Hits@1, @3 and @10 are the fractions answered within the top 1, 3 or 10.
 
 **Filtering.** A query may have several correct answers: (father, father_of, ?) has one per child. In the **raw** setting, the other children ranked above the test child count as errors. The **filtered** setting, introduced with TransE, removes every *other* known true triple (from training, validation and test) from the candidate list before ranking.[^bordes2013] Filtered metrics are now the standard.
 
@@ -690,7 +690,7 @@ The parameter count is still linear in $N$, which is one more argument for induc
 - A shallow node embedding is a lookup table trained as an **encoder–decoder**: choose a similarity $S$ on the graph, a decoder ($\mathbf{z}_u^\top\mathbf{z}_v$ or a distance) and a loss. The choice of $S$ decides what "similar nodes" means.
 - **Laplacian eigenmaps** minimize $\operatorname{tr}(\mathbf{Z}^\top\mathbf{L}\mathbf{Z})$: neighbours close, first-order proximity only. **Factorization** methods (graph factorization, GraRep, HOPE) take a low-rank approximation of a proximity matrix.
 - **DeepWalk** trains skip-gram with negative sampling on random walks; **node2vec** biases the walks with $p$ (return) and $q$ (in–out); **LINE** models first- and second-order proximity on edges.
-- These are the same family: DeepWalk implicitly factorizes $\log\big(\frac{\operatorname{vol}(G)}{km}\sum_{r=1}^{m}\mathbf{P}^r\operatorname{diag}(\mathbf{d})^{-1}\big)$ (**NetMF**), which we confirmed numerically (correlation 0.996).
+- These are the same family: DeepWalk implicitly factorizes $\log\big(\frac{\operatorname{vol}(G)}{km}\sum_{j=1}^{m}\mathbf{P}^j\operatorname{diag}(\mathbf{d})^{-1}\big)$ (**NetMF**), which we confirmed numerically (correlation 0.996).
 - Lookup tables are **transductive**: no vector for new nodes, no features, parameters growing with $N$. **Inductive** methods learn a shared function, which leads to GNNs.
 - **Knowledge-graph embeddings** score triples $(h,r,t)$: translations (TransE and its H/R/D refinements), bilinear products (DistMult, ComplEx) and rotations (RotatE). They are trained with corrupted triples and a margin (hinge) or logistic loss. Which relation patterns each can express follows from short algebraic arguments.
 - Evaluate with **filtered** MRR and Hits@k on leak-free benchmarks (FB15k-237, WN18RR). In node link prediction, remove test edges before training and include hard negatives.

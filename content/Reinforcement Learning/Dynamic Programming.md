@@ -20,7 +20,7 @@ next: "[[Stochastic Shortest Path Problems]]"
 
 ## Motivation
 
-The [[Introduction to Reinforcement Learning|previous lecture]] wrote down what the value of a policy, and the optimal value, *must* satisfy. Dynamic programming (DP) is the family of algorithms that *solves* those equations when we know the environment's dynamics exactly.[^bellman1957] This is **planning**, not learning: no interaction or exploration is needed, only computation with a known model.
+[[Introduction to Reinforcement Learning]] wrote down what the value of a policy, and the optimal value, *must* satisfy, and [[Finite-Horizon Dynamic Programming]] solved the fixed-horizon case by backward induction. Dynamic programming (DP) is the family of algorithms that *solves* those equations when we know the environment's dynamics exactly.[^bellman1957] This is **planning**, not learning: no interaction or exploration is needed, only computation with a known model.
 
 Why study it if real problems rarely give us the model?
 
@@ -271,19 +271,19 @@ With the stopping rule above, this gives $\lVert V_{k+1}-V^*\rVert_\infty<\varep
 
 The stopping bound above uses only the *size* of the last change. Using its smallest and largest components gives bounds from both sides, which can be much tighter. The trick is to treat the **Bellman residual as a reward**.
 
-For any $V$ and any policy $\mu$, subtract $\mathcal{T}^\mu V=r_\mu+\gamma P^\mu V$ from $V^\mu=r_\mu+\gamma P^\mu V^\mu$:
+For any $V$ and any policy $\pi$, subtract $\mathcal{T}^\pi V=r_\pi+\gamma P^\pi V$ from $V^\pi=r_\pi+\gamma P^\pi V^\pi$:
 
 $$
-V^\mu-V=\underbrace{(\mathcal{T}^\mu V-V)}_{d}+\gamma P^\mu\,(V^\mu-V).
+V^\pi-V=\underbrace{(\mathcal{T}^\pi V-V)}_{d}+\gamma P^\pi\,(V^\pi-V).
 $$
 
-This is a Bellman equation. **The error $V^\mu-V$ is the value of $\mu$ in an MDP whose reward is the residual $d$.** A value is at least $\min_sd(s)/(1-\gamma)$ and at most $\max_sd(s)/(1-\gamma)$. Using that for the future terms only, with $\underline d=\min_sd(s)$ and $\overline d=\max_sd(s)$,
+This is a Bellman equation. **The error $V^\pi-V$ is the value of $\pi$ in an MDP whose reward is the residual $d$.** A value is at least $\min_sd(s)/(1-\gamma)$ and at most $\max_sd(s)/(1-\gamma)$. Using that for the future terms only, with $\underline d=\min_sd(s)$ and $\overline d=\max_sd(s)$,
 
 $$
-\mathcal{T}^\mu V+\frac{\gamma\,\underline d}{1-\gamma}\mathbf{1}\;\le\;V^\mu\;\le\;\mathcal{T}^\mu V+\frac{\gamma\,\overline d}{1-\gamma}\mathbf{1}.
+\mathcal{T}^\pi V+\frac{\gamma\,\underline d}{1-\gamma}\mathbf{1}\;\le\;V^\pi\;\le\;\mathcal{T}^\pi V+\frac{\gamma\,\overline d}{1-\gamma}\mathbf{1}.
 $$
 
-So one application of $\mathcal{T}^\mu$ brackets $V^\mu$ from both sides. The same idea applies to value iteration and $V^*$.
+So one application of $\mathcal{T}^\pi$ brackets $V^\pi$ from both sides. The same idea applies to value iteration and $V^*$.
 
 > [!note] Proposition (two-sided value iteration bounds)
 > Let $V_k=(\mathcal{T}^*)^kV_0$ and, for $k\ge1$,
@@ -359,10 +359,10 @@ These are the MacQueen–Porteus bounds.[^macqueen1966]<sup>,</sup>[^porteus1971
 
 ### Modified and asynchronous policy iteration converge
 
-Modified PI is one instance of a much more flexible scheme. **Asynchronous policy iteration** keeps a pair $(V_k,\mu_k)$, with $\mu_k$ deterministic. At each step it picks some subset $S_k$ of states and does one of two things:
+Modified PI is one instance of a much more flexible scheme. **Asynchronous policy iteration** keeps a pair $(V_k,\pi_k)$, with $\pi_k$ deterministic. At each step it picks some subset $S_k$ of states and does one of two things:
 
-- a **value update** on $S_k$: $V_{k+1}(s)=(\mathcal{T}^{\mu_k}V_k)(s)$ for $s\in S_k$, leaving $\mu$ unchanged;
-- a **policy update** on $S_k$: make $\mu_{k+1}(s)$ greedy with respect to $V_k$ for $s\in S_k$, leaving $V$ unchanged.
+- a **value update** on $S_k$: $V_{k+1}(s)=(\mathcal{T}^{\pi_k}V_k)(s)$ for $s\in S_k$, leaving $\pi$ unchanged;
+- a **policy update** on $S_k$: make $\pi_{k+1}(s)$ greedy with respect to $V_k$ for $s\in S_k$, leaving $V$ unchanged.
 
 Policy iteration, modified PI, value iteration and in-place (asynchronous) value iteration are all particular schedules of these two moves.
 
@@ -370,12 +370,12 @@ Policy iteration, modified PI, value iteration and in-place (asynchronous) value
 > Suppose every state receives infinitely many value updates and infinitely many policy updates, and the initial pair is **pessimistic**:
 >
 > $$
-> \mathcal{T}^{\mu_0}V_0\ge V_0.
+> \mathcal{T}^{\pi_0}V_0\ge V_0.
 > $$
 >
 > Then $V_k$ is non-decreasing and converges to $V^*$.
 
-The condition holds, for instance, for $V_0=V^{\mu_0}$ (with equality), or for the constant $V_0=\frac{\min_{s,a}r(s,a)}{1-\gamma}\mathbf{1}$, since then $\mathcal{T}^{\mu_0}V_0\ge\min r+\gamma\frac{\min r}{1-\gamma}=V_0$. The proof shows by induction that $\mathcal{T}^{\mu_k}V_k\ge V_k$ is preserved by both kinds of update. So $V_k$ only increases, stays below $V^*$, and its limit $\bar V$ satisfies $\mathcal{T}^*\bar V\ge\bar V$. A strict inequality at some state is then ruled out by following a policy update at that state with the next value update there. The argument uses only monotonicity and the uniqueness of the Bellman fixed point, so it holds verbatim for undiscounted problems; it is written out in full in [[Stochastic Shortest Path Problems#Modified and asynchronous policy iteration|the SSP lecture]]. Without the monotonicity condition, natural asynchronous variants can fail to converge, as Bertsekas and Yu discuss.[^bertsekasyu2010]
+The condition holds, for instance, for $V_0=V^{\pi_0}$ (with equality), or for the constant $V_0=\frac{\min_{s,a}r(s,a)}{1-\gamma}\mathbf{1}$, since then $\mathcal{T}^{\pi_0}V_0\ge\min r+\gamma\frac{\min r}{1-\gamma}=V_0$. The proof shows by induction that $\mathcal{T}^{\pi_k}V_k\ge V_k$ is preserved by both kinds of update. So $V_k$ only increases, stays below $V^*$, and its limit $\bar V$ satisfies $\mathcal{T}^*\bar V\ge\bar V$. A strict inequality at some state is then ruled out by following a policy update at that state with the next value update there. The argument uses only monotonicity and the uniqueness of the Bellman fixed point, so it holds verbatim for undiscounted problems; it is written out in full in [[Stochastic Shortest Path Problems#Modified and asynchronous policy iteration|the SSP lecture]]. Without the monotonicity condition, natural asynchronous variants can fail to converge, as Bertsekas and Yu discuss.[^bertsekasyu2010]
 
 ### Generalized policy iteration (GPI)
 
@@ -422,7 +422,7 @@ In the new problem every policy terminates with probability one, after $1/(1-\ga
 - **Policy improvement theorem:** acting greedily with respect to $V^\pi$ never hurts, and it strictly helps unless $\pi$ is already optimal. **Policy iteration** therefore terminates at $\pi^*$, usually in very few iterations.
 - **Monotonicity** and the **constant-shift** identity are the primitive properties behind every proof. They give the contraction in two lines, and they survive when discounting is removed.
 - **Two-sided (MacQueen–Porteus) bounds** $V_k+\underline c_k\mathbf{1}\le V^*\le V_k+\overline c_k\mathbf{1}$ come free from the last two VI iterates. They can be far tighter than the norm bound when the remaining error is nearly constant across states. The $\gamma^k$ rate holds in the max-norm, not state by state.
-- **Asynchronous policy iteration** (any interleaving of partial evaluation and greedy improvement on subsets of states) converges from a pessimistic start $\mathcal{T}^{\mu_0}V_0\ge V_0$. PI, modified PI and VI are special cases.
+- **Asynchronous policy iteration** (any interleaving of partial evaluation and greedy improvement on subsets of states) converges from a pessimistic start $\mathcal{T}^{\pi_0}V_0\ge V_0$. PI, modified PI and VI are special cases.
 - **GPI** (interleaved evaluation and improvement) is the blueprint for model-free RL: Q-learning is sampled VI, and actor-critic is approximate PI.
 - **Discounting is termination:** a discounted MDP is an undiscounted problem that ends with probability $1-\gamma$ per step. Its value is the expected total reward, though the return's distribution differs.
 

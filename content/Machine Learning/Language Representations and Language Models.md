@@ -16,10 +16,10 @@ next: "[[Variational Autoencoders]]"
 >
 > **TL;DR:**
 > - Text is the largest unlabelled dataset there is, and it supervises itself: **hide part of it and predict the hidden part from the rest**. Three choices of what to hide give three families: neighbouring words (**word2vec**, **GloVe**), masked words (**BERT**), and the next word (**GPT**).
-> - Word vectors store **concepts as directions**: $\text{king}-\text{man}+\text{woman}\approx\text{queen}$. Independent concepts can sit in orthogonal directions, but only $d$ of those fit in $d$ dimensions. If directions only need to be **almost** orthogonal, **exponentially many** fit ($\approx e^{c\,d\,\varepsilon^2}$), which is how networks store more features than they have neurons (**superposition**).
+> - Word vectors store **concepts as directions**: $\text{king}-\text{man}+\text{woman}\approx\text{queen}$. Independent concepts can sit in orthogonal directions, but only $d$ of those fit in $d$ dimensions. If directions only need to be **almost** orthogonal, **exponentially many** fit ($e^{\Theta(d\varepsilon^2)}$), which is how networks store more features than they have neurons (**superposition**).
 > - Next-token prediction with cross-entropy is **compression**. Its loss falls as a **power law** in parameters, data and compute, and at the scale of billions of parameters the model starts to **learn from examples in its prompt** without any weight update (**in-context learning**). Instruction tuning and RLHF turn the predictor into an assistant.
 >
-> **Notation:** a vocabulary of $V$ tokens; a token sequence $x_1,\dots,x_T$ (indices from 1 here, as in most of the language-model literature); a word $w$ with **input vector** $\mathbf{v}_w\in\mathbb{R}^d$ and context word $c$ with **output vector** $\mathbf{u}_c\in\mathbb{R}^d$; $\#(\cdot)$ for counts in the corpus; $\sigma$ the logistic sigmoid; $\log$ natural, so losses are in nats.
+> **Notation:** a vocabulary of $V$ tokens; a token sequence $x_1,\dots,x_T$ (indices from 1 here, as in most of the language-model literature); a word $w$ with **input vector** $\mathbf{v}_w\in\mathbb{R}^d$ and context word $c$ with **output vector** $\mathbf{u}_c\in\mathbb{R}^d$; $\#(\cdot)$ for counts in the corpus; $\sigma$ the logistic sigmoid; $\log$ natural, so losses are in nats. In the scaling-law section $N$ and $D$ follow the literature and count **parameters** and **training tokens**, not samples and input dimensions.
 >
 > **Code:** [Word-Embeddings-and-Text-Classification](https://github.com/parag1604/Word-Embeddings-and-Text-Classification): exploring pretrained fastText vectors (neighbours, analogies), then AG News classification with LSTMs and a transformer encoder on learned and GloVe embeddings. [GPT-from-Scratch](https://github.com/parag1604/GPT-from-Scratch): a bigram model grown into a GPT on tiny Shakespeare, a BPE tokenizer, a KV cache, GPT-2 weights loaded into the same code, and LoRA fine-tuning for tweet sentiment. [modern_llms](https://github.com/paragduttaiisc/modern_llms): nanoGPT rebuilt on Hugging Face and extended with the techniques of current frontier models (multi-head latent attention, mixture of experts, the Muon optimizer, multi-token prediction with self-speculative decoding, RoPE/SwiGLU/RMSNorm) to train billion-parameter LLMs on local hardware and serve them fast.
 
@@ -110,7 +110,7 @@ After four merges the corpus reads `te a _`, `ten _`, `ten t_`, `n et_`, `ten et
 > merges, corpus = bpe_train({"tea": 6, "ten": 4, "tent": 3, "net": 5, "tenet": 2}, 4)
 > # merges: [('t','e'), ('t','_'), ('te','n'), ('e','t_')]
 > ```
-> Ties are broken by first occurrence. The encoder (in the test script) applies the merges in order.
+> Ties are broken by first occurrence. An encoder then applies the merges in order.
 
 ### Other tokenizers
 
@@ -127,7 +127,7 @@ The model never sees characters, only token ids, and this leaks into behaviour.
 
 ## Static word embeddings
 
-The first form of self-supervision gives each word type one vector. An embedding table maps token $w$ to row $w$ of a matrix (see [[Sequence Models]] for how embeddings feed a network). The question is how to train the table without labels.
+The first form of self-supervision gives each word type one vector. An embedding table maps token $w$ to row $w$ of a matrix (see [[Sequence Models#From words to vectors|Sequence Models]] for how embeddings feed a network). The question is how to train the table without labels.
 
 ### Word2vec: skip-gram and CBOW
 
@@ -181,19 +181,19 @@ Each step now touches only $k+1$ output vectors, with $k$ between 2 and 20. The 
 > ```
 > Each step reads $k+1$ rows of `U_emb` per pair instead of all $V$. The full softmax of (1) would be `F.cross_entropy(V_emb(w) @ U_emb.weight.T, c)`, which touches every output vector.
 
-This is **noise-contrastive estimation** in a simplified form: learn a distribution by training a classifier to separate data from noise, as derived in [[Self-Supervised Representation Learning]].[^gutmann2010]<sup>,</sup>[^mnih2012] Full NCE includes the term $\log kP_n(c)$ in the classifier's logit, which makes the model's scores converge to true log-probabilities. Negative sampling drops that term, so it no longer estimates $p(c\mid w)$, but it still learns good vectors, and exactly what it learns is the subject of the next subsection.[^goldberg2014]
+This is **noise-contrastive estimation** in a simplified form: learn a distribution by training a classifier to separate data from noise, as derived in [[Self-Supervised Representation Learning#NCE and InfoNCE|Self-Supervised Representation Learning]].[^gutmann2010]<sup>,</sup>[^mnih2012] Full NCE includes the term $\log kP_n(c)$ in the classifier's logit, which makes the model's scores converge to true log-probabilities. Negative sampling drops that term, so it no longer estimates $p(c\mid w)$, but it still learns good vectors, and exactly what it learns is the subject of the next subsection.[^goldberg2014]
 
-**Subsampling frequent words.** Words like "the" and "of" occur in nearly every window and say little about their neighbours. Word2vec discards each occurrence of word $w$ with probability $1-\sqrt{t/f(w)}$, where $f(w)$ is the word's frequency and $t\approx10^{-5}$. Frequent words are thinned out, training is faster, and the windows effectively widen around content words.[^mikolov2013b]
+**Subsampling frequent words.** Words like "the" and "of" occur in nearly every window and say little about their neighbours. Word2vec discards each occurrence of word $w$ with probability $1-\sqrt{\delta/p(w)}$, where $p(w)$ is the word's relative frequency and $\delta\approx10^{-5}$. Frequent words are thinned out, training is faster, and the windows effectively widen around content words.[^mikolov2013b]
 
 ### What skip-gram actually learns: a shifted PMI matrix
 
-Levy and Goldberg showed that skip-gram with negative sampling is, at its optimum, a **matrix factorization**.[^levy2014] Collect the objective (2) over the corpus and look at a single (word, context) pair. Write $x=\mathbf{u}_c^\top\mathbf{v}_w$. The pair appears $\#(w,c)$ times as a positive, and as a negative about $k\,\#(w)\,P_n(c)$ times, so its share of the objective is
+Levy and Goldberg showed that skip-gram with negative sampling is, at its optimum, a **matrix factorization**.[^levy2014] Collect the objective (2) over the corpus and look at a single (word, context) pair. Write $s=\mathbf{u}_c^\top\mathbf{v}_w$. The pair appears $\#(w,c)$ times as a positive, and as a negative about $k\,\#(w)\,P_n(c)$ times, so its share of the objective is
 
 $$
-\ell(x)=\#(w,c)\log\sigma(x)+k\,\#(w)\,P_n(c)\log\sigma(-x).
+\ell(s)=\#(w,c)\log\sigma(s)+k\,\#(w)\,P_n(c)\log\sigma(-s).
 $$
 
-If the vectors are free to set each dot product independently (dimension $d$ large enough), each $x$ is maximized separately. Setting $\ell'(x)=0$, using $\tfrac{d}{dx}\log\sigma(x)=\sigma(-x)$, gives
+If the vectors are free to set each dot product independently (dimension $d$ large enough), each $s$ is maximized separately. Setting $\ell'(s)=0$, using $\tfrac{d}{ds}\log\sigma(s)=\sigma(-s)$, gives
 
 $$
 \mathbf{u}_c^\top\mathbf{v}_w=\log\frac{\#(w,c)}{\#(w)\,P_n(c)}-\log k .
@@ -209,23 +209,23 @@ $$
 so skip-gram factorizes the matrix $\operatorname{PMI}-\log k$: the word vectors are its rows' factor and the context vectors its columns' factor. PMI is positive when $w$ and $c$ co-occur more often than chance and negative when less often.
 
 > [!proof]- Proof of (3)
-> $\ell'(x)=\#(w,c)\,\sigma(-x)-k\,\#(w)P_n(c)\,\sigma(x)=0$, so $\sigma(x)/\sigma(-x)=\#(w,c)/(k\,\#(w)P_n(c))$. Since $\sigma(x)/\sigma(-x)=e^x$, taking logs gives (3). The second derivative, $-\big(\#(w,c)+k\#(w)P_n(c)\big)\sigma(x)\sigma(-x)$, is negative, so this is the maximum. With $P_n(c)=\#(c)/|\mathcal{D}|$ and $p(w,c)=\#(w,c)/|\mathcal{D}|$, $p(w)=\#(w)/|\mathcal{D}|$, the first term of (3) is $\log\frac{\#(w,c)|\mathcal{D}|}{\#(w)\#(c)}=\operatorname{PMI}(w,c)$.
+> $\ell'(s)=\#(w,c)\,\sigma(-s)-k\,\#(w)P_n(c)\,\sigma(s)=0$, so $\sigma(s)/\sigma(-s)=\#(w,c)/(k\,\#(w)P_n(c))$. Since $\sigma(s)/\sigma(-s)=e^s$, taking logs gives (3). The second derivative, $-\big(\#(w,c)+k\#(w)P_n(c)\big)\sigma(s)\sigma(-s)$, is negative, so this is the maximum. With $P_n(c)=\#(c)/|\mathcal{D}|$ and $p(w,c)=\#(w,c)/|\mathcal{D}|$, $p(w)=\#(w)/|\mathcal{D}|$, the first term of (3) is $\log\frac{\#(w,c)|\mathcal{D}|}{\#(w)\#(c)}=\operatorname{PMI}(w,c)$.
 
 In practice $d$ (a few hundred) is much smaller than $V$, so skip-gram finds a **low-rank** approximation of the shifted PMI matrix, weighted by how often each pair occurs. The best low-rank approximation of a matrix is the business of the singular value decomposition and the Eckart–Young theorem from [[Matrix Factorization and Dimensionality Reduction]]; indeed, an SVD of the (positive) PMI matrix gives word vectors competitive with word2vec.[^levy2014] Figure 2(b) checks (3) on a toy corpus.
 
 ### GloVe: regression on log co-occurrence counts
 
-GloVe (global vectors) starts from the same co-occurrence statistics but fits them directly.[^pennington2014] Let $X_{ij}$ count how often word $j$ appears in the context of word $i$, and $P_{ij}=X_{ij}/\sum_kX_{ik}$.
+GloVe (global vectors) starts from the same co-occurrence statistics but fits them directly.[^pennington2014] Let $X_{ij}$ count how often word $j$ appears in the context of word $i$, and $P_{ij}=X_{ij}/\sum_cX_{ic}$.
 
-**Why ratios.** A single probability $P_{ik}$ mixes meaning with frequency. Ratios cancel the frequency. Compare $i=$ *king* and $j=$ *queen* through probe words $k$:
-- $k=$ *he*: much more likely near *king*, so $P_{ik}/P_{jk}\gg1$;
-- $k=$ *she*: $P_{ik}/P_{jk}\ll1$;
-- $k=$ *crown*, related to both, and $k=$ *fish*, related to neither: $P_{ik}/P_{jk}\approx1$.
+**Why ratios.** A single probability $P_{ic}$ mixes meaning with frequency. Ratios cancel the frequency. Compare $i=$ *king* and $j=$ *queen* through probe words $c$:
+- $c=$ *he*: much more likely near *king*, so $P_{ic}/P_{jc}\gg1$;
+- $c=$ *she*: $P_{ic}/P_{jc}\ll1$;
+- $c=$ *crown*, related to both, and $c=$ *fish*, related to neither: $P_{ic}/P_{jc}\approx1$.
 
-The ratio isolates exactly the dimension along which *king* and *queen* differ (gender) and ignores everything they share. GloVe asks the vectors to reproduce these ratios through **differences**: $\exp\big((\mathbf{w}_i-\mathbf{w}_j)^\top\tilde{\mathbf{w}}_k\big)=P_{ik}/P_{jk}$. This holds if $\mathbf{w}_i^\top\tilde{\mathbf{w}}_k=\log P_{ik}=\log X_{ik}-\log X_i$. The term $\log X_i$ does not depend on $k$, so it is absorbed into a bias $b_i$, and a context bias $\tilde b_k$ is added for symmetry. The result is a weighted **log-bilinear regression**:
+The ratio isolates exactly the dimension along which *king* and *queen* differ (gender) and ignores everything they share. GloVe asks the vectors to reproduce these ratios through **differences**: $\exp\big((\mathbf{v}_i-\mathbf{v}_j)^\top\mathbf{u}_c\big)=P_{ic}/P_{jc}$. This holds if $\mathbf{v}_i^\top\mathbf{u}_c=\log P_{ic}=\log X_{ic}-\log X_i$. The term $\log X_i$ does not depend on $c$, so it is absorbed into a bias $b_i$, and a context bias $\tilde b_c$ is added for symmetry. The result is a weighted **log-bilinear regression**:
 
 $$
-J=\sum_{i,j:\,X_{ij}>0}f(X_{ij})\big(\mathbf{w}_i^\top\tilde{\mathbf{w}}_j+b_i+\tilde b_j-\log X_{ij}\big)^2 .
+J=\sum_{i,j:\,X_{ij}>0}f(X_{ij})\big(\mathbf{v}_i^\top\mathbf{u}_j+b_i+\tilde b_j-\log X_{ij}\big)^2 .
 \tag{4}
 $$
 
@@ -259,7 +259,7 @@ Figure 2 reproduces this on a toy corpus. Every "sentence" contains one of eight
 
 ### Caveats: analogies are less clean than they look
 
-- **The exclusion trick.** The standard test (called 3CosAdd) returns $\arg\max_{d}\cos(\mathbf{v}_d,\ \mathbf{v}_b-\mathbf{v}_a+\mathbf{v}_c)$ over all words **except $a$, $b$ and $c$**. Without that exclusion, the nearest word to $\text{king}-\text{man}+\text{woman}$ in real embeddings is very often *king* itself: the offset is small compared with the word vector. Linzen showed that on some analogy categories, simply returning the nearest neighbour of $c$ (ignoring $a$ and $b$ altogether) scores almost as well as the full arithmetic.[^linzen2016] (In the toy corpus of Figure 2, the offsets are large and the answer is right even without the exclusion; real corpora are messier.)
+- **The exclusion trick.** The standard test (called 3CosAdd) returns $\arg\max_{w}\cos(\mathbf{v}_w,\ \mathbf{v}_b-\mathbf{v}_a+\mathbf{v}_c)$ over all words **except $a$, $b$ and $c$**. Without that exclusion, the nearest word to $\text{king}-\text{man}+\text{woman}$ in real embeddings is very often *king* itself: the offset is small compared with the word vector. Linzen showed that on some analogy categories, simply returning the nearest neighbour of $c$ (ignoring $a$ and $b$ altogether) scores almost as well as the full arithmetic.[^linzen2016] (In the toy corpus of Figure 2, the offsets are large and the answer is right even without the exclusion; real corpora are messier.)
 - **Selection bias.** The famous examples are the ones that work. Accuracy varies widely across relation types: inflections and country–capital pairs work well, while many lexical-semantic relations do not.[^rogers2017]
 - **Biases come along.** The same arithmetic surfaces stereotypes present in the training text, which the embeddings faithfully encode.
 
@@ -279,10 +279,10 @@ No. The way out is to accept **almost orthogonal** directions, with $|\cos|\le\v
 
 ### Random directions are nearly orthogonal
 
-Draw two independent random unit vectors $\mathbf{a},\mathbf{b}$ in $\mathbb{R}^d$. By symmetry $\mathbb{E}[\mathbf{a}^\top\mathbf{b}]=0$, and since $\mathbb{E}[(\mathbf{a}^\top\mathbf{b})^2]=\sum_i\mathbb{E}[a_i^2]\,\mathbb{E}[b_i^2]=d\cdot\tfrac1d\cdot\tfrac1d$,
+Draw two independent random unit vectors $\mathbf{a},\mathbf{a}'$ in $\mathbb{R}^d$. By symmetry $\mathbb{E}[\mathbf{a}^\top\mathbf{a}']=0$, and since $\mathbb{E}[(\mathbf{a}^\top\mathbf{a}')^2]=\sum_i\mathbb{E}[a_i^2]\,\mathbb{E}[{a'_i}^2]=d\cdot\tfrac1d\cdot\tfrac1d$,
 
 $$
-\operatorname{Var}(\mathbf{a}^\top\mathbf{b})=\frac1d .
+\operatorname{Var}(\mathbf{a}^\top\mathbf{a}')=\frac1d .
 $$
 
 The cosine concentrates around zero with standard deviation $1/\sqrt d$ (Figure 3). In 3 dimensions random directions are often nearly parallel; in 3,000 dimensions the largest $|\cos|$ among half a million random pairs is 0.08. Most directions in a high-dimensional space are nearly perpendicular to any given one.
@@ -293,19 +293,19 @@ The cosine concentrates around zero with standard deviation $1/\sqrt d$ (Figure 
 The variance alone gives Chebyshev's bound, which decays only like $1/(d\varepsilon^2)$. The tail is in fact **exponentially** small, like a Gaussian with variance $1/d$:
 
 $$
-P\big(|\mathbf{a}^\top\mathbf{b}|>\varepsilon\big)\le2\,e^{-d\varepsilon^2/2}\qquad\big(0<\varepsilon\le\tfrac{1}{\sqrt2}\big).
+P\big(|\mathbf{a}^\top\mathbf{a}'|>\varepsilon\big)\le2\,e^{-d\varepsilon^2/2}\qquad\big(0<\varepsilon\le\tfrac{1}{\sqrt2}\big).
 \tag{5}
 $$
 
 ### Counting the directions
 
-Now draw $N$ random unit vectors. A **union bound** over the fewer than $N^2/2$ pairs gives
+Now draw $n$ random unit vectors. A **union bound** over the fewer than $n^2/2$ pairs gives
 
 $$
-P\big(\text{some pair has }|\cos|>\varepsilon\big)<\frac{N^2}{2}\cdot2e^{-d\varepsilon^2/2}=N^2e^{-d\varepsilon^2/2}.
+P\big(\text{some pair has }|\cos|>\varepsilon\big)<\frac{n^2}{2}\cdot2e^{-d\varepsilon^2/2}=n^2e^{-d\varepsilon^2/2}.
 $$
 
-This is below 1 whenever $N<e^{d\varepsilon^2/4}$. A probability below 1 means that at least one draw succeeds, so:
+This is below 1 whenever $n<e^{d\varepsilon^2/4}$. A probability below 1 means that at least one draw succeeds, so:
 
 > [!note] Near-orthogonal capacity
 > For $0<\varepsilon\le1/\sqrt2$, $\mathbb{R}^d$ contains at least $\big\lceil e^{d\varepsilon^2/4}\big\rceil-1$ unit vectors whose pairwise cosines all satisfy $|\cos|\le\varepsilon$. Exactly orthogonal: at most $d$. Almost orthogonal: **exponentially many in $d$**.
@@ -313,19 +313,19 @@ This is below 1 whenever $N<e^{d\varepsilon^2/4}$. A probability below 1 means t
 For example, with $d=1{,}000$ and $\varepsilon=0.2$ the guarantee is $e^{10}\approx22{,}000$ directions, and with $d=4{,}096$ (a typical LLM width) it is $e^{41}\approx6\times10^{17}$. The constant $1/4$ is loose: a greedy search finds many more (Figure 4).
 
 > [!proof]- Proof of the tail bound (5)
-> By rotational symmetry we may fix $\mathbf{b}=\mathbf{e}_1$, so $\mathbf{a}^\top\mathbf{b}=a_1$, the first coordinate of a uniform point on the unit sphere. The set $\{a_1\ge\varepsilon\}$ is a **spherical cap**. Its share of the sphere's surface equals the share of the unit ball's volume taken by the cone $K$ from the origin to the cap.
+> By rotational symmetry we may fix $\mathbf{a}'=\mathbf{e}_1$, so $\mathbf{a}^\top\mathbf{a}'=a_1$, the first coordinate of a uniform point on the unit sphere. The set $\{a_1\ge\varepsilon\}$ is a **spherical cap**. Its share of the sphere's surface equals the share of the unit ball's volume taken by the cone $\mathcal{K}$ from the origin to the cap.
 >
-> Every point of that cone lies within distance $\sqrt{1-\varepsilon^2}$ of the point $\varepsilon\mathbf{e}_1$ (for $\varepsilon\le1/\sqrt2$). To see this, a point on the cap's rim is $\varepsilon\mathbf{e}_1+\sqrt{1-\varepsilon^2}\,\mathbf{n}$ with $\mathbf{n}\perp\mathbf{e}_1$; points on the cap itself are at most that far from $\varepsilon\mathbf{e}_1$; and the segments from the origin to the cap stay within that ball because the origin itself is at distance $\varepsilon\le\sqrt{1-\varepsilon^2}$ and balls are convex. So $K$ sits inside a ball of radius $\sqrt{1-\varepsilon^2}$, and
+> Every point of that cone lies within distance $\sqrt{1-\varepsilon^2}$ of the point $\varepsilon\mathbf{e}_1$ (for $\varepsilon\le1/\sqrt2$). To see this, a point on the cap's rim is $\varepsilon\mathbf{e}_1+\sqrt{1-\varepsilon^2}\,\mathbf{n}$ with $\mathbf{n}\perp\mathbf{e}_1$; points on the cap itself are at most that far from $\varepsilon\mathbf{e}_1$; and the segments from the origin to the cap stay within that ball because the origin itself is at distance $\varepsilon\le\sqrt{1-\varepsilon^2}$ and balls are convex. So $\mathcal{K}$ sits inside a ball of radius $\sqrt{1-\varepsilon^2}$, and
 >
 > $$
-> P(a_1\ge\varepsilon)=\frac{\operatorname{vol}(K)}{\operatorname{vol}(\text{unit ball})}\le\big(1-\varepsilon^2\big)^{d/2}\le e^{-d\varepsilon^2/2},
+> P(a_1\ge\varepsilon)=\frac{\operatorname{vol}(\mathcal{K})}{\operatorname{vol}(\text{unit ball})}\le\big(1-\varepsilon^2\big)^{d/2}\le e^{-d\varepsilon^2/2},
 > $$
 >
-> using $1-u\le e^{-u}$. The event $a_1\le-\varepsilon$ is symmetric, which gives the factor 2. (This is the cap bound of Ball's notes on convex geometry; a Chernoff argument on $a_1=g_1/\lVert\mathbf{g}\rVert$ with Gaussian $\mathbf{g}$ gives the same rate with different constants.)
+> using $1-u\le e^{-u}$. The event $a_1\le-\varepsilon$ is symmetric, which gives the factor 2. (This is the cap bound of Ball's notes on convex geometry; a Chernoff argument on $a_1=\xi_1/\lVert\boldsymbol\xi\rVert$ with Gaussian $\boldsymbol\xi$ gives the same rate with different constants.)
 
 ### The Johnson–Lindenstrauss view
 
-The same fact appears in the classical **Johnson–Lindenstrauss lemma**: any $n$ points in any dimension can be mapped linearly into $k=O(\log n/\varepsilon^2)$ dimensions while preserving all pairwise distances, and hence inner products of unit vectors, up to about $\varepsilon$.[^johnson1984] A random Gaussian projection does it with high probability, and the proof is again concentration plus a union bound.[^dasgupta2003] Apply it to the $n$ standard basis vectors of $\mathbb{R}^n$, which are exactly orthogonal: their images are $n$ unit-ish vectors in $k$ dimensions with pairwise $|\cos|\lesssim\varepsilon$. Solving $k\approx C\log n/\varepsilon^2$ for $n$ gives $n\approx e^{k\varepsilon^2/C}$, the same exponential capacity. Johnson–Lindenstrauss says that **$n$ independent features can be compressed into $O(\log n)$ dimensions** at the price of a small, controlled amount of interference.
+The same fact appears in the classical **Johnson–Lindenstrauss lemma**: any $n$ points in any dimension can be mapped linearly into $d=O(\log n/\varepsilon^2)$ dimensions while preserving all pairwise distances, and hence inner products of unit vectors, up to about $\varepsilon$.[^johnson1984] A random Gaussian projection does it with high probability, and the proof is again concentration plus a union bound.[^dasgupta2003] Apply it to the $n$ standard basis vectors of $\mathbb{R}^n$, which are exactly orthogonal: their images are $n$ unit-ish vectors in $d$ dimensions with pairwise $|\cos|\lesssim\varepsilon$. Solving $d\approx C_0\log n/\varepsilon^2$ for $n$ gives $n\approx e^{d\varepsilon^2/C_0}$, the same exponential capacity. Johnson–Lindenstrauss says that **$n$ independent features can be compressed into $O(\log n)$ dimensions** at the price of a small, controlled amount of interference.
 
 ![[Machine Learning/images/language-models-packing.svg]]
 *Figure 4. How many directions with all pairwise $|\cos|\le\varepsilon$ fit in $d$ dimensions. Solid: a greedy search that draws 200,000 random unit vectors and keeps each one that is nearly orthogonal to all kept so far (a lower bound on the true capacity; capped at 5,000). Dashed: the guarantee $e^{d\varepsilon^2/4}$ from the union bound. Dotted: the $d$ exactly orthogonal directions. With $\varepsilon=0.5$ the greedy search finds 29 directions in $d=8$, 157 in $d=16$, 1,923 in $d=32$ and hits the cap at $d=48$; with $\varepsilon=0.3$ it finds 24, 83, 476 and 2,190 directions in $d=16$, 32, 64 and 96. Both grow exponentially in $d$ (straight lines on the log scale), far above $d$; the union-bound guarantee has the right shape but a pessimistic constant.*
@@ -334,7 +334,7 @@ The same fact appears in the classical **Johnson–Lindenstrauss lemma**: any $n
 
 The capacity argument suggests what a network might do when it needs to represent more features than it has dimensions: give each feature a direction, and let the directions overlap slightly. Elhage et al. called this **superposition** and studied it in a toy model small enough to understand completely.[^elhage2022]
 
-**The toy model.** A vector $\mathbf{x}\in\mathbb{R}^n$ holds $n$ features. Each feature is zero with probability $1-p$, and otherwise uniform on $[0,1]$; feature $i$ has importance $I_i$. A linear map compresses $\mathbf{x}$ into $m<n$ dimensions, and the transpose with a ReLU reconstructs it:
+**The toy model.** A vector $\mathbf{x}\in\mathbb{R}^n$ holds $n$ features. Each feature is zero with probability $1-p$, and otherwise uniform on $[0,1]$; feature $i$ has importance $I_i$. A linear map compresses $\mathbf{x}$ into $d<n$ dimensions, and the transpose with a ReLU reconstructs it:
 
 $$
 \mathbf{h}=\mathbf{W}\mathbf{x},\qquad
@@ -342,16 +342,16 @@ $$
 \mathcal{L}=\mathbb{E}\Big[\sum_{i=1}^{n}I_i\,(x_i-\hat x_i)^2\Big].
 $$
 
-Column $\mathbf{W}_i\in\mathbb{R}^m$ is the direction assigned to feature $i$. Feature $i$ is read back as $\mathbf{W}_i^\top\mathbf{h}=\lVert\mathbf{W}_i\rVert^2x_i+\sum_{j\ne i}(\mathbf{W}_i^\top\mathbf{W}_j)\,x_j$: its own value plus **interference** from every other active feature.
+Column $\mathbf{W}_i\in\mathbb{R}^d$ is the direction assigned to feature $i$. Feature $i$ is read back as $\mathbf{W}_i^\top\mathbf{h}=\lVert\mathbf{W}_i\rVert^2x_i+\sum_{j\ne i}(\mathbf{W}_i^\top\mathbf{W}_j)\,x_j$: its own value plus **interference** from every other active feature.
 
-**Sparsity decides.** If features are dense (most are active at once), interference is paid on almost every input and is too costly, so the model behaves like PCA: it represents the $m$ most important features in orthogonal directions and ignores the rest. If features are **sparse**, two features are rarely active together, interference is rarely paid, and the ReLU with a negative bias can clip the small interference that remains. Then it pays to squeeze in more features than dimensions (Figure 5). In 2 dimensions with 5 sparse features, the model places them at the vertices of a regular pentagon, the most nearly orthogonal arrangement of 5 directions in a plane. In larger models, pairs of features often share one direction with opposite signs (antipodal pairs), since a ReLU can separate $+x_i$ from $-x_j$.
+**Sparsity decides.** If features are dense (most are active at once), interference is paid on almost every input and is too costly, so the model behaves like PCA: it represents the $d$ most important features in orthogonal directions and ignores the rest. If features are **sparse**, two features are rarely active together, interference is rarely paid, and the ReLU with a negative bias can clip the small interference that remains. Then it pays to squeeze in more features than dimensions (Figure 5). In 2 dimensions with 5 sparse features, the model places them at the vertices of a regular pentagon, the most nearly orthogonal arrangement of 5 directions in a plane. In larger models, pairs of features often share one direction with opposite signs (antipodal pairs), since a ReLU can separate $+x_i$ from $-x_j$.
 
 ![[Machine Learning/images/language-models-superposition.svg]]
-*Figure 5. The toy model of superposition, trained with Adam for 6,000 steps (importances $I_i=0.9^{\,i-1}$). (a) $n=5$ dense features ($p=1$) in $m=2$ dimensions: only the two most important features get a direction (column norms 1.00, 1.00, the rest below 0.01). (b) Sparse features ($p=0.05$): all five are stored, as a pentagon (column norms 1.13–1.14). (c) $n=20$ features in $m=5$ dimensions: the number of features with $\lVert\mathbf{W}_i\rVert>0.5$ grows from 5 (dense) to 18 (at $p=0.01$) as the features become sparser.*
+*Figure 5. The toy model of superposition, trained with Adam for 6,000 steps (importances $I_i=0.9^{\,i-1}$). (a) $n=5$ dense features ($p=1$) in $d=2$ dimensions: only the two most important features get a direction (column norms 1.00, 1.00, the rest below 0.01). (b) Sparse features ($p=0.05$): all five are stored, as a pentagon (column norms 1.13–1.14). (c) $n=20$ features in $d=5$ dimensions: the number of features with $\lVert\mathbf{W}_i\rVert>0.5$ grows from 5 (dense) to 18 (at $p=0.01$) as the features become sparser.*
 
 **Polysemantic neurons.** If features are stored along directions that are not aligned with the neuron basis, a single neuron responds to several unrelated features: it is **polysemantic**. Real language models are full of such neurons, which is why reading a network neuron by neuron rarely works. Superposition explains why: the network has many more features than neurons. A similar picture appeared earlier for word senses: the vector of a polysemous word like *bank* is close to a weighted sum of vectors for its separate senses, which sparse coding can pull apart.[^arora2018]
 
-**Recovering the features: sparse autoencoders.** If activations $\mathbf{h}\in\mathbb{R}^m$ are sparse combinations of many feature directions, then **dictionary learning** should find them. A sparse autoencoder maps $\mathbf{h}$ to a much wider code, $\mathbf{f}=\operatorname{ReLU}(\mathbf{W}_e\mathbf{h}+\mathbf{b}_e)\in\mathbb{R}^{F}$ with $F\gg m$, reconstructs $\hat{\mathbf{h}}=\mathbf{W}_d\mathbf{f}$, and penalizes $\lVert\mathbf{h}-\hat{\mathbf{h}}\rVert^2+\lambda\lVert\mathbf{f}\rVert_1$. The $\ell_1$ penalty (as in the lasso) keeps few features active at a time. The columns of $\mathbf{W}_d$ are candidate feature directions, and in practice many of them are far more interpretable (monosemantic) than individual neurons.[^cunningham2023]<sup>,</sup>[^bricken2023]
+**Recovering the features: sparse autoencoders.** If activations $\mathbf{h}\in\mathbb{R}^d$ are sparse combinations of many feature directions, then **dictionary learning** should find them. A sparse autoencoder maps $\mathbf{h}$ to a much wider code, $\mathbf{f}=\operatorname{ReLU}(\mathbf{W}_{\text{enc}}\mathbf{h}+\mathbf{b}_{\text{enc}})\in\mathbb{R}^{F}$ with $F\gg d$, reconstructs $\hat{\mathbf{h}}=\mathbf{W}_{\text{dec}}\mathbf{f}$, and penalizes $\lVert\mathbf{h}-\hat{\mathbf{h}}\rVert^2+\lambda\lVert\mathbf{f}\rVert_1$. The $\ell_1$ penalty (as in the lasso) keeps few features active at a time. The columns of $\mathbf{W}_{\text{dec}}$ are candidate feature directions, and in practice many of them are far more interpretable (monosemantic) than individual neurons.[^cunningham2023]<sup>,</sup>[^bricken2023]
 
 > [!tip] Intuition
 > Exactly orthogonal directions are like seats in a room with $d$ chairs. Almost orthogonal directions are like a crowd on a dance floor: there is no fixed limit, only a trade-off between how many people fit and how often they bump into each other. Sparse features rarely dance at the same time, so the floor can hold far more of them.
@@ -413,7 +413,7 @@ p(x_1,\dots,x_T)=\prod_{t=1}^{T}p(x_t\mid x_1,\dots,x_{t-1}).
 \tag{7}
 $$
 
-This is not an assumption; it is an identity. An **autoregressive language model** parameterizes each conditional with one network, a transformer decoder whose causal mask lets position $t$ see only $x_{<t}$ (see [[Sequence Models]]). Training maximizes the log-likelihood, i.e. minimizes the cross-entropy
+This is not an assumption; it is an identity. An **autoregressive language model** parameterizes each conditional with one network, a transformer decoder whose causal mask lets position $t$ see only $x_{<t}$ (see [[Sequence Models#Encoders, decoders and masks|Sequence Models]]). Training maximizes the log-likelihood, i.e. minimizes the cross-entropy
 
 $$
 \mathcal{L}(\theta)=-\frac1T\sum_{t=1}^{T}\log p_\theta\big(x_t\mid x_{<t}\big).
@@ -452,11 +452,11 @@ Because the loss depends on the tokenizer (more tokens per text means each is ea
 
 ### Why autoregressive models can generate
 
-Factorization (7) gives an exact sampler for free: draw $x_1$, then $x_2$ given $x_1$, and so on (**ancestral sampling**). Each step needs only one forward pass, and with a key–value cache (see [[Sequence Models]]) previous positions are never recomputed. Masked models and the contrastive objectives of the previous lecture have no such sampler.
+Factorization (7) gives an exact sampler for free: draw $x_1$, then $x_2$ given $x_1$, and so on (**ancestral sampling**). Each step needs only one forward pass, and with a key–value cache (see [[Sequence Models#The KV cache and grouped-query attention|Sequence Models]]) previous positions are never recomputed. Masked models and the contrastive objectives of the previous lecture have no such sampler.
 
-**Decoding.** How we pick each token from $p_\theta(\cdot\mid x_{<t})$ changes the text a lot. With logits $\ell_i$:
-- **Greedy** decoding takes $\arg\max_i\ell_i$. It is deterministic, and it tends to get stuck in repetitive loops.
-- **Temperature** samples from $p_i\propto\exp(\ell_i/\tau)$. $\tau<1$ sharpens the distribution (safer, duller), $\tau>1$ flattens it (more diverse, more errors), and $\tau\to0$ is greedy. This is the Boltzmann distribution of [[Energy-Based Models]] with energy $-\ell_i$.
+**Decoding.** How we pick each token from $p_\theta(\cdot\mid x_{<t})$ changes the text a lot. With logits $z_i$:
+- **Greedy** decoding takes $\arg\max_iz_i$. It is deterministic, and it tends to get stuck in repetitive loops.
+- **Temperature** samples from $p_i\propto\exp(z_i/\tau)$. $\tau<1$ sharpens the distribution (safer, duller), $\tau>1$ flattens it (more diverse, more errors), and $\tau\to0$ is greedy. This is the Boltzmann distribution of [[Energy-Based Models]] with energy $-z_i$.
 - **Top-$k$** sampling keeps only the $k$ most likely tokens and renormalizes.[^fan2018]
 - **Top-$p$ (nucleus)** sampling keeps the smallest set of tokens whose total probability exceeds $p$, so the candidate set adapts: small when the model is confident, large when it is not.[^holtzman2020] This cuts off the long tail of unlikely tokens, whose combined mass is what derails pure sampling.
 
@@ -477,13 +477,13 @@ two per parameter per token for the forward pass and four for the backward pass.
 **The compute-optimal trade-off.** With a fixed budget $C$, should one train a bigger model on fewer tokens or a smaller one on more? Kaplan et al. concluded that the parameter count should grow fastest, $N^*\propto C^{0.73}$, and GPT-3 (175B parameters, 300B tokens) followed that advice. Hoffmann et al. revisited the question, tuning the learning-rate schedule to each run's length, which Kaplan et al. had not, and found that **parameters and tokens should grow equally**, $N^*\propto C^{0.5}$ and $D^*\propto C^{0.5}$, at roughly **20 tokens per parameter**.[^hoffmann2022] Their 70B-parameter Chinchilla, trained on 1.4T tokens with the same compute as the 280B Gopher, outperformed Gopher and GPT-3. One of their three methods fits the loss directly as
 
 $$
-L(N,D)=E+\frac{A}{N^{\alpha}}+\frac{B}{D^{\beta}},
+L(N,D)=E+\frac{A}{N^{\alpha_N}}+\frac{B}{D^{\alpha_D}},
 \tag{9}
 $$
 
-with fitted constants $E=1.69$, $A=406.4$, $B=410.7$, $\alpha=0.34$ and $\beta=0.28$ (loss in nats per token).
+with fitted constants $E=1.69$, $A=406.4$, $B=410.7$, $\alpha_N=0.34$ and $\alpha_D=0.28$ (loss in nats per token).
 
-The three terms have a clean reading: $E$ is the irreducible entropy of text, which no model removes; $A/N^\alpha$ is the cost of a finite model; $B/D^\beta$ the cost of finite data. Minimizing (9) subject to $6ND=C$ gives $N^*\propto C^{\beta/(\alpha+\beta)}=C^{0.45}$ (Figure 6).
+The three terms have a clean reading: $E$ is the irreducible entropy of text, which no model removes; $A/N^{\alpha_N}$ is the cost of a finite model; $B/D^{\alpha_D}$ the cost of finite data. Minimizing (9) subject to $6ND=C$ gives $N^*\propto C^{\alpha_D/(\alpha_N+\alpha_D)}=C^{0.45}$ (Figure 6).
 
 ![[Machine Learning/images/language-models-scaling.svg]]
 *Figure 6. The parametric loss (9) from Hoffmann et al. (2022), plotted from their published constants. (a) At fixed compute $C=6ND$, the predicted loss is U-shaped in model size; dots mark the optimum. (b) Compute-optimal parameters and tokens from (9). Markers: GPT-3 (175B, 300B tokens), Gopher (280B, 300B) and Chinchilla (70B, 1.4T), at their training compute. Equation (9) predicts losses 2.00, 1.99 and 1.94 for them. With these constants the optimal ratio drifts from 32 to 98 tokens per parameter between $10^{19}$ and $10^{24}$ FLOPs, more than the 20 found by the paper's other two methods; a later re-analysis traced this to the fit itself and found a refitted (9) consistent with the other methods.*
@@ -505,23 +505,23 @@ and the model continues with *pomme*. Nothing was fine-tuned; no gradient was co
 
 Why should next-token prediction produce a learner? Four complementary explanations.
 
-**1. Implicit Bayesian inference.** Pretraining documents are each about something: a topic, a style, a format. Call that latent concept $\theta$. To predict the next token well, the model must infer $\theta$ from the text so far. A prompt of examples is just a document whose concept is the task, so the model's prediction is a posterior predictive,
+**1. Implicit Bayesian inference.** Pretraining documents are each about something: a topic, a style, a format. Call that latent concept $\psi$. To predict the next token well, the model must infer $\psi$ from the text so far. A prompt of examples is just a document whose concept is the task, so the model's prediction is a posterior predictive,
 
 $$
-p(y\mid\text{prompt})=\int p(y\mid\text{prompt},\theta)\,p(\theta\mid\text{prompt})\,d\theta,
+p(y\mid\text{prompt})=\int p(y\mid\text{prompt},\psi)\,p(\psi\mid\text{prompt})\,d\psi,
 $$
 
-and each extra example sharpens $p(\theta\mid\text{prompt})$. Xie et al. proved that ICL emerges in this way when pretraining data is a mixture of hidden Markov models, even though the prompt format (concatenated examples) is unlike any pretraining document.[^xie2022] Consistent with this view, Min et al. found that replacing the labels in the demonstrations by random ones barely hurts on many classification tasks: the demonstrations mainly tell the model the label space, the input distribution and the format, i.e. *which* task, not how to do it.[^min2022]
+and each extra example sharpens $p(\psi\mid\text{prompt})$. Xie et al. proved that ICL emerges in this way when pretraining data is a mixture of hidden Markov models, even though the prompt format (concatenated examples) is unlike any pretraining document.[^xie2022] Consistent with this view, Min et al. found that replacing the labels in the demonstrations by random ones barely hurts on many classification tasks: the demonstrations mainly tell the model the label space, the input distribution and the format, i.e. *which* task, not how to do it.[^min2022]
 
-**2. ICL as implicit gradient descent.** Garg et al. trained transformers from scratch on prompts $(\mathbf{x}_1,f(\mathbf{x}_1),\dots,\mathbf{x}_n,f(\mathbf{x}_n),\mathbf{x}_q)$ with a fresh random linear function $f$ in each prompt.[^garg2022] The trained models predicted $f(\mathbf{x}_q)$ about as well as least squares on the in-context examples: they had learned a learning algorithm. Why can attention implement one? Take one step of gradient descent from $\mathbf{w}=\mathbf{0}$ on the in-context loss $\frac1{2n}\sum_i(y_i-\mathbf{w}^\top\mathbf{x}_i)^2$, with step size $\eta$:
+**2. ICL as implicit gradient descent.** Garg et al. trained transformers from scratch on prompts $(\mathbf{x}_1,y_1,\dots,\mathbf{x}_K,y_K,\mathbf{x}_q)$ with $y_i=\mathbf{w}_\star^\top\mathbf{x}_i$ for a fresh random linear function $\mathbf{w}_\star$ in each prompt.[^garg2022] The trained models predicted $\mathbf{w}_\star^\top\mathbf{x}_q$ about as well as least squares on the in-context examples: they had learned a learning algorithm. Why can attention implement one? Take one step of gradient descent from $\mathbf{w}=\mathbf{0}$ on the in-context loss $\frac1{2K}\sum_i(y_i-\mathbf{w}^\top\mathbf{x}_i)^2$, with step size $\eta$:
 
 $$
-\mathbf{w}_1=\frac{\eta}{n}\sum_{i=1}^{n}y_i\,\mathbf{x}_i,
+\mathbf{w}_1=\frac{\eta}{K}\sum_{i=1}^{K}y_i\,\mathbf{x}_i,
 \qquad
-\hat y_q=\mathbf{w}_1^\top\mathbf{x}_q=\frac{1}{n}\sum_{i=1}^{n}\underbrace{\eta\,y_i}_{\text{value}}\,\underbrace{\mathbf{x}_i^\top}_{\text{key}}\underbrace{\mathbf{x}_q}_{\text{query}} .
+\hat y_q=\mathbf{w}_1^\top\mathbf{x}_q=\frac{1}{K}\sum_{i=1}^{K}\underbrace{\eta\,y_i}_{\text{value}}\,\underbrace{\mathbf{x}_i^\top}_{\text{key}}\underbrace{\mathbf{x}_q}_{\text{query}} .
 $$
 
-That is exactly one layer of **linear** self-attention (attention without the softmax) over tokens $(\mathbf{x}_i,y_i)$, with keys $\mathbf{x}_i$, values $\eta y_i$ and query $\mathbf{x}_q$. Von Oswald et al. showed that trained linear self-attention layers do learn such weights, so that $L$ layers run $L$ steps of (preconditioned) gradient descent on the prompt.[^vonoswald2023] Akyürek et al. found that, depending on depth and width, trained transformers match gradient descent, ridge regression or exact least squares.[^akyurek2023]
+That is exactly one layer of **linear** self-attention (attention without the softmax) over tokens $(\mathbf{x}_i,y_i)$, with keys $\mathbf{x}_i$, values $\eta y_i$ and query $\mathbf{x}_q$. Von Oswald et al. showed that trained linear self-attention layers do learn such weights, so that a stack of such layers runs one step of (preconditioned) gradient descent per layer on the prompt.[^vonoswald2023] Akyürek et al. found that, depending on depth and width, trained transformers match gradient descent, ridge regression or exact least squares.[^akyurek2023]
 
 > [!example]- Code: one linear-attention layer is one gradient step (tested)
 > ```python
@@ -546,7 +546,7 @@ That is exactly one layer of **linear** self-attention (attention without the so
 
 **3. Induction heads.** Olsson et al. looked for the mechanism inside real transformers.[^olsson2022] An **induction head** is a pair of attention heads in consecutive layers that completes patterns of the form `[A][B] … [A] → [B]`: the first head marks each token with the token before it, and the second, at the current token `A`, attends to the position just after the earlier `A` and copies what it finds there (`B`). It is the simplest possible "learn from the context" circuit. Induction heads form abruptly during training, at the same moment as a visible bump in the training loss and a sharp jump in in-context learning, measured as how much the loss on late tokens of a document improves over early tokens. The evidence is causal for small attention-only models and correlational for large ones.
 
-**4. Scale, and whether "emergence" is real.** Wei et al. catalogued **emergent abilities**: tasks on which models perform at chance up to some scale and well above it beyond, so that the ability could not have been predicted by extrapolating smaller models.[^wei2022a] Schaeffer et al. argued that much of this sharpness comes from the **metric**.[^schaeffer2023] If per-token accuracy $q$ improves smoothly with scale, an all-or-nothing metric like exact match on an answer of $L$ tokens scores $q^L$, which looks like a sudden jump: with $L=10$, going from $q=0.8$ to $q=0.95$ moves exact match from 0.11 to 0.60. Under continuous metrics (per-token log-likelihood, edit distance), many "emergent" curves become smooth. Both observations are useful: the underlying loss improves predictably, but what users care about is often a thresholded outcome, and that can still change abruptly.
+**4. Scale, and whether "emergence" is real.** Wei et al. catalogued **emergent abilities**: tasks on which models perform at chance up to some scale and well above it beyond, so that the ability could not have been predicted by extrapolating smaller models.[^wei2022a] Schaeffer et al. argued that much of this sharpness comes from the **metric**.[^schaeffer2023] If per-token accuracy $\rho$ improves smoothly with scale, an all-or-nothing metric like exact match on an answer of $T$ tokens scores $\rho^T$, which looks like a sudden jump: with $T=10$, going from $\rho=0.8$ to $\rho=0.95$ moves exact match from 0.11 to 0.60. Under continuous metrics (per-token log-likelihood, edit distance), many "emergent" curves become smooth. Both observations are useful: the underlying loss improves predictably, but what users care about is often a thresholded outcome, and that can still change abruptly.
 
 **Chain of thought.** A related prompting discovery: if the few-shot examples include worked reasoning steps before each answer, large models also write out steps, and their accuracy on arithmetic and multi-step word problems rises sharply.[^wei2022b] The gains appeared only in models of roughly 100 billion parameters or more. Generating intermediate tokens gives the model more computation per answer, and each step conditions the next.
 
@@ -619,8 +619,9 @@ $$
 
 ## Where this shows up next
 
-- [[Sequence Models]]: the transformer and state-space architectures that implement every model in this lecture, where most of the knowledge sits in the MLP layers, and how mixture-of-experts layers scale them.
-- [[Self-Supervised Representation Learning]]: the contrastive and non-contrastive objectives behind sentence embeddings and CLIP's text encoder.
+- [[Variational Autoencoders]], the next lecture, starts the deep generative models of images. Unlike the autoregressive models here, a VAE generates through a latent code and is trained on a lower bound of the likelihood instead of the exact chain-rule factorization (7).
+- [[Sequence Models]] (earlier): the transformer and state-space architectures that implement every model in this lecture, where most of the knowledge sits in the MLP layers, and how mixture-of-experts layers scale them.
+- [[Self-Supervised Representation Learning]] (earlier): the contrastive and non-contrastive objectives behind sentence embeddings and CLIP's text encoder.
 - [[Matrix Factorization and Dimensionality Reduction]] (earlier): the SVD and Eckart–Young explain why a low-rank factorization of the PMI matrix is the best rank-$d$ summary of co-occurrence statistics.
 - [[Energy-Based Models]]: temperature sampling and the DPO solution are Boltzmann distributions; contrastive learning is EBM training with the batch as negatives.
 - [[Policy Gradients]]: the REINFORCE and PPO machinery used in RLHF. [[Actor-Critic Algorithms]] covers the value-function baselines that PPO uses in practice.

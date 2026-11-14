@@ -17,7 +17,7 @@ next: "[[Index (Machine Learning)]]"
 > **TL;DR:**
 > - A model trained on one distribution (the **source**) is deployed on another (the **target**), where we have inputs but no labels. Its error can grow without any warning from the source validation set.
 > - If only $p(\mathbf{x})$ changes (**covariate shift**), re-weighting the source loss by $p_T(\mathbf{x})/p_S(\mathbf{x})$ fixes the bias. A source-vs-target classifier estimates that ratio. The price is variance: few effective samples. If only $p(y)$ changes (**label shift**), EM or a confusion-matrix inversion (BBSE) estimates the new class priors.
-> - The **Ben-David bound** $\epsilon_T(h)\le\epsilon_S(h)+\tfrac12d_{\mathcal{H}\Delta\mathcal{H}}+\lambda$ says: be accurate on the source, and make the two domains hard to tell apart. A **domain classifier** measures the second term, which motivates learning **domain-invariant features**.
+> - The **Ben-David bound** $\epsilon_T(h)\le\epsilon_S(h)+\tfrac12d_{\mathcal{H}\Delta\mathcal{H}}+\epsilon^*$ says: be accurate on the source, and make the two domains hard to tell apart. A **domain classifier** measures the second term, which motivates learning **domain-invariant features**.
 > - Features are aligned with a **discrepancy** (MMD, CORAL, optimal transport) or with an **adversary** (DANN's gradient reversal layer, ADDA, CDAN, MCD).
 > - Or alignment is skipped altogether. Self-training, entropy minimization and the **contradistinguisher** (CUDA) classify the target directly, with a supervised source loss plus an unsupervised target loss; batch-norm methods (AdaBN, TENT, SHOT) adapt even without the source data.
 > - Invariance is not free. When the class proportions differ, aligned features **must** make errors (Zhao et al.), and without assumptions linking the domains no method can be guaranteed to work.
@@ -126,7 +126,7 @@ $$
 
 the number of equally weighted points that would give the same variance. It equals $N_S$ when all weights are equal and approaches 1 when one weight dominates. If $p_T$ has heavier tails than $p_S$, the weights can even have infinite variance. Two pragmatic remedies: **flatten** the weights to $w^\nu$ with $\nu\in[0,1]$ (Shimodaira's suggestion: $\nu=0$ ignores the shift, $\nu=1$ is unbiased), or clip them. Both trade bias for variance, and $\nu$ can be chosen by importance-weighted cross-validation.[^sugiyama2007]
 
-Figure 3 shows the trade-off on Shimodaira's kind of example. The data follow a cubic, $y=-x+x^3+\epsilon$ with $\epsilon\sim\mathcal{N}(0,0.3^2)$, but we fit a straight line. With 50 source points from $\mathcal{N}(0.5,0.5^2)$, the effective sample size under the true weights for a target $\mathcal{N}(-0.3,0.3^2)$ is only 8.6 of 50. Unweighted least squares fits the line to the wrong region and has target MSE 0.61. Full weighting removes the bias (0.149), and a flattened $\nu=0.3$ does better still (0.125), against 0.108 for the best line on the target. Weights from a logistic domain classifier on $(x,x^2)$, trained on 50 unlabelled target points, are almost as good as the true ones.
+Figure 3 shows the trade-off on Shimodaira's kind of example. The data follow a cubic, $y=-x+x^3$ plus Gaussian noise $\mathcal{N}(0,0.3^2)$, but we fit a straight line. With 50 source points from $\mathcal{N}(0.5,0.5^2)$, the effective sample size under the true weights for a target $\mathcal{N}(-0.3,0.3^2)$ is only 8.6 of 50. Unweighted least squares fits the line to the wrong region and has target MSE 0.61. Full weighting removes the bias (0.149), and a flattened $\nu=0.3$ does better still (0.125), against 0.108 for the best line on the target. Weights from a logistic domain classifier on $(x,x^2)$, trained on 50 unlabelled target points, are almost as good as the true ones.
 
 ![[Machine Learning/images/unsupervised-domain-adaptation-importance-weighting.svg]]
 *Figure 3: importance weighting for covariate shift. (a) One draw of 50 source points (marker size proportional to the weight) and three least-squares lines. The unweighted fit follows the source region; the weighted fits follow the target region. (b) Target test MSE against the flattening exponent $\nu$, averaged over 500 draws, with the true weights and with weights from a domain classifier. Too little weighting leaves bias, full weighting adds variance; the best $\nu$ here is about 0.3–0.4.*
@@ -174,17 +174,17 @@ Each step increases the target log-likelihood. EM needs **calibrated** source po
 **BBSE (black-box shift estimation, Lipton, Wang and Smola).**[^lipton2018] Take *any* fixed classifier $\hat y=h(\mathbf{x})$, calibrated or not. Under label shift, the distribution of its predictions on the target is a mixture of its per-class behaviour, which is the same in both domains:
 
 $$
-q_T(\hat y=i)=\sum_{j}\mathbb{P}(\hat y=i\mid y=j)\,q_T(y=j)=\sum_j\underbrace{\mathbb{P}_S(\hat y=i,\,y=j)}_{C_{ij}}\,\underbrace{\frac{q_T(y=j)}{p_S(y=j)}}_{w_j}.
+q_T(\hat y=k)=\sum_{k'}\mathbb{P}(\hat y=k\mid y=k')\,q_T(y=k')=\sum_{k'}\underbrace{\mathbb{P}_S(\hat y=k,\,y=k')}_{C_{kk'}}\,\underbrace{\frac{q_T(y=k')}{p_S(y=k')}}_{w_{k'}}.
 $$
 
-Estimate the joint confusion matrix $\mathbf{C}$ on held-out labelled source data and the prediction frequencies $\boldsymbol\mu$ on the target, and solve the linear system $\mathbf{C}\mathbf{w}=\boldsymbol\mu$. Then $q_T(y)=w_y\,p_S(y)$. The estimator is consistent whenever $\mathbf{C}$ is invertible, i.e. the classifier is better than useless on every class, and Lipton et al. give finite-sample error bounds.
+Estimate the joint confusion matrix $\mathbf{C}$ on held-out labelled source data and the prediction frequencies $\hat{\mathbf{q}}$ on the target, and solve the linear system $\mathbf{C}\mathbf{w}=\hat{\mathbf{q}}$. Then $q_T(y)=w_y\,p_S(y)$. The estimator is consistent whenever $\mathbf{C}$ is invertible, i.e. the classifier is better than useless on every class, and Lipton et al. give finite-sample error bounds.
 
 Figure 4 tests both on sklearn's digits, made harder by average-pooling each image to 4×4. The source is balanced; the target has priors proportional to $0.7^k$ for digit $k$ (31% zeros, 1% nines), with 300 target points. A logistic regression is trained on the source and calibrated by temperature scaling on a held-out source split.
 
 ![[Machine Learning/images/unsupervised-domain-adaptation-label-shift.svg]]
 *Figure 4: label shift on 4×4-pooled digits. (a) Target priors estimated in one run. (b) Target accuracy of the source classifier before and after re-weighting its posteriors with (2), mean ± sd over 20 runs. EM on the raw (uncalibrated) posteriors makes things worse; after temperature scaling it nearly matches re-weighting with the true priors. BBSE needs no calibration for its estimate.*
 
-The numbers, averaged over 20 runs: the source classifier gets 80.9% on the target. Re-weighting with EM's priors from uncalibrated posteriors drops this to 77.0%, while EM after calibration reaches 85.9% and BBSE 86.9%, close to the 88.0% obtained with the true priors. In $\ell_1$ distance to the true target priors: counting predictions is off by 0.25, uncalibrated EM by 0.32, calibrated EM by 0.13 and BBSE by 0.20.
+The numbers, averaged over 20 runs: the source classifier gets 80.9% on the target. Re-weighting with EM's priors from uncalibrated posteriors drops this to 77.0%, while EM after calibration reaches 85.9% and BBSE 86.9%, close to the 88.0% obtained with the true priors. In $L_1$ distance to the true target priors: counting predictions is off by 0.25, uncalibrated EM by 0.32, calibrated EM by 0.13 and BBSE by 0.20.
 
 ## A bound for learning across domains
 
@@ -198,12 +198,12 @@ $$
 d_{\mathcal{H}\Delta\mathcal{H}}(p_S,p_T)=2\sup_{h,h'\in\mathcal{H}}\big|\epsilon_S(h,h')-\epsilon_T(h,h')\big|;
 $$
 
-- the **ideal joint error** $\lambda=\min_{h\in\mathcal{H}}\big[\epsilon_S(h)+\epsilon_T(h)\big]$, attained by some $h^*$.
+- the **ideal joint error** $\epsilon^*=\min_{h\in\mathcal{H}}\big[\epsilon_S(h)+\epsilon_T(h)\big]$, attained by some $h^*$.
 
 > [!note] Theorem (Ben-David et al., 2010)
 > For every $h\in\mathcal{H}$,
 > $$
-> \epsilon_T(h)\le\epsilon_S(h)+\tfrac12\,d_{\mathcal{H}\Delta\mathcal{H}}(p_S,p_T)+\lambda.
+> \epsilon_T(h)\le\epsilon_S(h)+\tfrac12\,d_{\mathcal{H}\Delta\mathcal{H}}(p_S,p_T)+\epsilon^*.
 > $$
 > With samples, $\epsilon_S$ and $d_{\mathcal{H}\Delta\mathcal{H}}$ are replaced by their empirical versions, at the cost of terms of order $\sqrt{(\mathrm{VC}(\mathcal{H})\log N)/N}$, as in the [[Bayesian Decision Theory#Learning as risk minimization|ordinary generalization bound]].
 
@@ -212,53 +212,53 @@ $$
 > 1. Triangle inequality through $h^*$: $\epsilon_T(h)\le\epsilon_T(h^*)+\epsilon_T(h,h^*)$.
 > 2. Move the disagreement to the source: $\epsilon_T(h,h^*)=\epsilon_S(h,h^*)+\big(\epsilon_T(h,h^*)-\epsilon_S(h,h^*)\big)\le\epsilon_S(h,h^*)+\tfrac12d_{\mathcal{H}\Delta\mathcal{H}}$, because $h$ and $h^*$ are both in $\mathcal{H}$, so their change in disagreement is at most the supremum.
 > 3. Triangle inequality on the source: $\epsilon_S(h,h^*)\le\epsilon_S(h)+\epsilon_S(h^*)$.
-> 4. Add up: $\epsilon_T(h)\le\epsilon_S(h)+\tfrac12d_{\mathcal{H}\Delta\mathcal{H}}+\underbrace{\epsilon_S(h^*)+\epsilon_T(h^*)}_{\lambda}$.
+> 4. Add up: $\epsilon_T(h)\le\epsilon_S(h)+\tfrac12d_{\mathcal{H}\Delta\mathcal{H}}+\underbrace{\epsilon_S(h^*)+\epsilon_T(h^*)}_{\epsilon^*}$.
 
 The three terms say what adaptation needs:
 1. **source error** $\epsilon_S(h)$: we can measure and minimize it;
 2. **divergence** $d_{\mathcal{H}\Delta\mathcal{H}}$: measurable from unlabelled data, as shown next;
-3. **adaptability** $\lambda$: small only if one hypothesis is good on both domains. It involves target labels, so it **cannot be estimated**. It is an assumption.
+3. **adaptability** $\epsilon^*$: small only if one hypothesis is good on both domains. It involves target labels, so it **cannot be estimated**. It is an assumption.
 
 ### Measuring the divergence with a domain classifier
 
-The supremum over pairs of hypotheses looks intractable, but it is a classification problem in disguise. Take the symmetric-difference class of functions $\eta(\mathbf{x})=\mathbb{1}[h(\mathbf{x})\ne h'(\mathbf{x})]$; the divergence asks how differently often such a function fires on the two domains. Ben-David et al. show that on balanced samples it equals $2(1-2\,\mathrm{err})$, where err is the smallest error of a **source-vs-target classifier** from that class.[^bendavid2007] If no classifier can tell the domains apart (err $=\tfrac12$), the divergence is 0; if one can do it perfectly, it is 2.
+The supremum over pairs of hypotheses looks intractable, but it is a classification problem in disguise. Take the symmetric-difference class of functions $\mathbf{x}\mapsto\mathbb{1}[h(\mathbf{x})\ne h'(\mathbf{x})]$; the divergence asks how differently often such a function fires on the two domains. Ben-David et al. show that on balanced samples it equals $2(1-2\,\mathrm{err})$, where err is the smallest error of a **source-vs-target classifier** from that class.[^bendavid2007] If no classifier can tell the domains apart (err $=\tfrac12$), the divergence is 0; if one can do it perfectly, it is 2.
 
-In practice we train some domain classifier (a linear SVM in Ganin et al.;[^ganin2016] an RBF SVM in our experiments), measure its held-out error $\hat\epsilon$, and report the **proxy $\mathcal{A}$-distance**
+In practice we train some domain classifier (a linear SVM in Ganin et al.;[^ganin2016] an RBF SVM in our experiments), measure its held-out error $\widehat{\mathrm{err}}$, and report the **proxy $\mathcal{A}$-distance**
 
 $$
-\hat d_{\mathcal{A}}=2\,(1-2\hat\epsilon).
+\hat d_{\mathcal{A}}=2\,(1-2\,\widehat{\mathrm{err}}).
 $$
 
 On the raw rotated moons, $\hat d_{\mathcal{A}}=$ 0.86. The proxy depends on the classifier family: a linear classifier cannot separate the rotated moons from the originals at all (the clouds overlap), while an RBF SVM can.
 
 ### Why this motivates invariant features
 
-Apply the bound not to the inputs but to features $\mathbf{z}=g(\mathbf{x})$, with $\mathcal{H}$ a class of classifiers $f$ on $\mathbf{z}$. Then the encoder controls the middle term: if $g$ maps both domains to the **same feature distribution**, $p_S(\mathbf{z})=p_T(\mathbf{z})$, no classifier on $\mathbf{z}$ can tell them apart, the divergence vanishes, and the target error is at most the source error plus $\lambda$. This gives the recipe followed by most deep UDA methods:
+Apply the bound not to the inputs but to features $\mathbf{z}=g(\mathbf{x})$, with $\mathcal{H}$ a class of classifiers $f$ on $\mathbf{z}$. Then the encoder controls the middle term: if $g$ maps both domains to the **same feature distribution**, $p_S(\mathbf{z})=p_T(\mathbf{z})$, no classifier on $\mathbf{z}$ can tell them apart, the divergence vanishes, and the target error is at most the source error plus $\epsilon^*$. This gives the recipe followed by most deep UDA methods:
 
 $$
 \min_{g,f}\;\underbrace{\frac{1}{N_S}\sum_{i=1}^{N_S}\ell\big(f(g(\mathbf{x}_i)),y_i\big)}_{\text{source risk}}\;+\;\alpha\cdot\underbrace{\mathrm{dist}\big(g_\#p_S,\;g_\#p_T\big)}_{\text{feature divergence}},
 \tag{3}
 $$
 
-where $g_\#p$ denotes the distribution of $g(\mathbf{x})$ when $\mathbf{x}\sim p$. Methods differ in the choice of $\mathrm{dist}$: a fixed statistic (next section) or a learned one (the section after). Keep the third term in mind, though: $g$ also changes $\lambda$, and nothing in (3) stops it from making $\lambda$ large. We return to this in [[#The limits of invariance]].
+where $g_\#p$ denotes the distribution of $g(\mathbf{x})$ when $\mathbf{x}\sim p$. Methods differ in the choice of $\mathrm{dist}$: a fixed statistic (next section) or a learned one (the section after). Keep the third term in mind, though: $g$ also changes $\epsilon^*$, and nothing in (3) stops it from making $\epsilon^*$ large. We return to this in [[#The limits of invariance]].
 
 ## Discrepancy-based alignment
 
 ### Maximum mean discrepancy
 
-Two distributions are equal iff every bounded continuous function has the same expectation under both. **Maximum mean discrepancy** relaxes "every function" to the unit ball of a reproducing-kernel Hilbert space $\mathcal{F}$ of a [[Support Vector Machines#Kernels|kernel]] $k$:[^gretton2012]
+Two distributions are equal iff every bounded continuous function has the same expectation under both. **Maximum mean discrepancy** relaxes "every function" to the unit ball of a reproducing-kernel Hilbert space $\mathcal{F}$ of a [[Support Vector Machines#Kernels|kernel]] $\kappa$:[^gretton2012]
 
 $$
 \mathrm{MMD}(P,Q)=\sup_{\lVert\phi\rVert_{\mathcal{F}}\le1}\Big(\mathbb{E}_{\mathbf{z}\sim P}[\phi(\mathbf{z})]-\mathbb{E}_{\mathbf{z}'\sim Q}[\phi(\mathbf{z}')]\Big)=\big\lVert\boldsymbol\mu_P-\boldsymbol\mu_Q\big\rVert_{\mathcal{F}},
 $$
 
-where $\boldsymbol\mu_P=\mathbb{E}_P[k(\mathbf{z},\cdot)]$ is the **kernel mean embedding** of $P$, the mean of its points in feature space. The supremum is attained by the witness function $\phi\propto\boldsymbol\mu_P-\boldsymbol\mu_Q$, and expanding the squared norm with the kernel trick needs only kernel evaluations:
+where $\boldsymbol\mu_P=\mathbb{E}_P[\kappa(\mathbf{z},\cdot)]$ is the **kernel mean embedding** of $P$, the mean of its points in feature space. The supremum is attained by the witness function $\phi\propto\boldsymbol\mu_P-\boldsymbol\mu_Q$, and expanding the squared norm with the kernel trick needs only kernel evaluations:
 
 $$
-\mathrm{MMD}^2(P,Q)=\mathbb{E}\big[k(\mathbf{z},\mathbf{z}')\big]+\mathbb{E}\big[k(\mathbf{w},\mathbf{w}')\big]-2\,\mathbb{E}\big[k(\mathbf{z},\mathbf{w})\big],
+\mathrm{MMD}^2(P,Q)=\mathbb{E}\big[\kappa(\mathbf{z},\mathbf{z}')\big]+\mathbb{E}\big[\kappa(\mathbf{v},\mathbf{v}')\big]-2\,\mathbb{E}\big[\kappa(\mathbf{z},\mathbf{v})\big],
 $$
 
-with $\mathbf{z},\mathbf{z}'\sim P$ and $\mathbf{w},\mathbf{w}'\sim Q$ independent. Replacing expectations by sample averages gives an estimate from two samples. For a **characteristic** kernel, such as the Gaussian kernel, $\mathrm{MMD}(P,Q)=0$ iff $P=Q$, so MMD is a genuine metric on distributions. Compare the [[Generative Adversarial Networks#The Wasserstein GAN|Wasserstein critic]]: both are integral probability metrics, with the critic restricted to Lipschitz functions there and to an RKHS ball here, where the supremum has a closed form.
+with $\mathbf{z},\mathbf{z}'\sim P$ and $\mathbf{v},\mathbf{v}'\sim Q$ independent. Replacing expectations by sample averages gives an estimate from two samples. For a **characteristic** kernel, such as the Gaussian kernel, $\mathrm{MMD}(P,Q)=0$ iff $P=Q$, so MMD is a genuine metric on distributions. Compare the [[Generative Adversarial Networks#The Wasserstein GAN|Wasserstein critic]]: both are integral probability metrics, with the critic restricted to Lipschitz functions there and to an RKHS ball here, where the supremum has a closed form.
 
 The **deep adaptation network** (DAN) of Long et al. plugs a multi-kernel MMD between source and target features of several layers into (3).[^long2015] Using a family of bandwidths avoids picking one: a bandwidth much smaller than the typical distance sees every point as unique, one much larger sees everything as identical.
 
@@ -274,17 +274,17 @@ The **deep adaptation network** (DAN) of Long et al. plugs a multi-kernel MMD be
 >     n = len(Zs)
 >     return K[:n, :n].mean() + K[n:, n:].mean() - 2 * K[:n, n:].mean()
 > ```
-> The biased estimate keeps the diagonal $k(\mathbf{z},\mathbf{z})$ terms; it is never negative, which makes it a convenient loss. For a two-sample *test*, the unbiased estimate (diagonals removed) is used. In our experiments the bandwidths are multiples of the median pairwise distance in the batch.
+> The biased estimate keeps the diagonal $\kappa(\mathbf{z},\mathbf{z})$ terms; it is never negative, which makes it a convenient loss. For a two-sample *test*, the unbiased estimate (diagonals removed) is used. In our experiments the bandwidths are multiples of the median pairwise distance in the batch.
 
 ### CORAL: matching covariances
 
-MMD with a Gaussian kernel matches all moments. **CORAL** (correlation alignment) matches only the first two, which is often most of the shift caused by lighting, contrast or sensor gain.[^sun2016] The original version needs no training at all: whiten the source features with their own covariance and re-colour them with the target's, $\mathbf{X}_S\leftarrow\mathbf{X}_S\,\mathbf{C}_S^{-1/2}\mathbf{C}_T^{1/2}$ (with a small ridge added to $\mathbf{C}_S$), then train any classifier. **Deep CORAL** turns it into a loss on the features of a network:[^sun2016deep]
+MMD with a Gaussian kernel matches all moments. **CORAL** (correlation alignment) matches only the first two, which is often most of the shift caused by lighting, contrast or sensor gain.[^sun2016] The original version needs no training at all: whiten the source features with their own covariance and re-colour them with the target's, $\mathbf{X}_S\leftarrow\mathbf{X}_S\,\boldsymbol\Sigma_S^{-1/2}\boldsymbol\Sigma_T^{1/2}$ (with a small ridge added to $\boldsymbol\Sigma_S$), then train any classifier. **Deep CORAL** turns it into a loss on the features of a network:[^sun2016deep]
 
 $$
-\mathcal{L}_{\mathrm{CORAL}}=\frac{1}{4D^2}\big\lVert\mathbf{C}_S-\mathbf{C}_T\big\rVert_F^2,
+\mathcal{L}_{\mathrm{CORAL}}=\frac{1}{4D^2}\big\lVert\boldsymbol\Sigma_S-\boldsymbol\Sigma_T\big\rVert_F^2,
 $$
 
-where $\mathbf{C}_S$ and $\mathbf{C}_T$ are the $D\times D$ [[Joint Distributions#Mean vectors and covariance matrices|covariance matrices]] of the source and target features in the batch.
+where $\boldsymbol\Sigma_S$ and $\boldsymbol\Sigma_T$ are the $D\times D$ [[Joint Distributions#Mean vectors and covariance matrices|covariance matrices]] of the source and target features in the batch.
 
 > [!example]- Code: the Deep CORAL loss (tested)
 > ```python
@@ -298,7 +298,7 @@ where $\mathbf{C}_S$ and $\mathbf{C}_T$ are the $D\times D$ [[Joint Distribution
 
 ### Optimal transport
 
-A third way to compare distributions is the cost of moving one onto the other. **JDOT** and **DeepJDOT** solve an optimal transport problem between source and target samples whose cost combines feature distance and label disagreement, $\alpha\lVert g(\mathbf{x}_i)-g(\mathbf{x}_j)\rVert^2+\beta\,\ell\big(y_i,f(g(\mathbf{x}_j))\big)$.[^courty2017]<sup>,</sup>[^damodaran2018] The transport plan pairs each target point with source points that look alike *and* carry a label the classifier agrees with; training alternates between computing the plan on a minibatch and updating the network. Unlike MMD and CORAL, which align marginals, this aligns the joint distribution of features and labels.
+A third way to compare distributions is the cost of moving one onto the other. **JDOT** and **DeepJDOT** solve an optimal transport problem between source and target samples whose cost combines feature distance and label disagreement, $\alpha\lVert g(\mathbf{x}_i)-g(\mathbf{x}_j)\rVert^2+\gamma\,\ell\big(y_i,f(g(\mathbf{x}_j))\big)$.[^courty2017]<sup>,</sup>[^damodaran2018] The transport plan pairs each target point with source points that look alike *and* carry a label the classifier agrees with; training alternates between computing the plan on a minibatch and updating the network. Unlike MMD and CORAL, which align marginals, this aligns the joint distribution of features and labels.
 
 ## Adversarial alignment
 
@@ -339,9 +339,9 @@ an instance of (3) with the Jensen–Shannon divergence. And a discriminator's b
 
 $$
 \begin{aligned}
-\theta_g&\leftarrow\theta_g-\mu\Big(\frac{\partial\mathcal{L}_y}{\partial\theta_g}-\lambda\frac{\partial\mathcal{L}_d}{\partial\theta_g}\Big),\qquad
-\theta_f\leftarrow\theta_f-\mu\frac{\partial\mathcal{L}_y}{\partial\theta_f},\\
-\theta_d&\leftarrow\theta_d-\mu\frac{\partial\mathcal{L}_d}{\partial\theta_d}.
+\theta_g&\leftarrow\theta_g-\eta\Big(\frac{\partial\mathcal{L}_y}{\partial\theta_g}-\lambda\frac{\partial\mathcal{L}_d}{\partial\theta_g}\Big),\qquad
+\theta_f\leftarrow\theta_f-\eta\frac{\partial\mathcal{L}_y}{\partial\theta_f},\\
+\theta_d&\leftarrow\theta_d-\eta\frac{\partial\mathcal{L}_d}{\partial\theta_d}.
 \end{aligned}
 $$
 
@@ -379,13 +379,13 @@ Everything is plain gradient descent on $\mathcal{L}_y+\mathcal{L}_d$, **except*
 **The λ schedule.** Early in training the features are random and the discriminator's signal is noise. Ganin et al. therefore ramp the reversal strength from 0 to 1,
 
 $$
-\lambda_p=\frac{2}{1+\exp(-10\,p)}-1,
+\lambda_\rho=\frac{2}{1+\exp(-10\,\rho)}-1,
 $$
 
-where $p\in[0,1]$ is the fraction of training done, and anneal the learning rate as $\mu_p=\mu_0/(1+10p)^{0.75}$ with SGD and momentum 0.9.[^ganin2016] The ramp applies to the gradient reaching the encoder; the discriminator always trains at full strength. Figure 5 shows the schedules and the game on the moons. The discriminator gets an early edge (its batch accuracy peaks at 0.63 around iteration 60), but as $\lambda_p$ grows the encoder holds it near chance: over the second half of training its accuracy averages 0.56 and its loss 0.68, close to $\log2\approx0.69$, the loss of a discriminator that can only guess.
+where $\rho\in[0,1]$ is the fraction of training done, and anneal the learning rate as $\eta_\rho=\eta_0/(1+10\rho)^{0.75}$ with SGD and momentum 0.9.[^ganin2016] The ramp applies to the gradient reaching the encoder; the discriminator always trains at full strength. Figure 5 shows the schedules and the game on the moons. The discriminator gets an early edge (its batch accuracy peaks at 0.63 around iteration 60), but as $\lambda_\rho$ grows the encoder holds it near chance: over the second half of training its accuracy averages 0.56 and its loss 0.68, close to $\log2\approx0.69$, the loss of a discriminator that can only guess.
 
 ![[Machine Learning/images/unsupervised-domain-adaptation-dann-training.svg]]
-*Figure 5: (a) DANN's schedules for the reversal strength $\lambda_p$ and the learning rate. (b) Domain-classifier accuracy and loss on the full batch during DANN training on the rotated moons (seed 0, moving average over 50 iterations). The discriminator never gets far above chance, and its loss stays near $\log2$; it never settles exactly, because the two players keep adapting to each other.*
+*Figure 5: (a) DANN's schedules for the reversal strength $\lambda_\rho$ and the learning rate. (b) Domain-classifier accuracy and loss on the full batch during DANN training on the rotated moons (seed 0, moving average over 50 iterations). The discriminator never gets far above chance, and its loss stays near $\log2$; it never settles exactly, because the two players keep adapting to each other.*
 
 > [!tip] Intuition
 > The discriminator is a [[Linear Models#Logistic Regression|logistic regression]] on the features, asked "source or target?". The reversed gradient tells the encoder, for every feature, which direction would make that question easier, and the encoder moves the other way. Features that carry domain information, like the angle of the moons, get suppressed; features that carry label information are protected by $\mathcal{L}_y$.
@@ -437,7 +437,7 @@ Every alignment method in the previous two sections solves an intermediate probl
 **The target loss.** For target points $\mathbf{x}_1,\dots,\mathbf{x}_{N_T}$, CUDA builds a joint distribution over (target point, class) out of the classifier's predictions:
 
 $$
-q_\theta(\mathbf{x}_j,y)=\frac{p_\theta(y\mid\mathbf{x}_j)}{\sum_{\ell=1}^{N_T}p_\theta(y\mid\mathbf{x}_\ell)}\;q_T(y).
+q_\theta(\mathbf{x}_j,y)=\frac{p_\theta(y\mid\mathbf{x}_j)}{\sum_{m=1}^{N_T}p_\theta(y\mid\mathbf{x}_m)}\;q_T(y).
 \tag{5}
 $$
 
@@ -446,14 +446,14 @@ Arrange the predictions as an $N_T\times K$ matrix. The classifier's softmax nor
 2. **Maximization:** with the pseudo-labels fixed, ascend
 
 $$
-\sum_{j}\Big[\log p_\theta(\hat y_j\mid\mathbf{x}_j)-\log\sum_{\ell}p_\theta(\hat y_j\mid\mathbf{x}_\ell)\Big]
+\sum_{j}\Big[\log p_\theta(\hat y_j\mid\mathbf{x}_j)-\log\sum_{m}p_\theta(\hat y_j\mid\mathbf{x}_m)\Big]
 $$
 
 in $\theta$ (the $\log q_T(\hat y_j)$ term is constant). The first term makes the network confident in its pseudo-label. The second pushes the probability of class $\hat y_j$ **down on all the other target points**: the network has to find what distinguishes $\mathbf{x}_j$ from the rest of the batch, hence the name. In practice the sums run over a minibatch (128 in the paper, large enough to contain every class), with log-sum-exp for stability.
 
 **How it relates to the rest of this lecture.**
 - The first term alone is pseudo-labelling without a confidence threshold, which the paper notes is a form of entropy regularization. On its own it is prone to the collapse of entropy minimization seen in our digits experiment.
-- The bracket is a log-softmax **over samples** of the scores $\log p_\theta(\hat y_j\mid\mathbf{x}_\ell)$, the same normalization over a batch of candidates that [[Self-Supervised Representation Learning#NCE and InfoNCE|InfoNCE]] uses. Like SHOT's diversity term, it makes "everything is class 3" a bad solution: if one class dominates the column, the denominator grows.
+- The bracket is a log-softmax **over samples** of the scores $\log p_\theta(\hat y_j\mid\mathbf{x}_m)$, the same normalization over a batch of candidates that [[Self-Supervised Representation Learning#NCE and InfoNCE|InfoNCE]] uses. Like SHOT's diversity term, it makes "everything is class 3" a bad solution: if one class dominates the column, the denominator grows.
 - Nothing is aligned. The middle term of the Ben-David bound is never estimated or minimized; the target error is attacked directly, through the cluster structure of the target data. The source loss is what decides which target cluster gets which name. The assumption is the one behind entropy minimization: that the target classes form clusters which the source classifier roughly identifies to begin with.
 - The prior $q_T(y)$ is an input. When it is unknown, the paper sets it to the source prior, which is exactly wrong under label shift; an estimate from [[#Label shift: estimating the new class priors|EM or BBSE]] can be used instead. This is not tested in the papers; in our own small re-implementation (the code linked above), on the moons with 90% of the target in one class, CUDA with the source prior had 13.2% target error, and 0.0% with an EM estimate of the target prior.
 
@@ -540,7 +540,7 @@ Figure 7 looks inside: the source and target features, projected to two dimensio
 
 Four things stand out.
 - **DANN** is the best and the most stable method here, and it lowers the proxy $\mathcal{A}$-distance of the features from 0.94 to 0.29.
-- **MMD** makes the domains indistinguishable to our test: $\hat d_{\mathcal{A}}=0.00$ on every seed. Yet its target accuracy ranges from 65% to 99% across the five seeds. **Invariance is not correctness.** In the bad seeds the two feature clouds coincide, but part of each target moon sits on top of the *other* source moon. That is the $\lambda$ term of the bound, which alignment does not control and the unlabelled data cannot reveal.
+- **MMD** makes the domains indistinguishable to our test: $\hat d_{\mathcal{A}}=0.00$ on every seed. Yet its target accuracy ranges from 65% to 99% across the five seeds. **Invariance is not correctness.** In the bad seeds the two feature clouds coincide, but part of each target moon sits on top of the *other* source moon. That is the $\epsilon^*$ term of the bound, which alignment does not control and the unlabelled data cannot reveal.
 - **CORAL** matches only the covariances and helps little. **Entropy minimization** helps, with no alignment at all: it pushes the boundary away from dense regions of target points.
 - **Self-training** with a 0.9 confidence threshold barely moves, and the reason is confirmation bias in its plainest form. The source-only network is confident (top probability at least 0.9) on 87–92% of the target points, and 80–90% of its target errors are among those confident points. The pseudo-labels therefore contain almost all the mistakes, and retraining on them teaches the network its own errors. **ADDA** is unstable: its untied target encoder starts from the source-only one, and on two of the five seeds ends up worse than where it started.
 
@@ -576,7 +576,7 @@ Panel (b) relates accuracy to the proxy $\mathcal{A}$-distance of the features. 
 
 ## The limits of invariance
 
-The bound has a third term, $\lambda$, and aligning features can make it large. Here is a clean case. Keep the moons unrotated, so there is **no covariate change at all**, but let the target contain mostly class 1: only label shift. A source-only classifier is then essentially perfect on the target, because $p(\mathbf{x}\mid y)$ is shared. Now force the features to be invariant. The source feature distribution is a 50/50 mixture of the two classes, the target a 10/90 mixture; to make them equal, the encoder must send some class-1 target points to where source class-0 points live, and the classifier labels them 0.
+The bound has a third term, $\epsilon^*$, and aligning features can make it large. Here is a clean case. Keep the moons unrotated, so there is **no covariate change at all**, but let the target contain mostly class 1: only label shift. A source-only classifier is then essentially perfect on the target, because $p(\mathbf{x}\mid y)$ is shared. Now force the features to be invariant. The source feature distribution is a 50/50 mixture of the two classes, the target a 10/90 mixture; to make them equal, the encoder must send some class-1 target points to where source class-0 points live, and the classifier labels them 0.
 
 Zhao, des Combes, Zhang and Gordon made this precise.[^zhao2019] Let $d_{\mathrm{JS}}=\sqrt{\mathrm{JSD}}$ be the Jensen–Shannon *distance* (with logarithms in base 2, so it lies in $[0,1]$). For any encoder $g$ and classifier $f$, if $d_{\mathrm{JS}}\big(p_S(y),q_T(y)\big)\ge d_{\mathrm{JS}}\big(g_\#p_S,g_\#p_T\big)$, then
 
@@ -593,7 +593,7 @@ Figure 11 shows it happening.
 
 At $q_T(y=1)=0.9$ the source-only model makes 0.1% target errors. With alignment, MMD makes 6.8% and DANN 2.3% (means of 3 seeds); the source errors stay near zero. The lower bound for perfectly aligned features is $\tfrac12\mathrm{JSD}=7.3\%$ there. MMD, which aligns the most completely, ends up close to it; DANN aligns less completely and pays less. On this task the adaptation methods turn a solved problem into an unsolved one. They would have done the same on a problem with real covariate shift *and* a change in class proportions, and there the damage would be mixed in with the benefit.
 
-**Impossibility without assumptions.** Ben-David, Lu, Luu and Pál go further.[^bendavid2010impossible] They study three assumptions: (i) the unlabelled distributions are similar, (ii) some hypothesis has low error on both domains ($\lambda$ small), and (iii) covariate shift. Without (i) or (ii), the remaining assumptions do not suffice: there are tasks on which **every** algorithm that sees no target labels fails. Covariate shift in particular is a weak assumption on its own. Every UDA method therefore bets on something it cannot verify from its data: that the shift is of a known kind, or that an invariant representation preserves the labels. The bet is often good, and choosing the method means choosing the bet:
+**Impossibility without assumptions.** Ben-David, Lu, Luu and Pál go further.[^bendavid2010impossible] They study three assumptions: (i) the unlabelled distributions are similar, (ii) some hypothesis has low error on both domains ($\epsilon^*$ small), and (iii) covariate shift. Without (i) or (ii), the remaining assumptions do not suffice: there are tasks on which **every** algorithm that sees no target labels fails. Covariate shift in particular is a weak assumption on its own. Every UDA method therefore bets on something it cannot verify from its data: that the shift is of a known kind, or that an invariant representation preserves the labels. The bet is often good, and choosing the method means choosing the bet:
 - the class proportions may differ? Use label-shift correction, or methods that align class-conditionally and re-weight (CDAN, class-weighted alignment), not plain marginal alignment;
 - the shift is mostly low-level (lighting, sensor, style)? Normalization statistics (AdaBN, TENT) and moment matching are cheap and safe;
 - the shift is geometric or large? Adversarial and discrepancy methods can help, but check with a labelled target sample before trusting them.
@@ -603,9 +603,9 @@ At $q_T(y=1)=0.9$ the source-only model makes 0.1% target errors. With alignment
 - Domain shift breaks the link between training error and test error. Adaptation from unlabelled target data is possible only under an assumption about what stays the same across domains.
 - **Covariate shift:** re-weight the source loss by $p_T(\mathbf{x})/p_S(\mathbf{x})$, estimated with a source-vs-target classifier. Watch the effective sample size, and flatten the weights when it is small.
 - **Label shift:** estimate the target priors (EM on calibrated posteriors, or BBSE with any classifier) and re-weight the posteriors by $q_T(y)/p_S(y)$.
-- **Ben-David:** $\epsilon_T\le\epsilon_S+\tfrac12d_{\mathcal{H}\Delta\mathcal{H}}+\lambda$. A domain classifier measures the divergence (proxy $\mathcal{A}$-distance), so we learn features that fool one: with a fixed statistic (MMD, CORAL, OT) or a learned adversary (DANN's gradient reversal, ADDA's inverted labels, CDAN, MCD).
+- **Ben-David:** $\epsilon_T\le\epsilon_S+\tfrac12d_{\mathcal{H}\Delta\mathcal{H}}+\epsilon^*$. A domain classifier measures the divergence (proxy $\mathcal{A}$-distance), so we learn features that fool one: with a fixed statistic (MMD, CORAL, OT) or a learned adversary (DANN's gradient reversal, ADDA's inverted labels, CDAN, MCD).
 - **Self-training** and entropy minimization push boundaries into low-density regions but can amplify their own errors. The **contradistinguisher** solves the target classification directly instead of aligning first (Vapnik's principle), adding a contrast over target samples that blocks collapse. **AdaBN, TENT and SHOT** adapt with the trained model and target inputs alone.
-- **Invariance has a price:** aligned features force errors when class proportions differ, $\lambda$ cannot be measured, and hyperparameters cannot be validated without target labels.
+- **Invariance has a price:** aligned features force errors when class proportions differ, $\epsilon^*$ cannot be measured, and hyperparameters cannot be validated without target labels.
 
 ## Where this shows up next
 

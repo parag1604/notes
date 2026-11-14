@@ -81,7 +81,7 @@ With $\mathbf{x}=(1,1,1,1)$, the row way computes three dot products, $1+2+1+2=6
 >
 > It is also called the **range** or **image** of $\mathbf{A}$, and the **span** of the columns.
 
-$C(\mathbf{A})$ is a **subspace** of $\mathbb{R}^m$: it contains $\mathbf{0}$ (take $\mathbf{x}=\mathbf{0}$), and it is closed under addition and scaling, because $\mathbf{A}\mathbf{x}+\mathbf{A}\mathbf{y}=\mathbf{A}(\mathbf{x}+\mathbf{y})$ and $c\,\mathbf{A}\mathbf{x}=\mathbf{A}(c\mathbf{x})$. Subspaces of $\mathbb{R}^3$ come in only four shapes: the origin alone, a line through the origin, a plane through the origin, or all of $\mathbb{R}^3$. Which one we get depends not on how many columns there are but on how many genuinely different directions they contain.
+$C(\mathbf{A})$ is a **subspace** of $\mathbb{R}^m$: it contains $\mathbf{0}$ (take $\mathbf{x}=\mathbf{0}$), and it is closed under addition and scaling, because $\mathbf{A}\mathbf{x}+\mathbf{A}\mathbf{x}'=\mathbf{A}(\mathbf{x}+\mathbf{x}')$ and $s\,\mathbf{A}\mathbf{x}=\mathbf{A}(s\mathbf{x})$. Subspaces of $\mathbb{R}^3$ come in only four shapes: the origin alone, a line through the origin, a plane through the origin, or all of $\mathbb{R}^3$. Which one we get depends not on how many columns there are but on how many genuinely different directions they contain.
 
 In the running example, column 2 is twice column 1, so it adds no new direction. Column 3, $(1,3,2)$, is not a multiple of column 1, so columns 1 and 3 together span a plane. Column 4 is column 1 plus column 3, so it stays in that plane. Four columns, one plane (Figure 2b).
 
@@ -126,7 +126,7 @@ Read by columns, **every possible vector of predictions is a combination of the 
 
 - **An exact fit exists only if $\mathbf{y}\in C(\mathbf{X})$.** With many data points and few features ($N>D$), $C(\mathbf{X})$ is at most a $D$-dimensional slice of $\mathbb{R}^N$, and a noisy target vector essentially never lies in it. The best we can do is the point of $C(\mathbf{X})$ closest to $\mathbf{y}$; that is least squares, done properly in [[Orthogonality and Least Squares#Least squares]] (with the probabilistic view in [[Linear Models]]).
 - **More features than data points ($D\ge N$) usually means $C(\mathbf{X})=\mathbb{R}^N$.** Then every target vector, noise included, is fitted exactly: the model memorizes the training set. The next lecture counts how many weight vectors do this.
-- **Redundant features add nothing to $C(\mathbf{X})$.** Record temperature in Celsius ($\mathbf{c}$) and in Fahrenheit ($\mathbf{f}=1.8\,\mathbf{c}+32\cdot\mathbf{1}$), together with the intercept column $\mathbf{1}$. Then $\mathbf{f}$ is a combination of $\mathbf{1}$ and $\mathbf{c}$, so $\mathbf{X}=[\mathbf{1}\ \mathbf{c}\ \mathbf{f}]$ has three columns but only two independent ones, and $C(\mathbf{X})$ is a plane. The predictions are no richer than with $[\mathbf{1}\ \mathbf{c}]$, and the weights are not unique: adding any multiple of $(32,1.8,-1)$ to $\mathbf{w}$ leaves $\mathbf{X}\mathbf{w}$ unchanged. This is **perfect multicollinearity**, and it is a statement about the rank.
+- **Redundant features add nothing to $C(\mathbf{X})$.** Record temperature in Celsius ($\mathbf{t}_{\mathrm{C}}$) and in Fahrenheit ($\mathbf{t}_{\mathrm{F}}=1.8\,\mathbf{t}_{\mathrm{C}}+32\cdot\mathbf{1}$), together with the intercept column $\mathbf{1}$. Then $\mathbf{t}_{\mathrm{F}}$ is a combination of $\mathbf{1}$ and $\mathbf{t}_{\mathrm{C}}$, so $\mathbf{X}=[\mathbf{1}\ \mathbf{t}_{\mathrm{C}}\ \mathbf{t}_{\mathrm{F}}]$ has three columns but only two independent ones, and $C(\mathbf{X})$ is a plane. The predictions are no richer than with $[\mathbf{1}\ \mathbf{t}_{\mathrm{C}}]$, and the weights are not unique: adding any multiple of $(32,1.8,-1)$ to $\mathbf{w}$ leaves $\mathbf{X}\mathbf{w}$ unchanged. This is **perfect multicollinearity**, and it is a statement about the rank.
 
 ## Independence, basis and rank
 
@@ -134,7 +134,7 @@ Read by columns, **every possible vector of predictions is a combination of the 
 
 The running example has four columns but only two directions. The words for this are:
 
-- Vectors $\mathbf{v}_1,\dots,\mathbf{v}_k$ are **linearly independent** if no one of them is a combination of the others. Equivalently, the only combination that gives zero is the trivial one: $c_1\mathbf{v}_1+\dots+c_k\mathbf{v}_k=\mathbf{0}$ forces all $c_i=0$.
+- Vectors $\mathbf{z}_1,\dots,\mathbf{z}_k$ are **linearly independent** if no one of them is a combination of the others. Equivalently, the only combination that gives zero is the trivial one: $d_1\mathbf{z}_1+\dots+d_k\mathbf{z}_k=\mathbf{0}$ forces all $d_i=0$.
 - A **basis** of a subspace is a set of independent vectors that spans it. Every vector in the subspace is then a combination of the basis vectors in **exactly one** way.
 - All bases of a subspace have the same number of vectors, its **dimension**.
 - The **rank** of $\mathbf{A}$ is the dimension of its column space: $r=\dim C(\mathbf{A})$, the number of independent columns.

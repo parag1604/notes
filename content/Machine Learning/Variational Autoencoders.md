@@ -203,7 +203,7 @@ $$
 \mathbf{z}_{i,l}=\boldsymbol\mu_\phi(\mathbf{x}_i)+\boldsymbol\sigma_\phi(\mathbf{x}_i)\odot\boldsymbol\epsilon_{i,l},\qquad\boldsymbol\epsilon_{i,l}\sim\mathcal{N}(\mathbf{0},\mathbf{I}).
 $$
 
-Note that this uses the **standard deviation** $\boldsymbol\sigma$, not the variance: in general $\mathbf{z}=\boldsymbol\mu+\mathbf{L}\boldsymbol\epsilon$, where $\mathbf{L}\mathbf{L}^\top=\boldsymbol\Sigma$ (Cholesky factor). For a diagonal $\boldsymbol\Sigma$, $\mathbf{L}=\operatorname{diag}\boldsymbol\sigma$.
+Note that this uses the **standard deviation** $\boldsymbol\sigma$, not the variance: in general $\mathbf{z}=\boldsymbol\mu+\mathbf{A}\boldsymbol\epsilon$, where $\mathbf{A}\mathbf{A}^\top=\boldsymbol\Sigma$ (Cholesky factor). For a diagonal $\boldsymbol\Sigma$, $\mathbf{A}=\operatorname{diag}\boldsymbol\sigma$.
 
 > [!example]- Code: the reparameterized sample (PyTorch)
 > ```python
@@ -282,18 +282,18 @@ $$
 
 ### The reconstruction term
 
-Term ① depends on the decoder's likelihood. With a Gaussian decoder of fixed variance, $p_\theta(\mathbf{x}\mid\mathbf{z})=\mathcal{N}\big(\mathbf{x};\hat{\mathbf{x}}_\theta(\mathbf{z}),\sigma^2\mathbf{I}\big)$, so
+Term ① depends on the decoder's likelihood. With a Gaussian decoder of fixed variance, $p_\theta(\mathbf{x}\mid\mathbf{z})=\mathcal{N}\big(\mathbf{x};\hat{\mathbf{x}}_\theta(\mathbf{z}),\sigma_{\mathrm{dec}}^2\mathbf{I}\big)$, so
 
 $$
-\log p_\theta(\mathbf{x}_i\mid\mathbf{z}_i)=-\frac{1}{2\sigma^2}\big\lVert\mathbf{x}_i-\hat{\mathbf{x}}_\theta(\mathbf{z}_i)\big\rVert_2^2+\text{const}.
+\log p_\theta(\mathbf{x}_i\mid\mathbf{z}_i)=-\frac{1}{2\sigma_{\mathrm{dec}}^2}\big\lVert\mathbf{x}_i-\hat{\mathbf{x}}_\theta(\mathbf{z}_i)\big\rVert_2^2+\text{const}.
 $$
 
-*Maximizing* the log-likelihood is *minimizing* the squared reconstruction error, just as in [[Linear Models|least squares]]. The decoder variance $\sigma^2$ sets the exchange rate between the two terms of the ELBO: a small $\sigma^2$ makes reconstruction dominate.
+*Maximizing* the log-likelihood is *minimizing* the squared reconstruction error, just as in [[Linear Models|least squares]]. The decoder variance $\sigma_{\mathrm{dec}}^2$ sets the exchange rate between the two terms of the ELBO: a small $\sigma_{\mathrm{dec}}^2$ makes reconstruction dominate.
 
 Put together, the loss we minimize for one data point (with $L=1$) is
 
 $$
-\mathcal{L}(\theta,\phi;\mathbf{x}_i)=\frac{1}{2\sigma^2}\big\lVert\mathbf{x}_i-\hat{\mathbf{x}}_\theta(\mathbf{z}_i)\big\rVert^2-\frac12\sum_{j=1}^d\Big(1+\log\sigma_{j}^2-\mu_{j}^2-\sigma_{j}^2\Big),
+\mathcal{L}(\theta,\phi;\mathbf{x}_i)=\frac{1}{2\sigma_{\mathrm{dec}}^2}\big\lVert\mathbf{x}_i-\hat{\mathbf{x}}_\theta(\mathbf{z}_i)\big\rVert^2-\frac12\sum_{j=1}^d\Big(1+\log\sigma_{j}^2-\mu_{j}^2-\sigma_{j}^2\Big),
 $$
 
 where $\mathbf{z}_i=\boldsymbol\mu_\phi(\mathbf{x}_i)+\boldsymbol\sigma_\phi(\mathbf{x}_i)\odot\boldsymbol\epsilon_i$. Backpropagation carries the reconstruction loss back to $\mathbf{z}_i$. Because of the reparameterization, it continues from $\mathbf{z}_i$ through $\boldsymbol\mu_\phi$ and $\boldsymbol\sigma_\phi$ into the encoder, all the way to the input.
@@ -309,7 +309,7 @@ where $\mathbf{z}_i=\boldsymbol\mu_\phi(\mathbf{x}_i)+\boldsymbol\sigma_\phi(\ma
 > [!example]- Code: the negative ELBO (PyTorch)
 > ```python
 > # assumes: x (B, D); x_hat = dec(z) (B, D); mu, logvar (B, d) from
-> #   the encoder; sigma2 = decoder variance
+> #   the encoder; sigma2 = decoder variance sigma_dec^2
 > # -log p(x|z) up to a constant
 > rec = ((x - x_hat) ** 2).sum(dim=1) / (2 * sigma2)
 > # eq. (3), analytic
@@ -389,9 +389,9 @@ $$
 
 > [!example]- Code: conditioning a VAE on a class label (PyTorch)
 > ```python
-> # assumes: enc, dec as before but with K extra input units;
+> # assumes: enc, dec as before but with C extra input units (C classes);
 > #   x (B, D); y (B,) integer labels; d latent dims
-> y1 = F.one_hot(y, K).float()
+> y1 = F.one_hot(y, C).float()
 > mu, logvar = enc(torch.cat([x, y1], dim=1))    # q_phi(z | x, y)
 > z = mu + torch.exp(0.5 * logvar) * torch.randn_like(mu)
 > # p_theta(x | z, y); loss as in the negative ELBO
@@ -428,10 +428,10 @@ Burgess et al. develop this reading and propose raising the allowed KL "capacity
 
 ### Hierarchical VAEs
 
-A single layer of Gaussian latents limits both the prior and the posterior. A **hierarchical VAE** stacks $L$ layers,
+A single layer of Gaussian latents limits both the prior and the posterior. A **hierarchical VAE** stacks $M$ layers,
 
 $$
-p_\theta(\mathbf{x},\mathbf{z}_{1:L})=p(\mathbf{z}_L)\prod_{l=1}^{L-1}p_\theta(\mathbf{z}_l\mid\mathbf{z}_{l+1})\;p_\theta(\mathbf{x}\mid\mathbf{z}_1),
+p_\theta(\mathbf{x},\mathbf{z}_{1:M})=p(\mathbf{z}_M)\prod_{m=1}^{M-1}p_\theta(\mathbf{z}_m\mid\mathbf{z}_{m+1})\;p_\theta(\mathbf{x}\mid\mathbf{z}_1),
 $$
 
 and the KL term of the ELBO becomes a sum of per-layer KLs between the encoder's and the prior's conditionals. Top layers can capture global structure (pose, identity) and bottom layers local detail. Trained naively, the upper layers tend to be ignored: the posterior collapse of [[#VAEs in practice]], layer by layer.
@@ -503,25 +503,25 @@ It is implemented with a **stop-gradient** $\mathrm{sg}[\cdot]$, which is the id
 The full VQ-VAE loss for one vector is
 
 $$
-\mathcal{L}_{\mathrm{VQ}}=-\log p_\theta(\mathbf{x}\mid\mathbf{z}_q)+\big\lVert\mathrm{sg}[\mathbf{z}_e]-\mathbf{e}_{k^*}\big\rVert^2+\beta\,\big\lVert\mathbf{z}_e-\mathrm{sg}[\mathbf{e}_{k^*}]\big\rVert^2.
+\mathcal{L}_{\mathrm{VQ}}=-\log p_\theta(\mathbf{x}\mid\mathbf{z}_q)+\big\lVert\mathrm{sg}[\mathbf{z}_e]-\mathbf{e}_{k^*}\big\rVert^2+\lambda\,\big\lVert\mathbf{z}_e-\mathrm{sg}[\mathbf{e}_{k^*}]\big\rVert^2.
 \tag{5}
 $$
 
 - The **codebook loss** (second term) moves the selected code towards the encoder outputs assigned to it: the K-means update step, done by gradient descent.
 - The **commitment loss** (third term) moves the encoder output towards its code. Without it, nothing stops $\mathbf{z}_e$ from drifting or growing faster than the codebook can follow, and the gradient copy becomes inaccurate.
-- The two terms are the same squared distance with stop-gradients on opposite sides, so the codes and the encoder are pulled towards each other at different rates. Van den Oord et al. used $\beta=0.25$ (this $\beta$ is unrelated to the β of β-VAE) and found results robust over a wide range.
+- The two terms are the same squared distance with stop-gradients on opposite sides, so the codes and the encoder are pulled towards each other at different rates. Van den Oord et al. used $\lambda=0.25$ and found results robust over a wide range.
 
 > [!example]- Code: the VQ-VAE loss (5) (PyTorch)
 > ```python
 > # assumes: x, x_hat = dec(z_q_st), z_e, z_q from the quantizer
-> #   above; beta = 0.25
+> #   above; lam = 0.25 (the commitment weight lambda)
 > # -log p(x | z_q) for a Gaussian decoder, up to scale
 > rec = F.mse_loss(x_hat, x)
 > # ||sg[z_e] - e||^2: moves the codes only
 > codebook = F.mse_loss(z_q, z_e.detach())
 > # ||z_e - sg[e]||^2: moves the encoder only
 > commit = F.mse_loss(z_e, z_q.detach())
-> loss = rec + codebook + beta * commit
+> loss = rec + codebook + lam * commit
 > ```
 
 ### EMA codebook updates
@@ -529,7 +529,7 @@ $$
 The codebook loss performs K-means by gradient descent, with a learning rate to tune. An alternative, given in the appendix of the VQ-VAE paper and by Kaiser et al., replaces it with **exponential moving averages**.[^kaiser2018] Let $n_k$ be the number of encoder outputs assigned to code $k$ in the minibatch and $\mathbf{s}_k$ their sum. Then
 
 $$
-N_k\leftarrow\gamma N_k+(1-\gamma)\,n_k,\qquad\mathbf{m}_k\leftarrow\gamma\,\mathbf{m}_k+(1-\gamma)\,\mathbf{s}_k,\qquad\mathbf{e}_k=\frac{\mathbf{m}_k}{N_k},
+\bar n_k\leftarrow\gamma\bar n_k+(1-\gamma)\,n_k,\qquad\mathbf{m}_k\leftarrow\gamma\,\mathbf{m}_k+(1-\gamma)\,\mathbf{s}_k,\qquad\mathbf{e}_k=\frac{\mathbf{m}_k}{\bar n_k},
 $$
 
 with decay $\gamma\approx0.99$. Each code becomes a running mean of the vectors assigned to it: online K-means. The codebook loss is dropped, and the commitment loss is kept. In practice this converges faster and more stably.
@@ -545,21 +545,21 @@ A common failure is that only a few codes are ever used. A code that is nobody's
 > [!example]- Code: EMA codebook update with dead-code restarts (PyTorch)
 > ```python
 > # assumes: z_e (B, d), k (B,) from the quantizer;
-> #   codebook E (K, d); buffers N (K,), m (K, d); gamma = 0.99
+> #   codebook E (K, d); buffers n_bar (K,), m (K, d); gamma = 0.99
 > with torch.no_grad():
 >     # (B, K) assignments
 >     onehot = F.one_hot(k, K).float()
->     # N_k <- gamma N_k + (1 - gamma) n_k
->     N.mul_(gamma).add_((1 - gamma) * onehot.sum(0))
+>     # n_bar_k <- gamma n_bar_k + (1 - gamma) n_k
+>     n_bar.mul_(gamma).add_((1 - gamma) * onehot.sum(0))
 >     # m_k <- gamma m_k + (1 - gamma) s_k
 >     m.mul_(gamma).add_((1 - gamma) * onehot.T @ z_e)
->     # e_k = m_k / N_k: running mean
->     E.copy_(m / N.clamp_min(1e-5).unsqueeze(1))
+>     # e_k = m_k / n_bar_k: running mean
+>     E.copy_(m / n_bar.clamp_min(1e-5).unsqueeze(1))
 >     # codes nobody has picked for a while
->     dead = N < 1e-3
+>     dead = n_bar < 1e-3
 >     # restart at random encoder outputs
 >     E[dead] = z_e[torch.randint(len(z_e), (int(dead.sum()),))]
->     m[dead], N[dead] = E[dead], 1.0
+>     m[dead], n_bar[dead] = E[dead], 1.0
 >     p_bar = onehot.mean(0)
 >     # K = all codes used evenly
 >     H = -(p_bar * torch.log(p_bar + 1e-10)).sum()
@@ -568,7 +568,7 @@ A common failure is that only a few codes are ever used. A code that is nobody's
 
 ### A prior over codes, and sampling
 
-After training, the autoencoder maps every image to a grid of code indices, say $32\times32$ integers in $\{1,\dots,K\}$. The uniform prior was only a placeholder: decoding uniformly random indices gives incoherent images. So a **second stage** fits an autoregressive prior over the indices, $p_\psi(k_1,\dots,k_n)=\prod_ip_\psi(k_i\mid k_{<i})$, in raster order: a PixelCNN in the original paper,[^vandenoord2016] a transformer in later work. To sample, draw indices from $p_\psi$, look up their codes, and decode. The division of labour is the point: the autoencoder handles local detail and compression, and the prior models global structure over a sequence of about a thousand tokens instead of tens of thousands of pixel values.
+After training, the autoencoder maps every image to a grid of code indices, say $32\times32$ integers in $\{1,\dots,K\}$. The uniform prior was only a placeholder: decoding uniformly random indices gives incoherent images. So a **second stage** fits an autoregressive prior over the indices, $p_\omega(k_1,\dots,k_T)=\prod_tp_\omega(k_t\mid k_{<t})$, in raster order: a PixelCNN in the original paper,[^vandenoord2016] a transformer in later work. To sample, draw indices from $p_\omega$, look up their codes, and decode. The division of labour is the point: the autoencoder handles local detail and compression, and the prior models global structure over a sequence of about a thousand tokens instead of tens of thousands of pixel values.
 
 ### VQ-VAE-2 and VQGAN
 
@@ -588,13 +588,12 @@ After training, the autoencoder maps every image to a grid of code indices, say 
 
 ## Where this shows up next
 
-- [[Generative Adversarial Networks]] drop the likelihood entirely and train a sampler against a learned critic, using the f-divergences and Fenchel duality.
+- [[Generative Adversarial Networks]] drop the likelihood entirely and train a sampler against a learned critic, using the f-divergences and Fenchel duality. VQGAN's adversarial loss comes from there, and the conditional GANs parallel the conditional VAE.
 - [[Policy Gradients]] use the score-function estimator from this lecture. The [[Policy Gradients#Straight-Through Gumbel-Softmax (STGS) for PG Algorithms|Gumbel-softmax]] section shows a pathwise alternative for discrete variables.
 - [[Matrix Factorization and Dimensionality Reduction#Principal component analysis (PCA)|PCA]] is the linear-Gaussian limit: a VAE with linear encoder and decoder recovers probabilistic PCA.
 - [[Energy-Based Models]] give up the sampler instead: a single energy network defines an unnormalized density, sampled with MCMC.
 - [[Denoising Diffusion Models]] can be read as very deep hierarchical VAEs with a fixed noising encoder; latent diffusion uses a VAE (KL- or VQ-regularized) as its first stage.
 - [[Language Representations and Language Models]]: VQ codes are tokens, so the same autoregressive machinery models images and audio.
-- [[Generative Adversarial Networks]]: VQGAN's adversarial loss, and the conditional GANs that parallel the conditional VAE.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

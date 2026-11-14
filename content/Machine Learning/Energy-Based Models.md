@@ -12,7 +12,7 @@ prev: "[[Generative Adversarial Networks]]"
 next: "[[Score-Based Models]]"
 ---
 
-> **Prerequisites:** [[Variational Autoencoders]] and [[Generative Adversarial Networks]] (the other two families of generative models), and the softmax from [[Linear Models#More than two classes: softmax regression|softmax regression]]. The Lagrangian aside in [[Support Vector Machines]] is used once, for the maximum-entropy derivation.
+> **Prerequisites:** [[Variational Autoencoders]] and [[Generative Adversarial Networks]] (the other two families of generative models), and the softmax from [[Linear Models#More than two classes: softmax regression|softmax regression]]. [[Multivariable Calculus#Constrained optimization: Lagrange multipliers|Lagrange multipliers]] are used once, for the maximum-entropy derivation.
 >
 > **TL;DR:**
 > - Any function $E_\theta(\mathbf{x})$ defines a probability distribution $p_\theta(\mathbf{x})=e^{-E_\theta(\mathbf{x})}/Z_\theta$, the **Boltzmann distribution**. Low energy means high probability. This is the most flexible way to write a model, and its price is the normalizer $Z_\theta$, which we usually cannot compute.
@@ -20,7 +20,7 @@ next: "[[Score-Based Models]]"
 > - The likelihood gradient of every EBM has the same shape: push the energy **down on data** and **up on the model's own samples**. Contrastive losses (InfoNCE, CLIP) are this rule with the model's samples replaced by other examples in the batch.
 > - Modern Hopfield networks with an exponential energy retrieve with one softmax step, and that step is transformer attention.
 >
-> **Notation in this lecture:** temperature is $\tau$ and inverse temperature is $\beta=1/\tau$ ($T$ is reserved for the RL horizon). $\mathbf{s}$ is the state of a network of $D$ units, not an RL state.
+> **Notation in this lecture:** temperature is $\tau$ and inverse temperature is $\beta=1/\tau$ ($T$ is reserved for the RL horizon). $\mathbf{u}$ is the state of a network of $D$ units (and $u$ a state of a physical system); $\mathbf{s}_\theta$ is a score network, as in the next lecture.
 >
 > **Code:** [Energy-Based-Models](https://github.com/parag1604/Energy-Based-Models): Langevin sampling on a 2-D toy, persistent chains in a replay buffer, an image EBM on Bitmoji faces (short-run sampling, inpainting, denoising), conditional super-resolution, and diffusion recovery likelihood. [Contrastive-Representation-Learning](https://github.com/parag1604/Contrastive-Representation-Learning): contrastive losses (InfoNCE, SimCLR, MoCo) on MNIST, for the contrastive-loss section.
 
@@ -28,7 +28,7 @@ next: "[[Score-Based Models]]"
 
 The [[Variational Autoencoders|VAE]] and the [[Generative Adversarial Networks|GAN]] both build a generator: a network that turns noise $\mathbf{z}$ into a sample $\mathbf{x}$. Sampling is a single forward pass. The price is a restricted model: the VAE only gets a lower bound on the likelihood, and the GAN gets no density at all.
 
-Energy-based models (EBMs) take the opposite approach. Instead of a sampler, we learn a **scalar score** $E_\theta(\mathbf{x})$ that says how "bad" or implausible $\mathbf{x}$ is. Any network with a scalar output will do. The score is turned into a probability by exponentiating and normalizing, exactly as a classifier's softmax turns logits into class probabilities. Where does that recipe come from? From physics: it is the distribution of states of a system at a fixed temperature. So we start there, as the handwritten notes do.
+Energy-based models (EBMs) take the opposite approach. Instead of a sampler, we learn a **scalar score** $E_\theta(\mathbf{x})$ that says how "bad" or implausible $\mathbf{x}$ is. Any network with a scalar output will do. The score is turned into a probability by exponentiating and normalizing, exactly as a classifier's softmax turns logits into class probabilities. Where does that recipe come from? From physics: it is the distribution of states of a system at a fixed temperature. So we start there.
 
 ## The Boltzmann distribution
 
@@ -36,37 +36,37 @@ Consider a box of gas molecules, held at a fixed temperature by its surroundings
 
 ### Intuition: a staircase of energy levels
 
-Suppose a molecule can sit in one of a ladder of states $s_k$ with energies $E_k=k\delta$, so each step up costs energy $\delta$ (Figure 1a). Assume each step up happens with probability $p\in(0,1)$, independently of the previous steps. A jump of $N$ levels, an energy increase of $\Delta E=N\delta$, then has probability
+Suppose a molecule can sit in one of a ladder of states $u_k$ with energies $E_k=k\delta$, so each step up costs energy $\delta$ (Figure 1a). Assume each step up happens with probability $q\in(0,1)$, independently of the previous steps. A jump of $N$ levels, an energy increase of $\Delta E=N\delta$, then has probability
 
 $$
-P(\Delta E)=p^{N}=e^{N\ln p}=\exp\Big(-\frac{\Delta E}{\delta}\ln\frac{1}{p}\Big)=e^{-\Delta E/\tau},
-\qquad \tau=\frac{\delta}{\ln(1/p)}.
+P(\Delta E)=q^{N}=e^{N\ln q}=\exp\Big(-\frac{\Delta E}{\delta}\ln\frac{1}{q}\Big)=e^{-\Delta E/\tau},
+\qquad \tau=\frac{\delta}{\ln(1/q)}.
 $$
 
-Because $0<p<1$, $\ln(1/p)>0$ and the **temperature** $\tau$ is positive, just as absolute temperature is. A large $p$ (jumps are easy) gives a high temperature; a small $p$ gives a low one. In physics the exponent is $-\Delta E/(k_B T)$, and the Boltzmann constant $k_B$ just converts units; we absorb it into $\tau$.
+Because $0<q<1$, $\ln(1/q)>0$ and the **temperature** $\tau$ is positive, just as absolute temperature is. A large $q$ (jumps are easy) gives a high temperature; a small $q$ gives a low one. In physics the exponent is $-\Delta E/(k_B T)$, and the Boltzmann constant $k_B$ just converts units; we absorb it into $\tau$.
 
 These are probabilities of energy **changes**. What they really pin down is the **ratio** between two states:
 
 $$
-\frac{P(s')}{P(s)}=e^{-(E(s')-E(s))/\tau}.
+\frac{P(u')}{P(u)}=e^{-(E(u')-E(u))/\tau}.
 $$
 
-The only way to satisfy this for every pair of states is $P(s)\propto e^{-E(s)/\tau}$. Normalizing so the probabilities sum to 1 gives the **Boltzmann distribution**:
+The only way to satisfy this for every pair of states is $P(u)\propto e^{-E(u)/\tau}$. Normalizing so the probabilities sum to 1 gives the **Boltzmann distribution**:
 
 $$
-P(s)=\frac{1}{Z}e^{-E(s)/\tau},
+P(u)=\frac{1}{Z}e^{-E(u)/\tau},
 \qquad
-Z=\sum_{s'} e^{-E(s')/\tau}.
+Z=\sum_{u'} e^{-E(u')/\tau}.
 \tag{1}
 $$
 
 $Z$ is the **partition function** (from the German *Zustandssumme*, "sum over states").
 
 ![[Machine Learning/images/energy-based-models-boltzmann.svg]]
-*Figure 1. (a) The staircase picture: each step up adds energy $\delta$ and has probability $p$, so a jump of $N$ levels has probability $p^N=e^{-\Delta E/\tau}$. (b) The resulting Boltzmann distribution over 8 equally spaced levels. At low temperature almost everything sits in the ground state; at high temperature the distribution flattens towards uniform.*
+*Figure 1. (a) The staircase picture: each step up adds energy $\delta$ and has probability $q$, so a jump of $N$ levels has probability $q^N=e^{-\Delta E/\tau}$. (b) The resulting Boltzmann distribution over 8 equally spaced levels. At low temperature almost everything sits in the ground state; at high temperature the distribution flattens towards uniform.*
 
 The temperature controls how peaked the distribution is (Figure 1b):
-- as $\tau\to0$, all the mass goes to the lowest-energy state (the **ground state**), so sampling becomes $\arg\min_s E(s)$;
+- as $\tau\to0$, all the mass goes to the lowest-energy state (the **ground state**), so sampling becomes $\arg\min_u E(u)$;
 - as $\tau\to\infty$, every state becomes equally likely.
 
 > [!note] ASIDE: the rigorous derivation (maximum entropy)
@@ -77,12 +77,12 @@ The temperature controls how peaked the distribution is (Figure 1b):
 > \quad\text{s.t.}\quad \sum_i p_i=1,\quad \sum_i p_iE_i=\bar E.
 > $$
 >
-> With multipliers $\lambda_0$ and $\beta$ (as in the [[Support Vector Machines|Lagrangian aside of the SVM lecture]]), set the derivative of the Lagrangian to zero:
+> With multipliers $\lambda_0$ and $\beta$ (as in [[Multivariable Calculus#Equality constraints|Lagrange multipliers]], whose maximum-entropy example is this argument for a die), set the derivative of the Lagrangian to zero:
 >
 > $$
 > \begin{aligned}
-> \mathcal{L}(p)&=-\sum_j p_j\log p_j-\lambda_0\Big(\sum_j p_j-1\Big)-\beta\Big(\sum_j p_jE_j-\bar E\Big),\\
-> \frac{\partial\mathcal{L}}{\partial p_i}&=-\log p_i-1-\lambda_0-\beta E_i=0 .
+> \Lambda(p)&=-\sum_j p_j\log p_j-\lambda_0\Big(\sum_j p_j-1\Big)-\beta\Big(\sum_j p_jE_j-\bar E\Big),\\
+> \frac{\partial\Lambda}{\partial p_i}&=-\log p_i-1-\lambda_0-\beta E_i=0 .
 > \end{aligned}
 > $$
 >
@@ -98,9 +98,9 @@ $$
 
 This is exactly (1) with **energy = negative logit**, $E_k=-\ell_k$. Higher logit means lower energy means more probable. So every classifier trained with [[Linear Models#More than two classes: softmax regression|softmax regression]] already outputs a Boltzmann distribution over classes, with $\tau=1$. The same formula appears all over this series:
 - **temperature sampling** in language models divides the next-token logits by $\tau$ before the softmax;
-- **Boltzmann (softmax) exploration** in [[Multi-Armed Bandits#Gradient bandit algorithms|gradient bandits]] picks arms with probability $\propto e^{h_t(a)}$;
+- **Boltzmann (softmax) exploration** in [[Multi-Armed Bandits#Gradient bandit algorithms|gradient bandits]] picks each arm with probability proportional to the exponential of its preference;
 - the **Gumbel-softmax** relaxation in [[Policy Gradients#Step 2: relax the argmax with a tempered softmax|Policy Gradients]] anneals $\tau\to0$ to approach a hard argmax;
-- the GMM responsibilities in [[Clustering and Expectation Maximization#E-step: responsibilities|EM]] are a Boltzmann distribution over clusters, with energy $\lVert\mathbf{x}-\boldsymbol\mu_k\rVert^2/2$ and temperature $\sigma^2$.
+- the GMM responsibilities in [[Clustering and Expectation Maximization#E-step: responsibilities|EM]] are a Boltzmann distribution over clusters, with energy $\lVert\mathbf{x}-\boldsymbol\mu_k\rVert^2/2$ and temperature equal to the shared variance.
 
 ## Energy-based models
 
@@ -132,37 +132,37 @@ And one property makes them hard:
 
 ## Hopfield networks: memories as valleys
 
-The handwritten notes call Hopfield networks the predecessors of modern generative models. Strictly, the classical Hopfield network is not generative: it is a deterministic **associative memory**. Its stochastic version, the Boltzmann machine, is the generative one. Hopfield networks are where the energy picture began, though, so we start with them.
+Hopfield networks are often called the predecessors of modern generative models. Strictly, the classical Hopfield network is not generative: it is a deterministic **associative memory**. Its stochastic version, the Boltzmann machine, is the generative one. Hopfield networks are where the energy picture began, though, so we start with them.
 
 Intuitively, we can think of the network's memories as the **valleys of an energy landscape**. Recalling a memory from a partial or noisy cue means starting somewhere on the landscape and **rolling downhill** until we settle in the nearest valley. Kirsanov's analogy is protein folding.[^kirsanov2024hopfield] A protein never searches through its astronomically many shapes. It simply slides down its energy landscape to the folded state. Memory retrieval in a Hopfield network is the same kind of computation: no search, only descent. It is **content-addressable**: we retrieve a memory from part of its content, not from an address.
 
 ### Energy and dynamics
 
-The network has $D$ binary units $s_i\in\{-1,+1\}$, connected by symmetric weights $w_{ij}=w_{ji}$ with no self-connections ($w_{ii}=0$), and biases $b_i$. Its energy is
+The network has $D$ binary units $u_i\in\{-1,+1\}$, connected by symmetric weights $w_{ij}=w_{ji}$ with no self-connections ($w_{ii}=0$), and biases $b_i$. Its energy is
 
 $$
-E(\mathbf{s})=-\frac12\sum_{i\ne j}w_{ij}s_is_j-\sum_i b_is_i
-=-\frac12\mathbf{s}^\top\mathbf{W}\mathbf{s}-\mathbf{b}^\top\mathbf{s}.
+E(\mathbf{u})=-\frac12\sum_{i\ne j}w_{ij}u_iu_j-\sum_i b_iu_i
+=-\frac12\mathbf{u}^\top\mathbf{W}\mathbf{u}-\mathbf{b}^\top\mathbf{u}.
 \tag{3}
 $$
 
-Read each term as a pairwise **agreement score**. If $w_{ij}>0$, the edge is "happy" (lowers the energy) when $s_i$ and $s_j$ agree. If $w_{ij}<0$, it is happy when they disagree. Low energy means most edges are satisfied at once.
+Read each term as a pairwise **agreement score**. If $w_{ij}>0$, the edge is "happy" (lowers the energy) when $u_i$ and $u_j$ agree. If $w_{ij}<0$, it is happy when they disagree. Low energy means most edges are satisfied at once.
 
-Inference flips one unit at a time. Unit $i$ looks at its **local field** $h_i=\sum_{j}w_{ij}s_j+b_i$ and aligns with it:
+Inference flips one unit at a time. Unit $i$ looks at its **local field** $\phi_i=\sum_{j}w_{ij}u_j+b_i$ and aligns with it:
 
 $$
-s_i\leftarrow\operatorname{sign}(h_i).
+u_i\leftarrow\operatorname{sign}(\phi_i).
 \tag{4}
 $$
 
 > [!proof]- Asynchronous updates never increase the energy
-> Because $\mathbf{W}$ is symmetric with a zero diagonal, the terms of (3) involving $s_i$ are $-s_i\big(\sum_j w_{ij}s_j+b_i\big)=-s_ih_i$, and $h_i$ does not depend on $s_i$. Changing $s_i$ to $s_i'$ therefore changes the energy by
+> Because $\mathbf{W}$ is symmetric with a zero diagonal, the terms of (3) involving $u_i$ are $-u_i\big(\sum_j w_{ij}u_j+b_i\big)=-u_i\phi_i$, and $\phi_i$ does not depend on $u_i$. Changing $u_i$ to $u_i'$ therefore changes the energy by
 >
 > $$
-> \Delta E=-(s_i'-s_i)\,h_i .
+> \Delta E=-(u_i'-u_i)\,\phi_i .
 > $$
 >
-> Under (4), $s_i'$ has the sign of $h_i$. If $s_i$ flips, then $s_i'-s_i=2s_i'$ and $\Delta E=-2|h_i|\le0$; if it does not flip, $\Delta E=0$. The energy is bounded below and there are finitely many states, so after finitely many flips the network reaches a **fixed point**: a state where no single flip lowers the energy, i.e. a local minimum. Symmetry matters: with $w_{ij}\ne w_{ji}$ no energy function exists and the dynamics can cycle. So can **synchronous** updates (all units at once), which may oscillate between two states.
+> Under (4), $u_i'$ has the sign of $\phi_i$. If $u_i$ flips, then $u_i'-u_i=2u_i'$ and $\Delta E=-2|\phi_i|\le0$; if it does not flip, $\Delta E=0$. The energy is bounded below and there are finitely many states, so after finitely many flips the network reaches a **fixed point**: a state where no single flip lowers the energy, i.e. a local minimum. Symmetry matters: with $w_{ij}\ne w_{ji}$ no energy function exists and the dynamics can cycle. So can **synchronous** updates (all units at once), which may oscillate between two states.
 
 ### Learning: digging valleys with Hebb's rule
 
@@ -177,7 +177,7 @@ $$
 Substituting (5) into (3), with $\mathbf{b}=\mathbf{0}$, shows what this does to the landscape:
 
 $$
-E(\mathbf{s})=-\frac{1}{2D}\sum_{m=1}^M\Big(\boldsymbol\xi^{(m)\top}\mathbf{s}\Big)^2+\frac{M}{2}.
+E(\mathbf{u})=-\frac{1}{2D}\sum_{m=1}^M\Big(\boldsymbol\xi^{(m)\top}\mathbf{u}\Big)^2+\frac{M}{2}.
 $$
 
 Each stored pattern contributes minus its **squared overlap** with the current state. Learning a pattern literally digs a valley centred on it. Recall then works as in Figure 3: start from a corrupted pattern, update units one by one, and watch the energy fall until the stored pattern reappears.
@@ -206,10 +206,10 @@ Each stored pattern contributes minus its **squared overlap** with the current s
 
 ### Capacity and spurious memories
 
-Why does a stored pattern stay put? At $\mathbf{s}=\boldsymbol\xi^{(1)}$ the local field splits into a signal term and a **crosstalk** term from the other memories:
+Why does a stored pattern stay put? At $\mathbf{u}=\boldsymbol\xi^{(1)}$ the local field splits into a signal term and a **crosstalk** term from the other memories:
 
 $$
-h_i=\underbrace{\frac{D-1}{D}\,\xi^{(1)}_i}_{\text{signal}}
+\phi_i=\underbrace{\frac{D-1}{D}\,\xi^{(1)}_i}_{\text{signal}}
 +\underbrace{\frac1D\sum_{m\ne1}\sum_{j\ne i}\xi^{(m)}_i\xi^{(m)}_j\xi^{(1)}_j}_{\text{crosstalk}} .
 $$
 
@@ -219,27 +219,27 @@ For random patterns the crosstalk is a sum of about $MD$ random $\pm1$ terms div
 *Figure 4. Simulated capacity with $D=400$ (6 trials per point). Almost all bits of a stored pattern remain stable well past $\alpha_c$ (blue), but recall from a 10%-corrupted cue collapses near $\alpha_c$ (orange): wrong bits trigger further wrong bits, and the state drifts into a spurious minimum. In a finite network the drop is smeared slightly beyond $0.138$.*
 
 The landscape also has valleys we never asked for:
-- **reversed patterns** $-\boldsymbol\xi^{(m)}$, since $E(\mathbf{s})=E(-\mathbf{s})$ when $\mathbf{b}=\mathbf{0}$;
+- **reversed patterns** $-\boldsymbol\xi^{(m)}$, since $E(\mathbf{u})=E(-\mathbf{u})$ when $\mathbf{b}=\mathbf{0}$;
 - **mixture states**, such as the sign of the sum of three stored patterns;
 - **spin-glass states**, uncorrelated with any memory, which appear at high load.
 
 ## Boltzmann machines: Hopfield networks that dream
 
-A Hopfield network only descends; it always lands in the nearest valley and stays there. A **Boltzmann machine**[^ackley1985] replaces the deterministic update (4) with a random one, so that the network **samples** from the Boltzmann distribution of its energy instead of minimizing it. For Boltzmann machines we use units $s_i\in\{0,1\}$, as is standard; the energy is still (3).
+A Hopfield network only descends; it always lands in the nearest valley and stays there. A **Boltzmann machine**[^ackley1985] replaces the deterministic update (4) with a random one, so that the network **samples** from the Boltzmann distribution of its energy instead of minimizing it. For Boltzmann machines we use units $u_i\in\{0,1\}$, as is standard; the energy is still (3).
 
 ### The stochastic update rule
 
-Fix all units except $s_i$. The energy gap between $s_i=0$ and $s_i=1$ is $\Delta E_i=E(s_i=0)-E(s_i=1)=h_i$. Under the Boltzmann distribution (1), only the two states matter, so
+Fix all units except $u_i$. The energy gap between $u_i=0$ and $u_i=1$ is $\Delta E_i=E(u_i=0)-E(u_i=1)=\phi_i$. Under the Boltzmann distribution (1), only the two states matter, so
 
 $$
-p(s_i=1\mid\mathbf{s}_{-i})
-=\frac{e^{-E(s_i=1)/\tau}}{e^{-E(s_i=1)/\tau}+e^{-E(s_i=0)/\tau}}
+p(u_i=1\mid\mathbf{u}_{-i})
+=\frac{e^{-E(u_i=1)/\tau}}{e^{-E(u_i=1)/\tau}+e^{-E(u_i=0)/\tau}}
 =\frac{1}{1+e^{-\Delta E_i/\tau}}
-=\sigma\Big(\frac{h_i}{\tau}\Big).
+=\sigma\Big(\frac{\phi_i}{\tau}\Big).
 \tag{6}
 $$
 
-A unit turns on with a probability that is a sigmoid of its local energy gap.[^kirsanov2024boltzmann] As $\tau\to0$ the sigmoid becomes a step and we recover the Hopfield rule. At $\tau>0$ the network occasionally moves **uphill**, which lets it escape shallow valleys. Updating units repeatedly with (6) is **Gibbs sampling**, and its stationary distribution is exactly $p(\mathbf{s})\propto e^{-E(\mathbf{s})/\tau}$. Starting hot and slowly lowering $\tau$ finds low-energy states: **simulated annealing**.[^kirkpatrick1983]
+A unit turns on with a probability that is a sigmoid of its local energy gap.[^kirsanov2024boltzmann] As $\tau\to0$ the sigmoid becomes a step and we recover the Hopfield rule. At $\tau>0$ the network occasionally moves **uphill**, which lets it escape shallow valleys. Updating units repeatedly with (6) is **Gibbs sampling**, and its stationary distribution is exactly $p(\mathbf{u})\propto e^{-E(\mathbf{u})/\tau}$. Starting hot and slowly lowering $\tau$ finds low-energy states: **simulated annealing**.[^kirkpatrick1983]
 
 ### Hidden units
 
@@ -257,12 +257,12 @@ The log-likelihood of a visible vector is $\log p(\mathbf{v})=\log\sum_{\mathbf{
 
 $$
 \frac{\partial\log p(\mathbf{v})}{\partial w_{ij}}
-=\langle s_is_j\rangle_{\text{data}}-\langle s_is_j\rangle_{\text{model}} .
+=\langle u_iu_j\rangle_{\text{data}}-\langle u_iu_j\rangle_{\text{model}} .
 \tag{7}
 $$
 
-- $\langle s_is_j\rangle_{\text{data}}$: clamp the visible units to a training example, let the hidden units equilibrate, and measure how often units $i$ and $j$ are on together. This is the **wake** (positive) phase: plain Hebbian learning on data.
-- $\langle s_is_j\rangle_{\text{model}}$: let the whole network run freely and measure the same co-activation. This is the **sleep** (negative) phase: anti-Hebbian **unlearning** of whatever the network "dreams" about.
+- $\langle u_iu_j\rangle_{\text{data}}$: clamp the visible units to a training example, let the hidden units equilibrate, and measure how often units $i$ and $j$ are on together. This is the **wake** (positive) phase: plain Hebbian learning on data.
+- $\langle u_iu_j\rangle_{\text{model}}$: let the whole network run freely and measure the same co-activation. This is the **sleep** (negative) phase: anti-Hebbian **unlearning** of whatever the network "dreams" about.
 
 Learning stops when the network's dreams have the same statistics as the data. The rule is beautifully **local**: each weight needs only the activity of the two units it connects. Its weakness is the negative phase, which needs samples from the model's equilibrium distribution, and Gibbs sampling in a fully connected network is painfully slow.
 
@@ -302,7 +302,7 @@ Running the chain to equilibrium for every gradient step is too slow. Hinton's *
 > [!example] Algorithm: RBM training with CD-$k$
 > 1. Take a minibatch of data $\mathbf{v}^{(0)}$. Compute $p(\mathbf{h}\mid\mathbf{v}^{(0)})$ and sample $\mathbf{h}^{(0)}$.
 > 2. Run $k$ steps of block Gibbs sampling: $\mathbf{v}^{(1)}\sim p(\mathbf{v}\mid\mathbf{h}^{(0)})$, $\mathbf{h}^{(1)}\sim p(\mathbf{h}\mid\mathbf{v}^{(1)})$, …, ending at $\mathbf{v}^{(k)}$.
-> 3. Update $\mathbf{W}\leftarrow\mathbf{W}+\alpha\Big(\mathbf{v}^{(0)}p(\mathbf{h}\mid\mathbf{v}^{(0)})^\top-\mathbf{v}^{(k)}p(\mathbf{h}\mid\mathbf{v}^{(k)})^\top\Big)$, averaged over the minibatch; similarly $\mathbf{a}\leftarrow\mathbf{a}+\alpha(\mathbf{v}^{(0)}-\mathbf{v}^{(k)})$ and $\mathbf{b}\leftarrow\mathbf{b}+\alpha\big(p(\mathbf{h}\mid\mathbf{v}^{(0)})-p(\mathbf{h}\mid\mathbf{v}^{(k)})\big)$.
+> 3. Update $\mathbf{W}\leftarrow\mathbf{W}+\rho\Big(\mathbf{v}^{(0)}p(\mathbf{h}\mid\mathbf{v}^{(0)})^\top-\mathbf{v}^{(k)}p(\mathbf{h}\mid\mathbf{v}^{(k)})^\top\Big)$, averaged over the minibatch; similarly $\mathbf{a}\leftarrow\mathbf{a}+\rho(\mathbf{v}^{(0)}-\mathbf{v}^{(k)})$ and $\mathbf{b}\leftarrow\mathbf{b}+\rho\big(p(\mathbf{h}\mid\mathbf{v}^{(0)})-p(\mathbf{h}\mid\mathbf{v}^{(k)})\big)$.
 > 4. Repeat for a fixed number of epochs.
 
 This is (7) with the model expectation replaced by a short chain started at the data. Using the probabilities $p(\mathbf{h}\mid\cdot)$ instead of binary samples in step 3 reduces variance. Even $k=1$ works well in practice. CD is not, however, the gradient of the likelihood: it is biased, and it can leave spurious low-energy regions far from the data, which a short chain never visits.[^carreira2005] **Persistent CD** keeps the chains running across updates instead of restarting them at the data, and approximates the true gradient better.[^tieleman2008]
@@ -361,7 +361,7 @@ $$
 \tag{9}
 $$
 
-Gradient descent on (9) lowers the energy of training points and raises the energy wherever the model currently puts mass. At the optimum the two expectations balance: the model's samples look like the data. For a Boltzmann machine, $-\partial E/\partial w_{ij}=s_is_j$, and (9) becomes (7).
+Gradient descent on (9) lowers the energy of training points and raises the energy wherever the model currently puts mass. At the optimum the two expectations balance: the model's samples look like the data. For a Boltzmann machine, $-\partial E/\partial w_{ij}=u_iu_j$, and (9) becomes (7).
 
 ### Why the second term matters: collapse
 
@@ -429,29 +429,29 @@ The same idea turns a classifier into a generative model. Read the logits $\ell_
 
 ## Modern Hopfield networks and attention
 
-The classical Hopfield network stores only $0.14D$ patterns because its energy, $-\sum_m(\boldsymbol\xi^{(m)\top}\mathbf{s})^2$, grows only quadratically with the overlap: valleys are wide and shallow, and they interfere. **Dense associative memories**[^krotov2016] sharpen them with a steeper function of the overlap:
+The classical Hopfield network stores only $0.14D$ patterns because its energy, $-\sum_m(\boldsymbol\xi^{(m)\top}\mathbf{u})^2$, grows only quadratically with the overlap: valleys are wide and shallow, and they interfere. **Dense associative memories**[^krotov2016] sharpen them with a steeper function of the overlap:
 
 $$
-E(\mathbf{s})=-\sum_{m=1}^{M}F\big(\boldsymbol\xi^{(m)\top}\mathbf{s}\big).
+E(\mathbf{u})=-\sum_{m=1}^{M}f\big(\boldsymbol\xi^{(m)\top}\mathbf{u}\big).
 $$
 
-The classical network is $F(z)=z^2$. The polynomial $F(z)=z^n$ stores on the order of $D^{n-1}$ patterns, and the exponential $F(z)=e^{z}$ stores exponentially many.[^demircigil2017]
+The classical network is $f(z)=z^2$. The polynomial $f(z)=z^n$ stores on the order of $D^{n-1}$ patterns, and the exponential $f(z)=e^{z}$ stores exponentially many.[^demircigil2017]
 
-Ramsauer et al. made the state continuous, $\boldsymbol\xi\in\mathbb{R}^D$, and stored the patterns as the columns of $\mathbf{X}=[\mathbf{x}_1,\dots,\mathbf{x}_M]$.[^ramsauer2021] With the exponential interaction and a term that keeps $\boldsymbol\xi$ bounded, the energy is
-
-$$
-E(\boldsymbol\xi)=-\frac1\beta\log\sum_{m=1}^{M}e^{\beta\,\mathbf{x}_m^\top\boldsymbol\xi}+\frac12\boldsymbol\xi^\top\boldsymbol\xi+\text{const}.
-$$
-
-The first term is concave in $\boldsymbol\xi$ (a negated log-sum-exp) and the second is convex. The concave–convex procedure minimizes such an energy by repeatedly setting the gradient of the convex part equal to minus the gradient of the concave part at the current point. The gradient of the log-sum-exp is a softmax-weighted average, so the update is
+Ramsauer et al. made the state continuous, $\mathbf{u}\in\mathbb{R}^D$, and stored the patterns as the columns of $\mathbf{X}=[\mathbf{x}_1,\dots,\mathbf{x}_M]$.[^ramsauer2021] With the exponential interaction and a term that keeps $\mathbf{u}$ bounded, the energy is
 
 $$
-\boldsymbol\xi^{\text{new}}=\mathbf{X}\operatorname{softmax}\big(\beta\,\mathbf{X}^\top\boldsymbol\xi\big).
+E(\mathbf{u})=-\frac1\beta\log\sum_{m=1}^{M}e^{\beta\,\mathbf{x}_m^\top\mathbf{u}}+\frac12\mathbf{u}^\top\mathbf{u}+\text{const}.
+$$
+
+The first term is concave in $\mathbf{u}$ (a negated log-sum-exp) and the second is convex. The concave–convex procedure minimizes such an energy by repeatedly setting the gradient of the convex part equal to minus the gradient of the concave part at the current point. The gradient of the log-sum-exp is a softmax-weighted average, so the update is
+
+$$
+\mathbf{u}^{\text{new}}=\mathbf{X}\operatorname{softmax}\big(\beta\,\mathbf{X}^\top\mathbf{u}\big).
 \tag{12}
 $$
 
 It is guaranteed to lower the energy, and for well-separated patterns it converges in a **single step**. Now rename things:
-- the state $\boldsymbol\xi$ is a **query**;
+- the state $\mathbf{u}$ is a **query**;
 - the stored patterns, compared against the query, are **keys**;
 - the patterns returned as a weighted average are **values**;
 - $\beta=1/\sqrt{d_k}$.
@@ -463,7 +463,7 @@ Then (12) is exactly the [[Sequence Models#Attention as a soft dictionary lookup
 
 > [!example]- Code: one retrieval step is one attention call (PyTorch)
 > ```python
-> # assumes: X (D, M) stored patterns as columns; xi (D,) the query state; beta
+> # assumes: X (D, M) stored patterns as columns; xi (D,) the query state u; beta
 > import torch, torch.nn.functional as F
 > xi_new = X @ torch.softmax(beta * X.T @ xi, dim=0)          # (12)
 >
@@ -495,16 +495,16 @@ Look back at what each part of this lecture actually used:
 So why learn an energy at all? We could instead learn the **score directly**: a network $\mathbf{s}_\theta(\mathbf{x})\approx\nabla_{\mathbf{x}}\log p_{\text{data}}(\mathbf{x})$ that outputs a vector field pointing "uphill in probability". Then sample by plugging $\mathbf{s}_\theta$ into Langevin dynamics, with no $Z_\theta$ and no MCMC during training. Two questions stand in the way, and they set up the next lectures:
 
 1. **How do we fit a score without knowing the true one?** We never observe $\nabla_{\mathbf{x}}\log p_{\text{data}}$, only samples. Score matching answers this, and its denoising version reduces it to "predict the noise that was added to a data point".
-2. **Where is the learned score accurate?** Only where there is data. Between the modes of Figure 6 the density is tiny, the score is learned badly, and Langevin chains mix poorly there anyway. The fix is to **add noise to the data**: noise fills the empty regions and connects the modes. Learning scores at many noise levels and annealing from coarse to fine gives **noise-conditional score networks**.
+2. **Where is the learned score accurate?** Only where there is data. Between the modes of Figure 6 the density is tiny, the score is learned badly, and Langevin chains mix poorly there anyway. The fix is to **add noise to the data**: noise fills the empty regions and connects the modes. Learning scores at many noise levels and annealing from coarse to fine gives **noise-conditional score networks** ([[Score-Based Models]]).
 
-Follow that idea to its end, with a whole sequence of noise levels that gradually destroys the data, and you arrive at [[Denoising Diffusion Models|denoising diffusion models]]. They can also be derived as a very deep [[Variational Autoencoders|VAE]], and the two routes meet. Replacing the noisy sampling path by a deterministic one gives **flow matching**.
+Follow that idea to its end, with a whole sequence of noise levels that gradually destroys the data, and you arrive at [[Denoising Diffusion Models|denoising diffusion models]]. They can also be derived as a very deep [[Variational Autoencoders|VAE]], and the two routes meet. Replacing the noisy sampling path by a deterministic one gives **[[Flow Matching|flow matching]]**.
 
 ## Key takeaways
 
 - The Boltzmann distribution $p\propto e^{-E/\tau}$ is the maximum-entropy distribution at fixed average energy. Softmax is the same formula with energy = negative logit, and the temperature trades greedy (low $\tau$) against uniform (high $\tau$).
 - An EBM is any energy network plus (2). It is maximally flexible, but $Z_\theta$ is intractable, so we can compare probabilities but not compute them.
 - Hopfield networks store memories as energy minima with Hebb's rule and recall them by asynchronous descent, which provably never increases the energy. Capacity is about $0.14D$, and spurious minima appear.
-- Boltzmann machines sample instead of descending: a unit turns on with probability $\sigma(h_i/\tau)$. Learning is "wake minus sleep" statistics (7). RBMs make sampling a two-step block Gibbs chain, and contrastive divergence truncates it.
+- Boltzmann machines sample instead of descending: a unit turns on with probability $\sigma(\phi_i/\tau)$. Learning is "wake minus sleep" statistics (7). RBMs make sampling a two-step block Gibbs chain, and contrastive divergence truncates it.
 - Every EBM gradient is (9): energy down on data, up on the model's samples. Langevin dynamics provides samples and needs only the score, so $Z_\theta$ drops out. InfoNCE/CLIP use the batch as the negative samples.
 - Since sampling needs only the score, the natural next step is to learn the score directly. That leads to score-based models, diffusion models and flow matching.
 - Modern Hopfield networks with an exponential energy retrieve in one step, and that step is attention.
@@ -512,7 +512,7 @@ Follow that idea to its end, with a whole sequence of noise levels that graduall
 ## Where this shows up next
 
 - [[Linear Models#More than two classes: softmax regression|Softmax regression]]: the softmax classifier as a Boltzmann distribution over classes, and the starting point of joint energy models.
-- [[Multi-Armed Bandits#Gradient bandit algorithms|Gradient bandits]] and the Gumbel-softmax in [[Policy Gradients#Straight-Through Gumbel-Softmax (STGS) for PG Algorithms|Policy Gradients]]: Boltzmann exploration and temperature annealing. Maximum-entropy RL ([[Actor-Critic Algorithms#Soft actor-critic: maximum-entropy RL|soft actor-critic]]) gives policies $\pi(a\mid s)\propto e^{Q(s,a)/\tau}$.
+- [[Multi-Armed Bandits#Gradient bandit algorithms|Gradient bandits]] and the Gumbel-softmax in [[Policy Gradients#Straight-Through Gumbel-Softmax (STGS) for PG Algorithms|Policy Gradients]]: Boltzmann exploration and temperature annealing. Maximum-entropy RL ([[Actor-Critic Algorithms#Soft actor-critic: maximum-entropy RL|soft actor-critic]]) gives policies $\pi(a\mid u)\propto e^{Q(u,a)/\tau}$.
 - [[Clustering and Expectation Maximization]]: GMM responsibilities as a Boltzmann distribution over clusters; RBMs as latent-variable models.
 - [[Generative Adversarial Networks]]: NCE as a classifier between data and noise; contrastive pushes as a fixed-generator cousin of adversarial training.
 - [[Non-parametric Models#Similarity-based (dot-product) neighbours|Similarity-based neighbours]]: attention as soft nearest-neighbour retrieval, now derived from an energy.

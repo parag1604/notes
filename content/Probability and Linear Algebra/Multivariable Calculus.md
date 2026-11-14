@@ -736,7 +736,7 @@ This is usually the quickest test. Each example we have met:
 - $x^2+2y^2$: Hessian $\operatorname{diag}(2,4)\succ0$, convex;
 - $\lVert\mathbf{A}\mathbf{x}-\mathbf{b}\rVert^2$: Hessian $2\mathbf{A}^\top\mathbf{A}\succeq0$, convex;
 - $\operatorname{lse}$: Hessian $\operatorname{diag}(\mathbf{p})-\mathbf{p}\mathbf{p}^\top\succeq0$ (a variance), convex;
-- $f(x,y)=xy$: Hessian $\begin{bmatrix}0&1\\1&0\end{bmatrix}$, with eigenvalues $\pm1$; indefinite, so **not** convex. It is the saddle $x^2+4xy+y^2$ in disguise.
+- $f(x,y)=xy$: Hessian $\begin{bmatrix}0&1\\1&0\end{bmatrix}$, with eigenvalues $\pm1$; indefinite, so **not** convex. It is a saddle, like $x^2+4xy+y^2$ above.
 
 ### Every local minimum is global
 
@@ -765,7 +765,7 @@ Two more facts, both from the same kind of argument: the set of global minimizer
 
 Convexity allows flat stretches, and with them many minimizers or none at all. Two stronger notions fix this.
 - **Strictly convex**: the chord inequality is strict ($<$) whenever $\mathbf{x}\ne\mathbf{y}$ and $\theta\in(0,1)$. A strictly convex function has **at most one** minimizer. A positive definite Hessian everywhere is sufficient but not necessary: $x^4$ is strictly convex although $f''(0)=0$. Strict convexity does not guarantee that a minimizer exists: $e^x$ is strictly convex and has none.
-- **Strongly convex** with parameter $m>0$: $f(\mathbf{x})-\frac m2\lVert\mathbf{x}\rVert^2$ is still convex. For twice-differentiable $f$ this means $\mathbf{H}_f\succeq m\mathbf{I}$: the curvature is at least $m$ in every direction, everywhere. Equivalently, (8) improves to $f(\mathbf{y})\ge f(\mathbf{x})+\nabla f(\mathbf{x})^\top(\mathbf{y}-\mathbf{x})+\frac m2\lVert\mathbf{y}-\mathbf{x}\rVert^2$: a quadratic lower bound instead of a linear one. A strongly convex function has **exactly one** minimizer, and it grows at least quadratically away from it.
+- **Strongly convex** with parameter $m>0$ (written $\mu$ in [[First-Order Optimization]]): $f(\mathbf{x})-\frac m2\lVert\mathbf{x}\rVert^2$ is still convex. For twice-differentiable $f$ this means $\mathbf{H}_f\succeq m\mathbf{I}$: the curvature is at least $m$ in every direction, everywhere. Equivalently, (8) improves to $f(\mathbf{y})\ge f(\mathbf{x})+\nabla f(\mathbf{x})^\top(\mathbf{y}-\mathbf{x})+\frac m2\lVert\mathbf{y}-\mathbf{x}\rVert^2$: a quadratic lower bound instead of a linear one. A strongly convex function has **exactly one** minimizer, and it grows at least quadratically away from it.
 
 $x^2$ is strongly convex with $m=2$, while $x^4$ and $e^x$ are strictly but not strongly convex (their curvature gets arbitrarily close to zero). Adding an $\ell_2$ penalty makes any convex loss strongly convex: ridge regression, $\lVert\mathbf{A}\mathbf{x}-\mathbf{b}\rVert^2+\lambda\lVert\mathbf{x}\rVert^2$, has Hessian $2\mathbf{A}^\top\mathbf{A}+2\lambda\mathbf{I}\succeq2\lambda\mathbf{I}$, so it always has a unique solution. Strong convexity is what turns the slow $O(1/t)$ convergence of gradient descent into a fast, geometric one ([[First-Order Optimization#Convergence rates for smooth and convex functions|First-Order Optimization]]).
 

@@ -53,10 +53,10 @@ The transition probabilities form the **transition matrix** $\mathbf{P}=(p_{ij})
 By the chain rule and the Markov property, the probability of a whole path is a product of one-step probabilities:
 
 $$
-\mathbb{P}(X_0=i_0,X_1=i_1,\dots,X_n=i_n)=\mu_0(i_0)\,p_{i_0i_1}\,p_{i_1i_2}\cdots p_{i_{n-1}i_n},
+\mathbb{P}(X_0=i_0,X_1=i_1,\dots,X_n=i_n)=\nu_0(i_0)\,p_{i_0i_1}\,p_{i_1i_2}\cdots p_{i_{n-1}i_n},
 $$
 
-where $\boldsymbol\mu_0$ is the distribution of the starting state. So the initial distribution and $\mathbf{P}$ together determine everything about the chain.
+where $\boldsymbol\nu_0$ is the distribution of the starting state. So the initial distribution and $\mathbf{P}$ together determine everything about the chain.
 
 > [!example] Example: weather
 > Model each day as sunny, cloudy or rainy, with
@@ -77,13 +77,13 @@ $$
 p^{(m+n)}_{ij}=\sum_kp^{(m)}_{ik}\,p^{(n)}_{kj},\qquad\text{so}\qquad\mathbf{P}^{(n)}=\mathbf{P}^n.
 $$
 
-If $\boldsymbol\mu_n$ is the distribution of $X_n$, written as a row vector, then by the law of total probability $\mu_{n+1}(j)=\sum_i\mu_n(i)\,p_{ij}$, that is,
+If $\boldsymbol\nu_n$ is the distribution of $X_n$, written as a row vector, then by the law of total probability $\nu_{n+1}(j)=\sum_i\nu_n(i)\,p_{ij}$, that is,
 
 $$
-\boldsymbol\mu_{n+1}=\boldsymbol\mu_n\mathbf{P},\qquad\boldsymbol\mu_n=\boldsymbol\mu_0\mathbf{P}^n.
+\boldsymbol\nu_{n+1}=\boldsymbol\nu_n\mathbf{P},\qquad\boldsymbol\nu_n=\boldsymbol\nu_0\mathbf{P}^n.
 $$
 
-Studying a Markov chain therefore means studying powers of a matrix. Figure 1b shows $\boldsymbol\mu_n$ for the weather chain from two different starting days. After about a week the two starts are indistinguishable: the chain has forgotten where it began, and the distribution has settled at $(6,4,3)/13$. Explaining this behaviour is the goal of most of this lecture.
+Studying a Markov chain therefore means studying powers of a matrix. Figure 1b shows $\boldsymbol\nu_n$ for the weather chain from two different starting days. After about a week the two starts are indistinguishable: the chain has forgotten where it began, and the distribution has settled at $(6,4,3)/13$. Explaining this behaviour is the goal of most of this lecture.
 
 ![[Probability and Linear Algebra/images/markov-chains-weather.svg]]
 *Figure 1. (a) The weather chain as a transition diagram; each arrow is labelled with its transition probability. (b) The distribution of the weather on day $n$, starting from a sunny day (solid) or a rainy day (dashed). Both converge to the same limit, $(6,4,3)/13\approx(0.46,0.31,0.23)$ (thin lines).*
@@ -119,7 +119,7 @@ Likewise, the expected time $m_i$ to reach $A$ satisfies $m_i=0$ on $A$ and $m_i
 ![[Probability and Linear Algebra/images/markov-chains-gamblers-ruin.svg]]
 *Figure 2. Gambler's ruin with \$1 bets and a target of \$100. (a) The probability of reaching 100 before 0, against the starting fortune. A fair game gives a straight line; a 49% or 47% chance per bet makes success unlikely unless you start close to the target. (b) Four fair games starting from 50, each eventually absorbed at 0 or 100.*
 
-In matrix form, let $\mathbf{Q}$ be $\mathbf{P}$ restricted to the states outside $A$, and $\mathbf{b}$ the one-step probabilities of jumping into $A$. Then (1) reads $\mathbf{h}=\mathbf{Q}\mathbf{h}+\mathbf{b}$, so $\mathbf{h}=(\mathbf{I}-\mathbf{Q})^{-1}\mathbf{b}$, and the expected times are $\mathbf{m}=(\mathbf{I}-\mathbf{Q})^{-1}\mathbf{1}$. The matrix $(\mathbf{I}-\mathbf{Q})^{-1}=\mathbf{I}+\mathbf{Q}+\mathbf{Q}^2+\cdots$ is called the **fundamental matrix**: its $(i,j)$ entry is the expected number of visits to $j$ before absorption, starting from $i$. The same equations, with rewards added, are the [[Introduction to Reinforcement Learning|Bellman equations]] of reinforcement learning, and [[Dynamic Programming|policy evaluation]] solves exactly this kind of linear system.
+In matrix form, let $\tilde{\mathbf{P}}$ be $\mathbf{P}$ restricted to the states outside $A$, and $\mathbf{b}$ the one-step probabilities of jumping into $A$. Then (1) reads $\mathbf{h}=\tilde{\mathbf{P}}\mathbf{h}+\mathbf{b}$, so $\mathbf{h}=(\mathbf{I}-\tilde{\mathbf{P}})^{-1}\mathbf{b}$, and the expected times are $\mathbf{m}=(\mathbf{I}-\tilde{\mathbf{P}})^{-1}\mathbf{1}$. The matrix $(\mathbf{I}-\tilde{\mathbf{P}})^{-1}=\mathbf{I}+\tilde{\mathbf{P}}+\tilde{\mathbf{P}}^2+\cdots$ is called the **fundamental matrix**: its $(i,j)$ entry is the expected number of visits to $j$ before absorption, starting from $i$. The same equations, with rewards added, are the [[Introduction to Reinforcement Learning|Bellman equations]] of reinforcement learning, and [[Dynamic Programming|policy evaluation]] solves exactly this kind of linear system.
 
 > [!example]- Code: gambler's ruin by solving the linear system
 > ```python
@@ -128,14 +128,14 @@ In matrix form, let $\mathbf{Q}$ be $\mathbf{P}$ restricted to the states outsid
 > def gamblers_ruin(N, p):
 >     """Win probabilities h and expected durations m for starting fortunes 1..N-1."""
 >     n = N - 1                                  # interior states 1..N-1
->     Q = np.zeros((n, n)); b = np.zeros(n)
+>     Pt = np.zeros((n, n)); b = np.zeros(n)
 >     for k in range(n):                         # state i = k + 1
->         if k + 1 < n: Q[k, k + 1] = p          # win a bet
+>         if k + 1 < n: Pt[k, k + 1] = p          # win a bet
 >         else: b[k] = p                         # ... and reach N
->         if k - 1 >= 0: Q[k, k - 1] = 1 - p     # lose a bet (reaching 0 contributes 0)
+>         if k - 1 >= 0: Pt[k, k - 1] = 1 - p     # lose a bet (reaching 0 contributes 0)
 >     I = np.eye(n)
->     h = np.linalg.solve(I - Q, b)              # h = Q h + b
->     m = np.linalg.solve(I - Q, np.ones(n))     # m = 1 + Q m
+>     h = np.linalg.solve(I - Pt, b)              # h = Pt h + b
+>     m = np.linalg.solve(I - Pt, np.ones(n))     # m = 1 + Pt m
 >     return h, m
 >
 > h, m = gamblers_ruin(100, 0.49)
@@ -227,7 +227,7 @@ $$
 \tag{3}
 $$
 
-If the chain starts in $\boldsymbol\pi$, then $\boldsymbol\mu_1=\boldsymbol\pi\mathbf{P}=\boldsymbol\pi$, and it stays in $\boldsymbol\pi$ forever. Picture a large crowd of independent walkers, a fraction $\pi_i$ of them at each state. In one step, the flow of walkers *into* $j$ is $\sum_i\pi_ip_{ij}$, and (3) says that it exactly replaces the walkers at $j$. Individuals keep moving, but the crowd's distribution does not change. Algebraically, $\boldsymbol\pi$ is a left eigenvector of $\mathbf{P}$ with eigenvalue 1. Every stochastic matrix has eigenvalue 1, because $\mathbf{P}\mathbf{1}=\mathbf{1}$.
+If the chain starts in $\boldsymbol\pi$, then $\boldsymbol\nu_1=\boldsymbol\pi\mathbf{P}=\boldsymbol\pi$, and it stays in $\boldsymbol\pi$ forever. Picture a large crowd of independent walkers, a fraction $\pi_i$ of them at each state. In one step, the flow of walkers *into* $j$ is $\sum_i\pi_ip_{ij}$, and (3) says that it exactly replaces the walkers at $j$. Individuals keep moving, but the crowd's distribution does not change. Algebraically, $\boldsymbol\pi$ is a left eigenvector of $\mathbf{P}$ with eigenvalue 1 (worked out for a two-state chain in [[Eigenvalues and Eigenvectors#Example: a two-state Markov chain|Eigenvalues and Eigenvectors]]). Every stochastic matrix has eigenvalue 1, because $\mathbf{P}\mathbf{1}=\mathbf{1}$.
 
 For the weather chain, solving (3) gives $\boldsymbol\pi=(6,4,3)/13$: in the long run, 46% of days are sunny. Figure 1b shows the distributions converging to exactly this.
 
@@ -271,7 +271,7 @@ Summing over $i$ gives $\sum_i\pi_ip_{ij}=\pi_j\sum_ip_{ji}=\pi_j$, which is (3)
 
 ### Convergence and the ergodic theorem
 
-Does $\boldsymbol\mu_n$ converge to $\boldsymbol\pi$, as in Figure 1b? One more obstacle remains: **periodicity**. In the class $\{5,6\}$ of Figure 3, the chain alternates $5,6,5,6,\dots$, so $\mathbb{P}(X_n=5)$ flips between 0 and 1 forever, although $\boldsymbol\pi=(\tfrac12,\tfrac12)$ is stationary. The **period** of a state is the greatest common divisor of its possible return times. A chain is **aperiodic** if every period is 1. In an irreducible chain, a single state with $p_{ii}>0$ makes the whole chain aperiodic.
+Does $\boldsymbol\nu_n$ converge to $\boldsymbol\pi$, as in Figure 1b? One more obstacle remains: **periodicity**. In the class $\{5,6\}$ of Figure 3, the chain alternates $5,6,5,6,\dots$, so $\mathbb{P}(X_n=5)$ flips between 0 and 1 forever, although $\boldsymbol\pi=(\tfrac12,\tfrac12)$ is stationary. The **period** of a state is the greatest common divisor of its possible return times. A chain is **aperiodic** if every period is 1. In an irreducible chain, a single state with $p_{ii}>0$ makes the whole chain aperiodic.
 
 > [!note] Convergence theorem
 > If a chain is irreducible, aperiodic and positive recurrent, then for every starting state $i$ and every $j$,
@@ -292,10 +292,10 @@ A single long run of the chain spends a fraction $\pi_i$ of its time in state $i
 
 ### Aside: mixing and the spectral gap
 
-How fast does $\boldsymbol\mu_n$ approach $\boldsymbol\pi$? For a finite, irreducible, aperiodic, reversible chain, the answer is in the eigenvalues of $\mathbf{P}$. They are real, and they satisfy $1=\lambda_1>\lambda_2\ge\cdots\ge\lambda_{|\mathcal{S}|}>-1$. Expanding the starting distribution in the eigenvectors, the component along $\boldsymbol\pi$ stays, and every other component shrinks by its eigenvalue at each step. So the distance to stationarity decays like
+How fast does $\boldsymbol\nu_n$ approach $\boldsymbol\pi$? For a finite, irreducible, aperiodic, reversible chain, the answer is in the eigenvalues of $\mathbf{P}$. They are real, and they satisfy $1=\lambda_1>\lambda_2\ge\cdots\ge\lambda_{|\mathcal{S}|}>-1$. Expanding the starting distribution in the eigenvectors, the component along $\boldsymbol\pi$ stays, and every other component shrinks by its eigenvalue at each step. So the distance to stationarity decays like
 
 $$
-\|\boldsymbol\mu_n-\boldsymbol\pi\|\le C\,\lambda_*^n,\qquad\lambda_*=\max\big(|\lambda_2|,|\lambda_{|\mathcal{S}|}|\big).
+\|\boldsymbol\nu_n-\boldsymbol\pi\|\le C\,\lambda_*^n,\qquad\lambda_*=\max\big(|\lambda_2|,|\lambda_{|\mathcal{S}|}|\big).
 $$
 
 The **spectral gap** $1-\lambda_*$ sets the speed, and $1/(1-\lambda_*)$, the **relaxation time**, is roughly the number of steps the chain needs to forget where it started. Negative eigenvalues close to $-1$ signal near-periodic oscillation. The standard fix is a **lazy** chain, $\tfrac12(\mathbf{I}+\mathbf{P})$, which stays put half the time and has eigenvalues $\tfrac12(1+\lambda)\ge0$.
@@ -452,7 +452,7 @@ $$
 Familiar examples:
 - The [[Random Variables#The Poisson process|Poisson process]] is a CTMC on $\{0,1,2,\dots\}$ that only moves up, with $q_{n,n+1}=\lambda$.
 - The **M/M/1 queue**: customers arrive at rate $\lambda$ and are served at rate $\mu$, so $q_{n,n+1}=\lambda$ and $q_{n,n-1}=\mu$ for $n\ge1$ (Figure 8a). It is the continuous-time version of the slotted queue above.
-- A **two-state** chain that switches $0\to1$ at rate $\alpha$ and $1\to0$ at rate $\beta$, for instance a machine that breaks and gets repaired.
+- A **two-state** chain that switches $0\to1$ at rate $q_{01}$ and $1\to0$ at rate $q_{10}$, for instance a machine that breaks and gets repaired.
 
 ### Transition matrices and the Kolmogorov equations
 
@@ -463,15 +463,15 @@ $$
 \tag{5}
 $$
 
-The matrix exponential replaces the matrix power $\mathbf{P}^n$: a CTMC is "$\mathbf{P}^n$ with a continuous $n$". (The backward equation $\mathbf{P}'(t)=\mathbf{Q}\,\mathbf{P}(t)$ holds as well.) A distribution over states evolves by $\frac{d}{dt}\boldsymbol\mu(t)=\boldsymbol\mu(t)\,\mathbf{Q}$, sometimes called the **master equation**: probability flows into $j$ at rate $\sum_{i\ne j}\mu_i\,q_{ij}$ and out of it at rate $\mu_j\,q_j$.
+The matrix exponential replaces the matrix power $\mathbf{P}^n$: a CTMC is "$\mathbf{P}^n$ with a continuous $n$". (The backward equation $\mathbf{P}'(t)=\mathbf{Q}\,\mathbf{P}(t)$ holds as well.) A distribution over states evolves by $\frac{d}{dt}\boldsymbol\nu(t)=\boldsymbol\nu(t)\,\mathbf{Q}$, sometimes called the **master equation**: probability flows into $j$ at rate $\sum_{i\ne j}\nu_i\,q_{ij}$ and out of it at rate $\nu_j\,q_j$.
 
 For the two-state chain, (5) can be solved by hand:
 
 $$
-p_{00}(t)=\frac{\beta}{\alpha+\beta}+\frac{\alpha}{\alpha+\beta}\,e^{-(\alpha+\beta)t}.
+p_{00}(t)=\frac{q_{10}}{q_{01}+q_{10}}+\frac{q_{01}}{q_{01}+q_{10}}\,e^{-(q_{01}+q_{10})t}.
 $$
 
-The chain forgets its start exponentially fast, at rate $\alpha+\beta$, which is the nonzero eigenvalue of $-\mathbf{Q}$ (Figure 8b). In continuous time, the spectral gap of the generator plays the role that $1-\lambda_*$ played for $\mathbf{P}$.
+The chain forgets its start exponentially fast, at rate $q_{01}+q_{10}$, which is the nonzero eigenvalue of $-\mathbf{Q}$ (Figure 8b). In continuous time, the spectral gap of the generator plays the role that $1-\lambda_*$ played for $\mathbf{P}$.
 
 **Stationarity** becomes $\boldsymbol\pi\,\mathbf{Q}=\mathbf{0}$: in every state the rate of flowing in balances the rate of flowing out, $\pi_j\,q_j=\sum_{i\ne j}\pi_i\,q_{ij}$. Detailed balance reads $\pi_i\,q_{ij}=\pi_j\,q_{ji}$. For the M/M/1 queue it gives $\pi_n=(1-\rho)\rho^n$ with $\rho=\lambda/\mu<1$, a geometric distribution with mean queue length $\rho/(1-\rho)$. At $\rho=0.8$ the queue holds 4 customers on average, and as $\rho\to1$ it blows up. Recurrence, classes and the ergodic theorem carry over from the discrete case, with time averages $\frac1T\int_0^Tf(X(t))\,dt$.
 
@@ -518,7 +518,7 @@ The self-loops of $\mathbf{P}_{\bar q}$ are "rejected" jump attempts, so this is
 
 Two families of modern models are built on continuous-time Markov processes, and the ideas above are their foundations.
 
-**Continuous states: Brownian motion.** Take the symmetric random walk, speed it up to $n$ steps per unit time, and shrink each step to $1/\sqrt n$. By the [[Sample Statistics#The central limit theorem|central limit theorem]], the position at time $t$ becomes $\mathcal{N}(0,t)$, and as $n\to\infty$ the whole path converges to **Brownian motion** $W(t)$ (Figure 9a). Brownian motion is a Markov process with continuous states and continuous paths, and independent Gaussian increments. More general **diffusion processes** are written as stochastic differential equations, $d\mathbf{x}=\mathbf{f}(\mathbf{x},t)\,dt+g(t)\,d\mathbf{W}$. For them, the master equation $\dot{\boldsymbol\mu}=\boldsymbol\mu\mathbf{Q}$ becomes a partial differential equation for the density, the **Fokker–Planck equation**. In one dimension it reads
+**Continuous states: Brownian motion.** Take the symmetric random walk, speed it up to $n$ steps per unit time, and shrink each step to $1/\sqrt n$. By the [[Sample Statistics#The central limit theorem|central limit theorem]], the position at time $t$ becomes $\mathcal{N}(0,t)$, and as $n\to\infty$ the whole path converges to **Brownian motion** $W(t)$ (Figure 9a). Brownian motion is a Markov process with continuous states and continuous paths, and independent Gaussian increments. More general **diffusion processes** are written as stochastic differential equations, $d\mathbf{x}=\mathbf{f}(\mathbf{x},t)\,dt+g(t)\,d\mathbf{W}$. For them, the master equation $\dot{\boldsymbol\nu}=\boldsymbol\nu\mathbf{Q}$ becomes a partial differential equation for the density, the **Fokker–Planck equation**. In one dimension it reads
 
 $$
 \frac{\partial p}{\partial t}=-\frac{\partial}{\partial x}\big(f\,p\big)+\frac{g^2}{2}\,\frac{\partial^2p}{\partial x^2}.
@@ -560,7 +560,7 @@ This is a Markov chain with Gaussian transitions, and the ideas of this lecture 
 
 ## Key takeaways
 
-- A Markov chain is a sequence in which the future is conditionally independent of the past given the present. It is specified by an initial distribution and a stochastic matrix $\mathbf{P}$; $n$-step probabilities are $\mathbf{P}^n$, and distributions evolve as $\boldsymbol\mu_{n+1}=\boldsymbol\mu_n\mathbf{P}$.
+- A Markov chain is a sequence in which the future is conditionally independent of the past given the present. It is specified by an initial distribution and a stochastic matrix $\mathbf{P}$; $n$-step probabilities are $\mathbf{P}^n$, and distributions evolve as $\boldsymbol\nu_{n+1}=\boldsymbol\nu_n\mathbf{P}$.
 - First-step analysis gives linear equations for hitting probabilities and expected hitting times. In gambler's ruin, a small edge per bet makes ruin likely over a long game.
 - Stopping times allow restarting the chain at random times (the strong Markov property). Communicating classes organize the states. A transient state is visited a geometric number of times; a recurrent one, infinitely often. Open classes are transient and finite closed classes positive recurrent. Random walks are recurrent in dimensions 1 and 2 only.
 - An irreducible chain has a stationary distribution $\boldsymbol\pi=\boldsymbol\pi\mathbf{P}$ exactly when it is positive recurrent; then $\pi_i=1/\mathbb{E}_i[\tau_i]$. Detailed balance is a sufficient shortcut, and birth–death chains always satisfy it.
@@ -571,10 +571,10 @@ This is a Markov chain with Gaussian transitions, and the ideas of this lecture 
 
 ## Where this shows up next
 
-- [[Introduction to Reinforcement Learning]] adds actions and rewards to a Markov chain to get a Markov decision process. [[Dynamic Programming]] solves the first-step (Bellman) equations, and the convergence of value iteration is another contraction argument.
+- [[Introduction to Reinforcement Learning]] adds actions and rewards to a Markov chain to get a Markov decision process. [[Dynamic Programming]] solves the first-step (Bellman) equations, and the convergence of value iteration is a contraction argument.
 - [[Energy-Based Models]] use Gibbs sampling in Boltzmann machines and RBMs, and Langevin MCMC for deep EBMs. [[Score-Based Models]] sample with annealed Langevin dynamics, an MCMC method driven by the score.
 - [[Score-Based Models]] reverses the diffusion of Figure 9b with learned scores; [[Denoising Diffusion Models]] is built on the forward Markov chain and its continuous-time limit, and [[Flow Matching]] continues from there.
-- [[Matrix Factorization and Dimensionality Reduction]] covers the eigenvalues and power iteration behind stationary distributions, PageRank and mixing; spectral clustering in [[Clustering and Expectation Maximization]] looks for the same bottlenecks that slow a random walk down.
+- [[Eigenvalues and Eigenvectors]], earlier in the series, covers the eigenvalues and power iteration behind stationary distributions, PageRank and mixing; spectral clustering in [[Clustering and Expectation Maximization]] looks for the same bottlenecks that slow a random walk down.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

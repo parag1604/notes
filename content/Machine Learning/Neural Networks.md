@@ -24,7 +24,7 @@ next: "[[Convolutional Neural Networks]]"
 
 ## Motivation
 
-Every classifier we have met so far ends in a hyperplane. [[Linear Models#Logistic Regression|Logistic regression]], [[Discriminant Analysis|LDA]] and the linear [[Support Vector Machines|SVM]] all compute a score $\mathbf{w}^\top\mathbf{x}+b$ and threshold it. They differ only in how they choose $\mathbf{w}$ and $b$. When the classes are not linearly separable in the raw features, we have so far had one answer: pick a feature map $\phi(\mathbf{x})$ by hand, or implicitly through a kernel, and draw the hyperplane in feature space.
+Most classifiers we have met so far end in a hyperplane. [[Linear Models#Logistic Regression|Logistic regression]], [[Discriminant Analysis|LDA]] and the linear [[Support Vector Machines|SVM]] all compute a score $\mathbf{w}^\top\mathbf{x}+b$ and threshold it. They differ only in how they choose $\mathbf{w}$ and $b$. When the classes are not linearly separable in the raw features, apart from giving up on a global model altogether ([[Non-parametric Models|k-nearest neighbours]]), we have so far had one answer: pick a non-linear feature map by hand, or implicitly through a kernel, and draw the hyperplane in feature space.
 
 This lecture takes the other road: **learn the feature map from data**. We start from the oldest learning machine of all, Rosenblatt's perceptron,[^rosenblatt1958] derive it as a stripped-down version of logistic regression, prove that it works when a separating hyperplane exists, and see exactly where it breaks (XOR). Stacking perceptron-like units into layers fixes the problem, and the rest of the lecture is about how to train such stacks: backpropagation, what they can represent, and the practical tricks that make deep networks trainable. For book-length treatments of everything here, see Goodfellow, Bengio and Courville,[^goodfellow2016] Prince,[^prince2023] and Bishop and Bishop.[^bishop2024]
 
@@ -57,7 +57,7 @@ Starting from $\mathbf{w}=\mathbf{0}$, every iterate is a sum of terms $2\alpha 
 > 2. If $y_i(\mathbf{w}^\top\mathbf{x}_i+b)\le0$ (a mistake, or a point on the boundary):
 > 3. $\quad\mathbf{w}\leftarrow\mathbf{w}+y_i\mathbf{x}_i$ and $b\leftarrow b+y_i$.
 >
-> Predict with $\hat y(\mathbf{u})=\operatorname{sign}(\mathbf{w}^\top\mathbf{u}+b)$.
+> Predict with $\hat y(\mathbf{x})=\operatorname{sign}(\mathbf{w}^\top\mathbf{x}+b)$.
 
 > [!example]- Code: the perceptron rule and the mistake bound (numpy)
 > ```python
@@ -94,7 +94,7 @@ $$
 so its margin goes up by $\lVert\mathbf{x}_i\rVert^2$ (with the bias, by $\lVert\mathbf{x}_i\rVert^2+1$). One update need not fix the point, and it can break others, but it always pushes the hyperplane the right way for the point at hand.
 
 > [!note] The same rule as SGD on a loss
-> Define the **perceptron loss** $\ell(\mathbf{w};\mathbf{x},y)=\max(0,\,-y\,\mathbf{w}^\top\mathbf{x})$. It is zero for correctly classified points and grows linearly with the violation. A subgradient is $-y\mathbf{x}$ when $y\mathbf{w}^\top\mathbf{x}\le0$ (choosing that branch at the kink) and $\mathbf{0}$ otherwise, so SGD with step 1 *is* the perceptron rule. Compare the SVM's [[Support Vector Machines#The hinge loss: SVM vs. logistic regression|hinge loss]] $\max(0,1-y\,\mathbf{w}^\top\mathbf{x})$: the perceptron loss is a hinge with the corner moved from margin 1 to margin 0, and without the $\lVert\mathbf{w}\rVert^2$ penalty. Two consequences:
+> Define the **perceptron loss** $E(\mathbf{w};\mathbf{x},y)=\max(0,\,-y\,\mathbf{w}^\top\mathbf{x})$. It is zero for correctly classified points and grows linearly with the violation. A subgradient is $-y\mathbf{x}$ when $y\mathbf{w}^\top\mathbf{x}\le0$ (choosing that branch at the kink) and $\mathbf{0}$ otherwise, so SGD with step 1 *is* the perceptron rule. Compare the SVM's [[Support Vector Machines#The hinge loss: SVM vs. logistic regression|hinge loss]] $\max(0,1-y\,\mathbf{w}^\top\mathbf{x})$: the perceptron loss is a hinge with the corner moved from margin 1 to margin 0, and without the $\lVert\mathbf{w}\rVert^2$ penalty. Two consequences:
 > - $\mathbf{w}=\mathbf{0}$ has zero perceptron loss, which is why the algorithm counts $y_i\mathbf{w}^\top\mathbf{x}_i=0$ as a mistake. Otherwise it would never leave its starting point.
 > - The perceptron stops at *any* separating hyperplane, often one that grazes the data. The SVM insists on the widest margin.
 
@@ -148,7 +148,7 @@ The proof is short and worth knowing.[^block1962]<sup>,</sup>[^novikoff1962] It 
 Remarks:
 
 - The bound does not depend on $N$ or on the dimension $D$, only on the geometry: the radius of the data and the margin. The best possible $\gamma$ is exactly the margin of the hard-margin SVM through the origin on the points $\tilde{\mathbf{x}}_i$, which makes the perceptron a slow, approximate cousin of the [[Support Vector Machines|SVM]].
-- The bound is a worst case and usually very loose. In Figure 1 (left) the perceptron finishes after 12 mistakes while $(R/\gamma)^2\approx3461$, because the data sit away from the origin and the appended constant 1 inflates $R$ relative to $\gamma$. Centering the data shrinks the bound.
+- The bound is a worst case and usually very loose. In Figure 1 (left) the perceptron finishes after 12 mistakes while $(R/\gamma)^2\approx3461$, because the data sit away from the origin and the appended constant 1 inflates $R$ relative to $\gamma$. Centring the data shrinks the bound.
 - The theorem says nothing about *which* separator is found, and the perceptron's answer depends on the visiting order.
 
 ![[Machine Learning/images/neural-networks-perceptron.svg]]
@@ -172,7 +172,7 @@ The XOR function labels $(0,1)$ and $(1,0)$ as class 1 and $(0,0)$, $(1,1)$ as c
 
 The two conclusions contradict each other. Minsky and Papert made limitations of this kind famous,[^minsky1969] and the observation that single-layer perceptrons cannot compute such simple predicates cooled interest in neural networks for more than a decade. There are two ways out.
 
-1. **Fix a non-linear feature map.** Adding the feature $x_1x_2$ (after centering) makes XOR separable. Choosing features by hand does not scale, but choosing them implicitly through a kernel does: the perceptron's weights are a sum of $y_i\mathbf{x}_i$ terms, so it can be kernelized exactly like the SVM. This road leads to [[Support Vector Machines#Kernels|kernel methods]].
+1. **Fix a non-linear feature map.** Adding the feature $x_1x_2$ (after centring) makes XOR separable. Choosing features by hand does not scale, but choosing them implicitly through a kernel does: the perceptron's weights are a sum of $y_i\mathbf{x}_i$ terms, so it can be kernelized exactly like the SVM. This road leads to [[Support Vector Machines#Kernels|kernel methods]].
 2. **Learn the feature map.** Put a layer of perceptron-like units in front of the final one and train everything together. This is the **multilayer perceptron**, and the road to deep learning.
 
 ## Multilayer perceptrons
@@ -230,29 +230,29 @@ The last layer of an MLP is a [[Linear Models|generalized linear model]] applied
 In all three cases the gradient of the loss with respect to the logits takes the same simple form,
 
 $$
-\frac{\partial\ell}{\partial\mathbf{z}^{(L)}}=\hat{\mathbf{y}}-\mathbf{y},
+\frac{\partial E}{\partial\mathbf{z}^{(L)}}=\hat{\mathbf{y}}-\mathbf{y},
 $$
 
 "prediction minus target". This is the starting point of backpropagation below. (In code, combine the last two steps, e.g. `BCEWithLogitsLoss` or `cross_entropy` on logits, which evaluate the loss stably via log-sum-exp, as in [[Linear Models#More than two classes: softmax regression|softmax regression]].)
 
-So an MLP for classification is "logistic regression on learned features", and training it is still empirical risk minimization of the average loss $\mathcal{L}(\theta)=\frac1N\sum_i\ell(f_\theta(\mathbf{x}_i),y_i)$, now over all layers at once. The catch is that $\mathcal{L}$ is no longer convex in $\theta$, and we need its gradient with respect to every weight in every layer.
+So an MLP for classification is "logistic regression on learned features", and training it is still empirical risk minimization of the average loss $\mathcal{L}(\theta)=\frac1N\sum_iE(f_\theta(\mathbf{x}_i),y_i)$, now over all layers at once. The catch is that $\mathcal{L}$ is no longer convex in $\theta$, and we need its gradient with respect to every weight in every layer.
 
 ## Backpropagation
 
 ### The chain rule, layer by layer
 
-Fix one training example and write $\ell$ for its loss. Define the **error signal** of layer $\ell$ as the gradient of the loss with respect to that layer's pre-activations,
+Fix one training example and write $E$ for its loss. Define the **error signal** of layer $\ell$ as the gradient of the loss with respect to that layer's pre-activations,
 
 $$
-\boldsymbol\delta^{(\ell)}=\frac{\partial\ell}{\partial\mathbf{z}^{(\ell)}}\in\mathbb{R}^{n_\ell}.
+\boldsymbol\delta^{(\ell)}=\frac{\partial E}{\partial\mathbf{z}^{(\ell)}}\in\mathbb{R}^{n_\ell}.
 $$
 
 Everything follows from two observations.
 
-**Weights from errors.** Unit $j$ of layer $\ell$ computes $z^{(\ell)}_j=\sum_kW^{(\ell)}_{jk}h^{(\ell-1)}_k+b^{(\ell)}_j$, and $W^{(\ell)}_{jk}$ affects the loss only through $z^{(\ell)}_j$. Hence $\partial\ell/\partial W^{(\ell)}_{jk}=\delta^{(\ell)}_j\,h^{(\ell-1)}_k$, or in matrix form
+**Weights from errors.** Unit $j$ of layer $\ell$ computes $z^{(\ell)}_j=\sum_kW^{(\ell)}_{jk}h^{(\ell-1)}_k+b^{(\ell)}_j$, and $W^{(\ell)}_{jk}$ affects the loss only through $z^{(\ell)}_j$. Hence $\partial E/\partial W^{(\ell)}_{jk}=\delta^{(\ell)}_j\,h^{(\ell-1)}_k$, or in matrix form
 
 $$
-\frac{\partial\ell}{\partial\mathbf{W}^{(\ell)}}=\boldsymbol\delta^{(\ell)}\,\mathbf{h}^{(\ell-1)\top},\qquad\frac{\partial\ell}{\partial\mathbf{b}^{(\ell)}}=\boldsymbol\delta^{(\ell)} .
+\frac{\partial E}{\partial\mathbf{W}^{(\ell)}}=\boldsymbol\delta^{(\ell)}\,\mathbf{h}^{(\ell-1)\top},\qquad\frac{\partial E}{\partial\mathbf{b}^{(\ell)}}=\boldsymbol\delta^{(\ell)} .
 $$
 
 The gradient of a weight is "error at its output times activity at its input", an outer product.
@@ -270,9 +270,9 @@ $$
 Errors flow backwards through the *transposed* weights and are gated by the local slope $\phi'$. With $\boldsymbol\delta^{(L)}=\hat{\mathbf{y}}-\mathbf{y}$ from the output layer, equation (1) gives every $\boldsymbol\delta^{(\ell)}$, and the first observation turns them into weight gradients. This is **backpropagation** (Rumelhart, Hinton and Williams, 1986).[^rumelhart1986]
 
 > [!example] Algorithm: backpropagation for an MLP (one example)
-> 1. **Forward:** for $\ell=1,\dots,L$ compute and *store* $\mathbf{z}^{(\ell)}$ and $\mathbf{h}^{(\ell)}$; then the loss $\ell$.
-> 2. **Output error:** $\boldsymbol\delta^{(L)}=\hat{\mathbf{y}}-\mathbf{y}$ (for a matched output and loss; otherwise $\partial\ell/\partial\mathbf{z}^{(L)}$ directly).
-> 3. **Backward:** for $\ell=L,\dots,1$: set $\nabla_{\mathbf{W}^{(\ell)}}\ell=\boldsymbol\delta^{(\ell)}\mathbf{h}^{(\ell-1)\top}$ and $\nabla_{\mathbf{b}^{(\ell)}}\ell=\boldsymbol\delta^{(\ell)}$; if $\ell>1$, compute $\boldsymbol\delta^{(\ell-1)}$ from equation (1).
+> 1. **Forward:** for $\ell=1,\dots,L$ compute and *store* $\mathbf{z}^{(\ell)}$ and $\mathbf{h}^{(\ell)}$; then the loss $E$.
+> 2. **Output error:** $\boldsymbol\delta^{(L)}=\hat{\mathbf{y}}-\mathbf{y}$ (for a matched output and loss; otherwise $\partial E/\partial\mathbf{z}^{(L)}$ directly).
+> 3. **Backward:** for $\ell=L,\dots,1$: set $\nabla_{\mathbf{W}^{(\ell)}}E=\boldsymbol\delta^{(\ell)}\mathbf{h}^{(\ell-1)\top}$ and $\nabla_{\mathbf{b}^{(\ell)}}E=\boldsymbol\delta^{(\ell)}$; if $\ell>1$, compute $\boldsymbol\delta^{(\ell-1)}$ from equation (1).
 >
 > For a mini-batch, average the per-example gradients. Stacking examples as rows, $\boldsymbol\Delta^{(\ell)}\in\mathbb{R}^{B\times n_\ell}$ and $\mathbf{H}^{(\ell-1)}\in\mathbb{R}^{B\times n_{\ell-1}}$, the weight gradient is the single matrix product $\boldsymbol\Delta^{(\ell)\top}\mathbf{H}^{(\ell-1)}/B$.
 
@@ -340,16 +340,16 @@ The cost is easy to read off: the backward pass does one matrix–vector product
 
 ### Computational graphs and reverse-mode autodiff
 
-Deriving equation (1) by hand for every new architecture would be tedious and error-prone. **Automatic differentiation** does it mechanically.[^baydin2018] Any program that computes the loss is a composition of primitive operations (add, multiply, matrix product, $\exp$, $\tanh$, …), which forms a directed acyclic **computational graph**. Each primitive knows its own local derivative. For every node $v$, define its **adjoint** $\bar v=\partial\ell/\partial v$. The chain rule says that $\bar v$ collects contributions from every node $c$ that uses $v$:
+Deriving equation (1) by hand for every new architecture would be tedious and error-prone. **Automatic differentiation** does it mechanically.[^baydin2018] Any program that computes the loss is a composition of primitive operations (add, multiply, matrix product, $\exp$, $\tanh$, …), which forms a directed acyclic **computational graph**. Each primitive knows its own local derivative. For every node $q$, define its **adjoint** $\bar q=\partial E/\partial q$. The chain rule says that $\bar q$ collects contributions from every node $q'$ that uses $q$:
 
 $$
-\bar v=\sum_{c\,:\,v\to c}\bar c\,\frac{\partial c}{\partial v},\qquad\bar\ell=1 .
+\bar q=\sum_{q'\,:\,q\to q'}\bar q'\,\frac{\partial q'}{\partial q},\qquad\bar E=1 .
 $$
 
 Visit the nodes in reverse topological order, starting from the loss, and every adjoint is ready when needed. Figure 4 does this for one sigmoid neuron with a squared-error loss.
 
 ![[Machine Learning/images/neural-networks-graph.svg]]
-*Figure 4: a computational graph for $L=\frac12(\sigma(wx+b)-y)^2$ at $x=1.5$, $w=0.8$, $b=-0.2$, $y=1$. The forward pass (blue, above each node) computes $u=1.2$, $z=1.0$, $a=0.7311$, $L=0.0362$. The backward pass (vermilion, below) starts from $\bar L=1$: $\bar a=a-y=-0.2689$, $\bar z=\bar a\,a(1-a)=-0.0529$, which passes unchanged through the sum to $\bar u$ and $\bar b$, and then $\bar w=\bar u\,x=-0.0793$ and $\bar x=\bar u\,w=-0.0423$.*
+*Figure 4: a computational graph for $E=\frac12(\sigma(wx+b)-y)^2$ at $x=1.5$, $w=0.8$, $b=-0.2$, $y=1$. The forward pass (blue, above each node) computes $u=1.2$, $z=1.0$, $a=0.7311$, $E=0.0362$. The backward pass (vermilion, below) starts from $\bar E=1$: $\bar a=a-y=-0.2689$, $\bar z=\bar a\,a(1-a)=-0.0529$, which passes unchanged through the sum to $\bar u$ and $\bar b$, and then $\bar w=\bar u\,x=-0.0793$ and $\bar x=\bar u\,w=-0.0423$.*
 
 > [!example]- Code: a scalar reverse-mode autodiff engine (after Scalar-Autograd)
 > ```python
@@ -384,19 +384,19 @@ Visit the nodes in reverse topological order, starting from the loss, and every 
 >             for p, g in zip(v.parents, v.local_grads):
 >                 p.grad += g * v.grad        # accumulate: sum over the children of p
 >
-> # Figure 4: L = (sigma(w x + b) - y)^2 / 2
+> # Figure 4: E = (sigma(w x + b) - y)^2 / 2
 > x, w, b, y = Value(1.5), Value(0.8), Value(-0.2), 1.0
 > e = (w * x + b).sigmoid() + (-y)
-> L = e * e * 0.5                             # e feeds the product twice
-> L.backward()
-> print(round(L.data, 4), round(w.grad, 4), round(x.grad, 4))   # 0.0362 -0.0793 -0.0423
+> E = e * e * 0.5                             # e feeds the product twice
+> E.backward()
+> print(round(E.data, 4), round(w.grad, 4), round(x.grad, 4))   # 0.0362 -0.0793 -0.0423
 > ```
 > Each node stores its local derivatives on the forward pass, and `backward` applies the adjoint equation above in reverse topological order. Writing $e^2$ as `e * e` makes `e` a parent twice, so its adjoint is a sum of two contributions; with `=` instead of `+=` the gradients would be half as large. The repository's engine stores a `_backward` closure per node instead of the local derivatives, which is equivalent.
 
 Two details matter in practice:
 
 - **Accumulate, don't overwrite.** If a node feeds several others (a weight shared across time steps, or simply $y=x+x$), its adjoint is a *sum*. Autodiff engines therefore add into `.grad` (`+=`), and you must zero the gradients before each new backward pass; this is why PyTorch training loops call `zero_grad()`.
-- **Why reverse mode.** The chain rule can also be applied forwards: **forward mode** propagates $\partial v/\partial\theta_j$ for one input direction $\theta_j$ at a time, so a gradient with respect to $P$ parameters needs $P$ passes. **Reverse mode** propagates $\partial\ell/\partial v$ for one *output* at a time, so a scalar loss needs a single backward pass, at a small constant multiple of the forward cost, for all $P$ derivatives. With $P$ in the millions or billions and one scalar loss, reverse mode is the only sensible choice, and backpropagation is exactly reverse-mode autodiff applied to a network. (Forward mode wins in the opposite case: few inputs, many outputs.)
+- **Why reverse mode.** The chain rule can also be applied forwards: **forward mode** propagates $\partial q/\partial\theta_j$ for one input direction $\theta_j$ at a time, so a gradient with respect to $P$ parameters needs $P$ passes. **Reverse mode** propagates $\partial E/\partial q$ for one *output* at a time, so a scalar loss needs a single backward pass, at a small constant multiple of the forward cost, for all $P$ derivatives. With $P$ in the millions or billions and one scalar loss, reverse mode is the only sensible choice, and backpropagation is exactly reverse-mode autodiff applied to a network. (Forward mode wins in the opposite case: few inputs, many outputs.)
 
 > [!example]- Code: the same XOR network in PyTorch
 > ```python
@@ -426,12 +426,12 @@ $$
 \frac{\partial\mathcal{L}}{\partial\theta_j}\approx\frac{\mathcal{L}(\theta+\epsilon\mathbf{e}_j)-\mathcal{L}(\theta-\epsilon\mathbf{e}_j)}{2\epsilon},
 $$
 
-whose error is $O(\epsilon^2)$, against the one-sided difference's $O(\epsilon)$. Compare with the relative error $|g_{\text{num}}-g_{\text{bp}}|/(|g_{\text{num}}|+|g_{\text{bp}}|)$. In double precision with $\epsilon\approx10^{-6}$, values around $10^{-7}$ or smaller mean the gradient is right; around $10^{-2}$ means a bug. Check on a small network and a few examples, because each parameter costs two forward passes. Kinks such as ReLU at 0 can cause isolated false alarms.
+whose error is $O(\epsilon^2)$, against the one-sided difference's $O(\epsilon)$. Compare with the relative error $|d_{\text{num}}-d_{\text{bp}}|/(|d_{\text{num}}|+|d_{\text{bp}}|)$. In double precision with $\epsilon\approx10^{-6}$, values around $10^{-7}$ or smaller mean the gradient is right; around $10^{-2}$ means a bug. Check on a small network and a few examples, because each parameter costs two forward passes. Kinks such as ReLU at 0 can cause isolated false alarms.
 
 > [!tip] Aside: gradients in pictures, and why the loss is not convex
-> **The gradient is perpendicular to level sets.** Along any curve $\mathbf{c}(t)$ inside a level set, $f(\mathbf{c}(t))$ is constant, so $\frac{d}{dt}f(\mathbf{c}(t))=\nabla f^\top\mathbf{c}'(t)=0$: the gradient is orthogonal to every direction within the level set.
+> **The gradient is perpendicular to level sets.** Along any curve $\mathbf{r}(\tau)$ inside a level set, $f(\mathbf{r}(\tau))$ is constant, so $\frac{d}{d\tau}f(\mathbf{r}(\tau))=\nabla f^\top\mathbf{r}'(\tau)=0$: the gradient is orthogonal to every direction within the level set.
 >
-> **It points in the direction of steepest ascent.** The rate of change in a unit direction $\mathbf{v}$ is $\nabla f^\top\mathbf{v}$, which by Cauchy–Schwarz is largest for $\mathbf{v}=\nabla f/\lVert\nabla f\rVert$. Gradient descent walks straight downhill across the contours (Figure 5, left).
+> **It points in the direction of steepest ascent.** The rate of change in a unit direction $\mathbf{d}$ is $\nabla f^\top\mathbf{d}$, which by Cauchy–Schwarz is largest for $\mathbf{d}=\nabla f/\lVert\nabla f\rVert$. Gradient descent walks straight downhill across the contours (Figure 5, left).
 >
 > **A zero gradient is not a minimum.** For $f(x,y)=-x^2+y^2$ the gradient vanishes at the origin, but $f$ decreases along $x$ and increases along $y$: a **saddle point**, with an indefinite Hessian $\operatorname{diag}(-2,2)$ (Figure 5, right).
 >
@@ -445,9 +445,9 @@ whose error is $O(\epsilon^2)$, against the one-sided difference's $O(\epsilon)$
 ### Universal approximation
 
 > [!tip] Theorem (universal approximation)
-> Let $\phi:\mathbb{R}\to\mathbb{R}$ be continuous and **not a polynomial**. For every compact set $K\subset\mathbb{R}^D$, every continuous $f:K\to\mathbb{R}$ and every $\varepsilon>0$, there are a width $H$ and parameters $a_j,b_j\in\mathbb{R}$, $\mathbf{w}_j\in\mathbb{R}^D$ such that the one-hidden-layer network $g(\mathbf{x})=\sum_{j=1}^{H}a_j\,\phi(\mathbf{w}_j^\top\mathbf{x}+b_j)$ satisfies $\sup_{\mathbf{x}\in K}|f(\mathbf{x})-g(\mathbf{x})|<\varepsilon$.
+> Let $\phi:\mathbb{R}\to\mathbb{R}$ be continuous and **not a polynomial**. For every compact set $\mathcal{C}\subset\mathbb{R}^D$, every continuous $f^*:\mathcal{C}\to\mathbb{R}$ and every $\varepsilon>0$, there are a width $H$ and parameters $c_j,b_j\in\mathbb{R}$, $\mathbf{w}_j\in\mathbb{R}^D$ such that the one-hidden-layer network $g(\mathbf{x})=\sum_{j=1}^{H}c_j\,\phi(\mathbf{w}_j^\top\mathbf{x}+b_j)$ satisfies $\sup_{\mathbf{x}\in\mathcal{C}}|f^*(\mathbf{x})-g(\mathbf{x})|<\varepsilon$.
 
-Cybenko proved this for sigmoid-shaped activations,[^cybenko1989] Hornik for any bounded non-constant activation,[^hornik1991] and Leshno, Lin, Pinkus and Schocken showed that "not a polynomial" is exactly the right condition (for a broad class of activations that includes ReLU).[^leshno1993] The polynomial exclusion makes sense: if $\phi$ is a polynomial of degree $m$, then so is every $g$, and degree-$m$ polynomials are a finite-dimensional family that cannot approximate everything.
+Cybenko proved this for sigmoid-shaped activations,[^cybenko1989] Hornik for any bounded non-constant activation,[^hornik1991] and Leshno, Lin, Pinkus and Schocken showed that "not a polynomial" is exactly the right condition (for a broad class of activations that includes ReLU).[^leshno1993] The polynomial exclusion makes sense: if $\phi$ is a polynomial of degree $d$, then so is every $g$, and degree-$d$ polynomials are a finite-dimensional family that cannot approximate everything.
 
 **Intuition in one dimension.** With ReLUs the theorem is almost obvious. Three ReLUs make a "hat" (Figure 6, left):
 
@@ -458,13 +458,13 @@ $$
 rises linearly from 0 at $x=0.3$ to 1 at $x=0.5$ and falls back to 0 at $x=0.7$. More generally, any piecewise-linear function with knots $x_0<x_1<\dots<x_H$ on $[x_0,x_H]$ is exactly a one-hidden-layer ReLU network:
 
 $$
-g(x)=f(x_0)+\sum_{k=0}^{H-1}c_k\,\mathrm{ReLU}(x-x_k),
+g(x)=f^*(x_0)+\sum_{k=0}^{H-1}c_k\,\mathrm{ReLU}(x-x_k),
 $$
 
-where $c_0$ is the slope of the first piece and each later $c_k$ is the *change* of slope at knot $x_k$. Interpolate $f$ at the knots, refine the grid, and uniform continuity of $f$ on the interval makes the error as small as we like. With 4 units the maximum error in Figure 6 is 0.21; with 16 it is 0.019.
+where $c_0$ is the slope of the first piece and each later $c_k$ is the *change* of slope at knot $x_k$. Interpolate $f^*$ at the knots, refine the grid, and uniform continuity of $f^*$ on the interval makes the error as small as we like. With 4 units the maximum error in Figure 6 is 0.21; with 16 it is 0.019.
 
 ![[Machine Learning/images/neural-networks-uat.svg]]
-*Figure 6: left, three shifted and scaled ReLUs (dashed) add up to a localized bump. Right, a one-hidden-layer ReLU network with $H$ units is a piecewise-linear interpolant of the target $f(x)=\sin(2\pi x)+0.6x$ with $H$ pieces; the maximum error falls from 0.21 with 4 units to 0.019 with 16.*
+*Figure 6: left, three shifted and scaled ReLUs (dashed) add up to a localized bump. Right, a one-hidden-layer ReLU network with $H$ units is a piecewise-linear interpolant of the target $f^*(x)=\sin(2\pi x)+0.6x$ with $H$ pieces; the maximum error falls from 0.21 with 4 units to 0.019 with 16.*
 
 **What the theorem does not say.**
 
@@ -473,7 +473,7 @@ where $c_0$ is the slope of the first piece and each later $c_k$ is the *change*
 
 ### Depth versus width
 
-Depth can be exponentially more efficient than width. Consider the "tent" map on $[0,1]$, $t(x)=2\,\mathrm{ReLU}(x)-4\,\mathrm{ReLU}(x-\tfrac12)$, which equals $2x$ on $[0,\tfrac12]$ and $2-2x$ on $[\tfrac12,1]$. Composing it $k$ times gives a sawtooth with $2^{k}$ linear pieces, using only $2$ ReLUs per layer and $k$ layers. A one-hidden-layer ReLU network with $H$ units is piecewise linear with at most $H+1$ pieces, so it needs at least $2^{k}-1$ units to represent the same function. Telgarsky turned this idea into a theorem: there are functions computed by deep networks with $\Theta(k^3)$ layers of constant width that no network with $O(k)$ layers can approximate unless it has $\Omega(2^k)$ units.[^telgarsky2016] Real data are not sawtooth functions, but the result supports the practical experience that depth buys compositional, reusable features.
+Depth can be exponentially more efficient than width. Consider the "tent" map on $[0,1]$, $T(x)=2\,\mathrm{ReLU}(x)-4\,\mathrm{ReLU}(x-\tfrac12)$, which equals $2x$ on $[0,\tfrac12]$ and $2-2x$ on $[\tfrac12,1]$. Composing it $r$ times gives a sawtooth with $2^{r}$ linear pieces, using only $2$ ReLUs per layer and $r$ layers. A one-hidden-layer ReLU network with $H$ units is piecewise linear with at most $H+1$ pieces, so it needs at least $2^{r}-1$ units to represent the same function. Telgarsky turned this idea into a theorem: there are functions computed by deep networks with $\Theta(r^3)$ layers of constant width that no network with $O(r)$ layers can approximate unless it has $\Omega(2^r)$ units.[^telgarsky2016] Real data are not sawtooth functions, but the result supports the practical experience that depth buys compositional, reusable features.
 
 ## Training neural networks in practice
 
@@ -481,21 +481,21 @@ Depth can be exponentially more efficient than width. Consider the "tent" map on
 
 **Break the symmetry.** If all weights of a layer start equal, every unit in it computes the same function and receives the same gradient, so they stay identical forever and the layer acts like a single unit. Weights are therefore initialized at random (biases can start at zero).
 
-**Keep the signal's scale.** The scale of the random weights matters. Consider $z_j=\sum_{k=1}^{n_{\text{in}}}W_{jk}h_k$ with independent zero-mean weights of variance $\sigma_w^2$, independent of the inputs. Then
+**Keep the signal's scale.** The scale of the random weights matters. Consider $z_j=\sum_{k=1}^{n_{\text{in}}}W_{jk}h_k$ with independent zero-mean weights of variance $\operatorname{Var}(W_{jk})$, independent of the inputs. Then
 
 $$
-\operatorname{Var}(z_j)=n_{\text{in}}\,\sigma_w^2\,\mathbb{E}\big[h_k^2\big].
+\operatorname{Var}(z_j)=n_{\text{in}}\,\operatorname{Var}(W_{jk})\,\mathbb{E}\big[h_k^2\big].
 $$
 
-If $n_{\text{in}}\sigma_w^2$ is below 1, the signal shrinks by a constant factor at every layer and vanishes exponentially with depth; above 1, it explodes. The backward pass, equation (1), multiplies by $\mathbf{W}^\top$ instead and involves $n_{\text{out}}$ instead. Two standard choices:
+If $n_{\text{in}}\operatorname{Var}(W_{jk})$ is below 1, the signal shrinks by a constant factor at every layer and vanishes exponentially with depth; above 1, it explodes. The backward pass, equation (1), multiplies by $\mathbf{W}^\top$ instead and involves $n_{\text{out}}$ instead. Two standard choices:
 
-- **Glorot (Xavier) initialization**[^glorot2010] for tanh-like activations, which are roughly the identity near 0, so $\mathbb{E}[h^2]\approx\operatorname{Var}(z)$ of the previous layer. Preserving the forward variance needs $\sigma_w^2=1/n_{\text{in}}$, the backward one $1/n_{\text{out}}$; the compromise is $\sigma_w^2=2/(n_{\text{in}}+n_{\text{out}})$.
-- **He initialization**[^he2015] for ReLU. A ReLU zeroes half of a symmetric input, so $\mathbb{E}[\mathrm{ReLU}(z)^2]=\tfrac12\operatorname{Var}(z)$. To compensate, double the variance: $\sigma_w^2=2/n_{\text{in}}$.
+- **Glorot (Xavier) initialization**[^glorot2010] for tanh-like activations, which are roughly the identity near 0, so $\mathbb{E}[h^2]\approx\operatorname{Var}(z)$ of the previous layer. Preserving the forward variance needs $\operatorname{Var}(W_{jk})=1/n_{\text{in}}$, the backward one $1/n_{\text{out}}$; the compromise is $\operatorname{Var}(W_{jk})=2/(n_{\text{in}}+n_{\text{out}})$.
+- **He initialization**[^he2015] for ReLU. A ReLU zeroes half of a symmetric input, so $\mathbb{E}[\mathrm{ReLU}(z)^2]=\tfrac12\operatorname{Var}(z)$. To compensate, double the variance: $\operatorname{Var}(W_{jk})=2/n_{\text{in}}$.
 
 Figure 7 shows what goes wrong otherwise in a 30-layer network.
 
 ![[Machine Learning/images/neural-networks-init.svg]]
-*Figure 7: a 30-layer MLP of width 256 on Gaussian inputs, with four activation and initialization combinations. Left, the standard deviation of each layer's activations; right, that of the backpropagated error $\delta^{(\ell)}$ for a unit-variance error at the top. With weights that are too small (tanh, $\sigma_w=0.5/\sqrt{n}$) both signals shrink by about a factor of 2 per layer, to about $10^{-9}$. Glorot initialization keeps tanh networks in range. With ReLU, Glorot loses half the variance per layer (activations about $4\times10^{-5}$ at layer 30), while He initialization keeps both signals near 1 throughout.*
+*Figure 7: a 30-layer MLP of width 256 on Gaussian inputs, with four activation and initialization combinations. Left, the standard deviation of each layer's activations; right, that of the backpropagated error $\boldsymbol\delta^{(\ell)}$ for a unit-variance error at the top. With weights that are too small (tanh, weight standard deviation $0.5/\sqrt{n_{\text{in}}}$) both signals shrink by about a factor of 2 per layer, to about $10^{-9}$. Glorot initialization keeps tanh networks in range. With ReLU, Glorot loses half the variance per layer (activations about $4\times10^{-5}$ at layer 30), while He initialization keeps both signals near 1 throughout.*
 
 ### Vanishing and exploding gradients
 
@@ -524,20 +524,20 @@ The optimizers themselves (mini-batch SGD, momentum, Nesterov, AdaGrad, RMSProp,
 
 Neural networks typically have more parameters than training examples and can fit even random labels, so regularization matters.
 
-- **Weight decay.** Add $\frac{\lambda}{2}\lVert\mathbf{W}\rVert^2$ to the loss, exactly [[Linear Models#MAP estimation and regularization|ridge regularization]], i.e. MAP estimation under a Gaussian prior. The SGD step becomes $\mathbf{W}\leftarrow(1-\alpha\lambda)\mathbf{W}-\alpha\mathbf{g}_t$: the weights "decay" by a constant factor each step. With Adam, adding the penalty to the loss is *not* the same as decaying the weights, because the penalty's gradient gets rescaled per coordinate. The decoupled version, AdamW, applies $\mathbf{W}\leftarrow(1-\alpha\lambda)\mathbf{W}$ separately and is usually better.[^loshchilov2019]
+- **Weight decay.** Add $\frac{\lambda}{2}\lVert\mathbf{W}\rVert^2$ to the loss, exactly [[Linear Models#MAP estimation and regularization|ridge regularization]], i.e. MAP estimation under a Gaussian prior. The SGD step becomes $\mathbf{W}\leftarrow(1-\alpha\lambda)\mathbf{W}-\alpha\nabla_{\mathbf{W}}\mathcal{L}$: the weights "decay" by a constant factor each step. With Adam, adding the penalty to the loss is *not* the same as decaying the weights, because the penalty's gradient gets rescaled per coordinate. The decoupled version, AdamW, applies $\mathbf{W}\leftarrow(1-\alpha\lambda)\mathbf{W}$ separately and is usually better.[^loshchilov2019]
 - **Early stopping.** Monitor the loss on a validation set and keep the parameters from the epoch where it was lowest. For a quadratic loss, stopping gradient descent early behaves much like an $L_2$ penalty whose strength shrinks with training time.[^goodfellow2016]
 - **Dropout.** During training, multiply each hidden unit by an independent mask $m_j\sim\mathrm{Bernoulli}(\rho)$ and rescale, $\tilde h_j=m_jh_j/\rho$, so that $\mathbb{E}[\tilde h_j]=h_j$; at test time use all units unchanged.[^srivastava2014] Here $\rho$ is the *keep* probability, often 0.5 to 0.9. A unit cannot rely on any particular other unit being present, which discourages fragile co-adaptations, and training effectively averages an exponential number of thinned sub-networks that share weights.
-- **Data augmentation** (random crops, flips, noise) encodes invariances the model should have; it is often the most effective regularizer for images, and is covered with the applications.
+- **Data augmentation** (random crops, flips, noise) encodes invariances the model should have; it is often the most effective regularizer for images, and is covered in [[Convolutional Neural Networks#Image classification in practice|Convolutional Neural Networks]].
 
 ### Normalization layers
 
 **Batch normalization** standardizes each unit's pre-activation over the current mini-batch $\mathcal{B}$ of size $B$, then lets the network undo it with a learned scale $s_j$ and shift $t_j$ (the paper calls them $\gamma$ and $\beta$):[^ioffe2015]
 
 $$
-\hat z_{ij}=\frac{z_{ij}-\mu_j}{\sqrt{v_j+\epsilon}},\qquad\text{output}_{ij}=s_j\,\hat z_{ij}+t_j ,
+\hat z_{ij}=\frac{z_{ij}-\bar z_j}{\sqrt{v_j+\epsilon_{\mathrm{BN}}}},\qquad\text{output}_{ij}=s_j\,\hat z_{ij}+t_j ,
 $$
 
-where $\mu_j$ and $v_j$ are the mean and variance of unit $j$ over the batch. At test time, running averages of $\mu_j$ and $v_j$ collected during training replace the batch statistics, so a prediction does not depend on the other examples. Batch norm allows larger learning rates and makes training much less sensitive to initialization. It was introduced to reduce "internal covariate shift", but later work suggests the main benefit is a smoother loss landscape.[^santurkar2018] In [Basic-Image-Classification](https://github.com/parag1604/Basic-Image-Classification) (version 7) adding batch norm is what lets a CIFAR-10 network that would not train start fitting the data.
+where $\bar z_j$ and $v_j$ are the mean and variance of unit $j$ over the batch and $\epsilon_{\mathrm{BN}}$ is a small constant for numerical stability. At test time, running averages of $\bar z_j$ and $v_j$ collected during training replace the batch statistics, so a prediction does not depend on the other examples. Batch norm allows larger learning rates and makes training much less sensitive to initialization. It was introduced to reduce "internal covariate shift", but later work suggests the main benefit is a smoother loss landscape.[^santurkar2018] In [Basic-Image-Classification](https://github.com/parag1604/Basic-Image-Classification) (version 7) adding batch norm is what lets a CIFAR-10 network that would not train start fitting the data.
 
 **Layer normalization** computes the same statistics across the units of a single example instead of across the batch.[^ba2016] It behaves identically at training and test time, works with batch size 1 and with variable-length sequences, and is the standard choice in recurrent networks and transformers.
 
@@ -587,7 +587,7 @@ The companion repositories build everything above from scratch, one idea per fil
 - On separable data it makes at most $(R/\gamma)^2$ mistakes (Block–Novikoff), independent of $N$ and $D$. On non-separable data it never settles; use the pocket or averaged perceptron.
 - One hyperplane cannot compute XOR. Kernels fix a non-linear feature map; multilayer perceptrons learn one. Without non-linear activations, depth adds nothing.
 - An MLP classifier is logistic or softmax regression on learned features. With matched output and loss, the error at the logits is $\hat{\mathbf{y}}-\mathbf{y}$.
-- Backpropagation: $\boldsymbol\delta^{(\ell)}=\phi'(\mathbf{z}^{(\ell)})\odot\mathbf{W}^{(\ell+1)\top}\boldsymbol\delta^{(\ell+1)}$ and $\nabla_{\mathbf{W}^{(\ell)}}=\boldsymbol\delta^{(\ell)}\mathbf{h}^{(\ell-1)\top}$. It is reverse-mode autodiff: all gradients for about the cost of a forward pass. Check hand-written gradients with central differences.
+- Backpropagation: $\boldsymbol\delta^{(\ell)}=\phi'(\mathbf{z}^{(\ell)})\odot\mathbf{W}^{(\ell+1)\top}\boldsymbol\delta^{(\ell+1)}$ and $\nabla_{\mathbf{W}^{(\ell)}}E=\boldsymbol\delta^{(\ell)}\mathbf{h}^{(\ell-1)\top}$. It is reverse-mode autodiff: all gradients for about the cost of a forward pass. Check hand-written gradients with central differences.
 - One hidden layer can approximate any continuous function on a compact set (non-polynomial activation), but possibly with exponentially many units and with no promise that training finds them. Depth can be exponentially more efficient than width.
 - To train deep networks: random, variance-preserving initialization (Glorot for tanh, He for ReLU); ReLU-type activations; momentum or Adam with a schedule; weight decay, early stopping and dropout; batch or layer normalization; residual connections against vanishing gradients.
 
@@ -595,6 +595,7 @@ The companion repositories build everything above from scratch, one idea per fil
 
 - [[Convolutional Neural Networks]]: networks for images (classification, detection and segmentation), built from the pieces in this lecture plus locality and weight sharing.
 - [[Sequence Models]]: networks for text and other sequences: RNNs and LSTMs, attention and transformers, mixture of experts and state space models.
+- [[Graph Neural Networks]]: networks for graphs, where message passing replaces the fixed neighbourhoods of grids and sequences.
 - [[Support Vector Machines]]: the other way out of linear separability, via kernels and the maximum margin; the perceptron's mistake bound is governed by the same margin.
 - [[Variational Autoencoders]] and [[Generative Adversarial Networks]] use neural networks as encoders, decoders, generators and critics, all trained by backpropagation.
 - [[Energy-Based Models]]: Hopfield networks and Boltzmann machines, the other early family of neural networks, and the link between modern Hopfield networks and attention.

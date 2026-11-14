@@ -265,11 +265,11 @@ $$
 >
 > Then the iterates track the **averaged** ODE $\dot x=\bar h(x)$, where $\bar h(x)=\sum_y\nu(y)\,h(x,y)$. If $\bar h$ has a unique globally asymptotically stable equilibrium $x^*$, then $x_n\to x^*$ almost surely.
 
-The chain mixes on its own fast timescale, while the iterates move on the slow timescale $\alpha_n\to0$. So the iterates only "see" the drift averaged over the chain's stationary distribution.[^borkar2008] The condition that the chain's law does not depend on the iterates can be relaxed to "controlled" Markov noise.[^karmakarbhatnagar2018] For **linear TD(0)** with features $\phi$, the averaged drift is $\bar h(w)=b-Aw$ with $A=\Phi^\top D(I-\gamma P^\pi)\Phi$, $b=\Phi^\top Dr^\pi$, and $D=\operatorname{diag}(d_\pi)$ the stationary distribution. This is the setting of Tsitsiklis and Van Roy's analysis, worked out in [[Linear Function Approximation]].[^tsitsiklisvanroy1997]
+The chain mixes on its own fast timescale, while the iterates move on the slow timescale $\alpha_n\to0$. So the iterates only "see" the drift averaged over the chain's stationary distribution.[^borkar2008] The condition that the chain's law does not depend on the iterates can be relaxed to "controlled" Markov noise.[^karmakarbhatnagar2018] For **linear TD(0)** with features $\phi$, the averaged drift is $\bar h(w)=b-Aw$ with $A=\Phi^\top D(I-\gamma P^\pi)\Phi$, $b=\Phi^\top Dr_\pi$, and $D=\operatorname{diag}(d_\pi)$ the stationary distribution. This is the setting of Tsitsiklis and Van Roy's analysis, worked out in [[Linear Function Approximation]].[^tsitsiklisvanroy1997]
 
 ### Checking the conditions: synchronous Q-learning
 
-Here is the whole pipeline on one example. Suppose we have a simulator and, at every iteration, sample a next state $s'\sim p(\cdot\mid s,a)$ for **every** pair $(s,a)$ ("synchronous" Q-learning). Rewards satisfy $|r(s,a,s')|\le R_{\max}$. The update is
+Here is the whole pipeline on one example. Suppose we have a simulator and, at every iteration, sample a next state $s'\sim p(\cdot\mid s,a)$ for **every** pair $(s,a)$ ("synchronous" Q-learning). Rewards satisfy $|r(s,a,s')|\le r_{\max}$. The update is
 
 $$
 Q_{n+1}(s,a)=Q_n(s,a)+\alpha_n\Big[r(s,a,s')+\gamma\max_{a'}Q_n(s',a')-Q_n(s,a)\Big].
@@ -277,7 +277,7 @@ $$
 
 1. **Mean field.** $h(Q)=\mathcal{T}^*Q-Q$, where $(\mathcal{T}^*Q)(s,a)=\sum_{s'}p(s'\mid s,a)\big[r(s,a,s')+\gamma\max_{a'}Q(s',a')\big]$.
 2. **Lipschitz.** $\mathcal{T}^*$ is a $\gamma$-contraction in $\lVert\cdot\rVert_\infty$ (proved in [[Dynamic Programming]]), so $h$ is Lipschitz with constant $1+\gamma$.
-3. **Noise.** $M_{n+1}=\big(r+\gamma\max_{a'}Q_n(s',a')\big)-\mathcal{T}^*Q_n$ componentwise, which is an MDS by construction, and $|M_{n+1}(s,a)|\le2R_{\max}+2\gamma\lVert Q_n\rVert_\infty$. Squaring gives the growth bound.
+3. **Noise.** $M_{n+1}=\big(r+\gamma\max_{a'}Q_n(s',a')\big)-\mathcal{T}^*Q_n$ componentwise, which is an MDS by construction, and $|M_{n+1}(s,a)|\le2r_{\max}+2\gamma\lVert Q_n\rVert_\infty$. Squaring gives the growth bound.
 4. **Stability.** $h_\infty(Q)=\gamma P\max Q-Q$, where $(P\max Q)(s,a)=\sum_{s'}p(s'\mid s,a)\max_{a'}Q(s',a')$; the rewards vanish in the limit. The map $Q\mapsto\gamma P\max Q$ is a $\gamma$-contraction with fixed point $0$, so by the contraction lemma the origin is globally asymptotically stable, and Borkar–Meyn gives $\sup_n\lVert Q_n\rVert<\infty$.
 5. **Limit.** By the contraction lemma again, $Q^*$ is the unique globally asymptotically stable equilibrium of $\dot Q=\mathcal{T}^*Q-Q$.
 
@@ -367,7 +367,7 @@ $$
 >
 > Then $x_n\to x^*$ almost surely.
 
-This is the main convergence theorem of Tsitsiklis's paper, specialised to the case without communication delays (his theorem also allows each component to use outdated values of the others).[^tsitsiklis1994] Jaakkola, Jordan and Singh proved a closely related result at the same time.[^jaakkola1994] Three remarks:
+This is the main convergence theorem of Tsitsiklis's paper, specialized to the case without communication delays (his theorem also allows each component to use outdated values of the others).[^tsitsiklis1994] Jaakkola, Jordan and Singh proved a closely related result at the same time.[^jaakkola1994] Three remarks:
 
 - **No separate stability assumption** is needed. The pseudo-contraction itself keeps the iterates bounded, which Tsitsiklis proves as a first step.
 - **Exploration is hidden in condition 1.** $\sum_n\alpha_n(i)=\infty$ forces component $i$ to be updated infinitely often. For Q-learning: *every state-action pair must be visited infinitely often*. Step sizes such as $\alpha=1/N_n(s,a)$, the reciprocal of the visit count, are $\mathcal{F}_n$-measurable and satisfy condition 1 on that event.
@@ -486,7 +486,7 @@ Note the linear TD row. The limit is the **TD fixed point**, which in general is
 
 ## Where this shows up next
 
-This lecture is the analysis behind the learning methods of the first half. Each of these lectures states its convergence results with exact conditions and links back here:
+This lecture is the analysis behind the learning methods of the first half. Here is where each of them uses it:
 
 - [[Multi-Armed Bandits]]: the incremental sample average and the gradient bandit as stochastic approximation.
 - [[Policy Gradients]]: REINFORCE is stochastic gradient ascent, so it converges to stationary points of $J(\theta)$ under Robbins–Monro steps.
@@ -495,6 +495,8 @@ This lecture is the analysis behind the learning methods of the first half. Each
 - [[Q-Learning and SARSA]]: asynchronous stochastic approximation and Tsitsiklis's theorem.
 - [[Linear Function Approximation]]: Markov noise, the ODE $\dot w=b-Aw$, and why $A$ is positive definite on-policy.
 - [[Off-Policy Learning with Function Approximation]]: what goes wrong when the ODE is unstable.
+
+The series closes with [[Model-Based Reinforcement Learning]] (next), which joins the two halves: learn a model from experience, then plan with it.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 

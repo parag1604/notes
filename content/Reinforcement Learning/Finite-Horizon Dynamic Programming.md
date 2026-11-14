@@ -14,13 +14,13 @@ next: "[[Dynamic Programming]]"
 
 > **Prerequisites:** [[Introduction to Reinforcement Learning]] (MDPs, the Markov property, [[Introduction to Reinforcement Learning#Horizons and discounting|horizons]], value functions and Bellman equations) and [[Markov Chains]]. Conditional expectation and the tower rule ([[Joint Distributions#Conditional expectation|here]]) are used in the proofs.
 >
-> **TL;DR:** When the interaction lasts exactly $T$ steps, the best action depends on *how much time is left*, so optimal policies are **non-stationary**: one decision rule $\mu_t$ per stage. **Backward induction**, $V_T=r_T$ and $V_t(s)=\max_a\mathbb{E}\big[r_t(s,a,s')+V_{t+1}(s')\big]$, computes the optimal value and an optimal policy from every state at once, in $O(T|\mathcal{S}|^2|\mathcal{A}|)$ operations. Letting $T\to\infty$ with discounting turns the recursion into value iteration, the subject of [[Dynamic Programming]].
+> **TL;DR:** When the interaction lasts exactly $T$ steps, the best action depends on *how much time is left*, so optimal policies are **non-stationary**: one decision rule $\pi_t$ per stage. **Backward induction**, $V_T=r_T$ and $V_t(s)=\max_a\mathbb{E}\big[r_t(s,a,s')+V_{t+1}(s')\big]$, computes the optimal value and an optimal policy from every state at once, in $O(T|\mathcal{S}|^2|\mathcal{A}|)$ operations. Letting $T\to\infty$ with discounting turns the recursion into value iteration, the subject of [[Dynamic Programming]].
 
 > [!note] Why it works: planning with a known model
 > The lectures so far learned from experience. This lecture starts the second half of the series, which asks what those methods are approximating. Here we assume the transition model $p(s'\mid s,a)$ and the rewards are **known**, so the problem is *planning*: pure computation, no interaction. In practice the model is usually unknown, which is why the model-free lectures ([[Imitation Learning]], [[Policy Gradients]], …) never use it. A model can also be *learned* from data and then planned with; that is the topic of [[Model-Based Reinforcement Learning]].
 
 > [!note] Notation in this lecture
-> Series notation (see [[Introduction to Reinforcement Learning]]) with three finite-horizon additions. Rewards may depend on time, $r_t(s,a,s')$, and there is a terminal reward $r_T(s)$. Policies are sequences of **deterministic decision rules** $\pi=(\mu_0,\dots,\mu_{T-1})$. The subscript in $V_t$ is a *time index* (value with $T-t$ steps to go), not an iteration counter.
+> Series notation (see [[Introduction to Reinforcement Learning]]) with three finite-horizon additions. Rewards may depend on time, $r_t(s,a,s')$, and there is a terminal reward $r_T(s)$. Policies are sequences of **deterministic decision rules** $\pi=(\pi_0,\dots,\pi_{T-1})$, with $a_t=\pi_t(s_t)$: the subscript on $\pi_t$ is the stage. The subscript in $V_t$ is a *time index* (value with $T-t$ steps to go), not an iteration counter.
 
 ## Motivation
 
@@ -54,24 +54,24 @@ Both may depend on time. A discounted problem is the special case $r_t=\gamma^t 
 
 ### Policies are sequences of decision rules
 
-A **decision rule** is a map $\mu:\mathcal{S}\to\mathcal{A}$ with $\mu(s)\in\mathcal{A}(s)$ (it is **admissible**). A (deterministic Markov) **policy** for horizon $T$ is a sequence of decision rules, one per stage:
+A **decision rule** for stage $t$ is a map $\pi_t:\mathcal{S}\to\mathcal{A}$ with $\pi_t(s)\in\mathcal{A}(s)$ (it is **admissible**). A (deterministic Markov) **policy** for horizon $T$ is a sequence of decision rules, one per stage:
 
 $$
-\pi=(\mu_0,\mu_1,\dots,\mu_{T-1}),\qquad a_t=\mu_t(s_t).
+\pi=(\pi_0,\pi_1,\dots,\pi_{T-1}),\qquad a_t=\pi_t(s_t).
 $$
 
 Running $\pi$ from $s_0$ produces a random trajectory, and its **value** is the expected total reward:
 
 $$
-V^\pi_0(s_0)=\mathbb{E}\Big[\,r_T(s_T)+\sum_{t=0}^{T-1}r_t\big(s_t,\mu_t(s_t),s_{t+1}\big)\;\Big|\;s_0\Big],
+V^\pi_0(s_0)=\mathbb{E}\Big[\,r_T(s_T)+\sum_{t=0}^{T-1}r_t\big(s_t,\pi_t(s_t),s_{t+1}\big)\;\Big|\;s_0\Big],
 $$
 
-where the expectation is over $s_1,\dots,s_T$, with $s_{t+1}\sim p(\cdot\mid s_t,\mu_t(s_t))$. More generally, $V^\pi_t(s)$ is the expected reward collected from stage $t$ onwards, starting in $s$ at time $t$ and following $(\mu_t,\dots,\mu_{T-1})$. The **optimal value** is $V^*_0(s_0)=\max_\pi V^\pi_0(s_0)$. There are finitely many policies, so the maximum exists.
+where the expectation is over $s_1,\dots,s_T$, with $s_{t+1}\sim p(\cdot\mid s_t,\pi_t(s_t))$. More generally, $V^\pi_t(s)$ is the expected reward collected from stage $t$ onwards, starting in $s$ at time $t$ and following $(\pi_t,\dots,\pi_{T-1})$. The **optimal value** is $V^*_0(s_0)=\max_\pi V^\pi_0(s_0)$. There are finitely many policies, so the maximum exists.
 
-**Why one decision rule per stage?** In the infinite-horizon discounted problem, the future looks the same from every time step, so a single stationary rule $\pi(a\mid s)$ suffices (the existence theorem in [[Introduction to Reinforcement Learning]]). With a deadline it does not. The state alone no longer summarizes the situation: "one game left, one point ahead" calls for a different move than "ten games left, one point ahead" might. Equivalently, $(s,t)$ is the real state, and a policy that is stationary in $(s,t)$ is non-stationary in $s$. The [[#Example 2: a seasonal inventory|inventory example]] below shows two stages with identical demand, identical rewards and identical stock where the optimal orders differ, purely because one stage is the last.
+**Why one decision rule per stage?** In the infinite-horizon discounted problem, the future looks the same from every time step, so a single stationary rule suffices (the existence theorem in [[Introduction to Reinforcement Learning]]). With a deadline it does not. The state alone no longer summarizes the situation: "one game left, one point ahead" calls for a different move than "ten games left, one point ahead" might. Equivalently, $(s,t)$ is the real state, and a policy that is stationary in $(s,t)$ is non-stationary in $s$. The [[#Example 2: a seasonal inventory|inventory example]] below shows two stages with identical demand, identical rewards and identical stock where the optimal orders differ, purely because one stage is the last.
 
 > [!note] Feedback, not plans
-> The objective depends on the decision *rules*, and the actions $a_t=\mu_t(s_t)$ are random variables. Fixing a sequence of actions $a_0,\dots,a_{T-1}$ in advance (an **open-loop** plan) is a different and generally worse problem, because it cannot react to the states the dynamics actually produce. In the chess match, the best fixed plan wins with probability $0.425$ against $0.537$ for the best feedback rule (Figure 2).
+> The objective depends on the decision *rules*, and the actions $a_t=\pi_t(s_t)$ are random variables. Fixing a sequence of actions $a_0,\dots,a_{T-1}$ in advance (an **open-loop** plan) is a different and generally worse problem, because it cannot react to the states the dynamics actually produce. In the chess match, the best fixed plan wins with probability $0.425$ against $0.537$ for the best feedback rule (Figure 2).
 >
 > We also restricted attention to deterministic Markov policies. That loses nothing: the proof of the DP theorem below shows that no randomized or history-dependent policy can do better.
 
@@ -82,14 +82,14 @@ where the expectation is over $s_1,\dots,s_T$, with $s_{t+1}\sim p(\cdot\mid s_t
 > [!tip] Intuition
 > If you are driving the fastest route from Bangalore to Delhi and it passes through Nagpur, then its Nagpur–Delhi part is the fastest route from Nagpur to Delhi. If it weren't, you could swap in the faster tail and improve the whole trip.
 
-**Principle of optimality.** Let $\pi^*=(\mu^*_0,\dots,\mu^*_{T-1})$ be optimal for the problem started at $s_0$. Suppose that under $\pi^*$ the state $s$ is reached at stage $t$ with positive probability. Then the **tail policy** $(\mu^*_t,\dots,\mu^*_{T-1})$ is optimal for the **tail subproblem** that starts in $s$ at time $t$ and maximizes
+**Principle of optimality.** Let $\pi^*=(\pi^*_0,\dots,\pi^*_{T-1})$ be optimal for the problem started at $s_0$. Suppose that under $\pi^*$ the state $s$ is reached at stage $t$ with positive probability. Then the **tail policy** $(\pi^*_t,\dots,\pi^*_{T-1})$ is optimal for the **tail subproblem** that starts in $s$ at time $t$ and maximizes
 
 $$
-\mathbb{E}\Big[\,r_T(s_T)+\sum_{k=t}^{T-1}r_k\big(s_k,\mu_k(s_k),s_{k+1}\big)\;\Big|\;s_t=s\Big].
+\mathbb{E}\Big[\,r_T(s_T)+\sum_{k=t}^{T-1}r_k\big(s_k,\pi_k(s_k),s_{k+1}\big)\;\Big|\;s_t=s\Big].
 $$
 
 > [!proof]- Proof
-> Suppose not. Then some tail policy $(\tilde\mu_t,\dots,\tilde\mu_{T-1})$ has **strictly larger** tail value from $s$, by some gap $\Delta>0$. Build a new policy that follows $\pi^*$, except that *if* the state at time $t$ is $s$, it switches to the $\tilde\mu$'s from then on. This policy has to remember whether $s_t=s$ happened, so it is history-dependent rather than Markov. That is harmless: the remark after the DP theorem below shows that the best Markov policy is as good as any history-dependent one (and that proof does not use the principle), so if the new policy beats $\pi^*$, so does some Markov policy. Trajectories that do not pass through $s$ at time $t$ collect exactly the same rewards as before. On the event $\{s_t=s\}$, the rewards before $t$ are unchanged and, by the Markov property, the expected reward from $t$ on rises by $\Delta$. So the total expected reward rises by
+> Suppose not. Then some tail policy $(\tilde\pi_t,\dots,\tilde\pi_{T-1})$ has **strictly larger** tail value from $s$, by some gap $\Delta>0$. Build a new policy that follows $\pi^*$, except that *if* the state at time $t$ is $s$, it switches to the $\tilde\pi$'s from then on. This policy has to remember whether $s_t=s$ happened, so it is history-dependent rather than Markov. That is harmless: the remark after the DP theorem below shows that the best Markov policy is as good as any history-dependent one (and that proof does not use the principle), so if the new policy beats $\pi^*$, so does some Markov policy. Trajectories that do not pass through $s$ at time $t$ collect exactly the same rewards as before. On the event $\{s_t=s\}$, the rewards before $t$ are unchanged and, by the Markov property, the expected reward from $t$ on rises by $\Delta$. So the total expected reward rises by
 > $$
 > \mathbb{P}_{\pi^*}(s_t=s)\cdot\Delta>0,
 > $$
@@ -107,20 +107,20 @@ The principle is a statement about optimal policies, not yet an algorithm. Read 
 > 1. **Initialize** $V_T(s)=r_T(s)$ for all $s$.
 > 2. **For** $t=T-1,T-2,\dots,0$ and every state $s$:
 >     - compute $Q_t(s,a)=\sum_{s'}p(s'\mid s,a)\big[r_t(s,a,s')+V_{t+1}(s')\big]$ for each $a\in\mathcal{A}(s)$;
->     - set $V_t(s)=\max_{a\in\mathcal{A}(s)}Q_t(s,a)$ and $\mu^*_t(s)\in\arg\max_{a\in\mathcal{A}(s)}Q_t(s,a)$.
-> 3. **Return** $V_0$ and the policy $\pi^*=(\mu^*_0,\dots,\mu^*_{T-1})$.
+>     - set $V_t(s)=\max_{a\in\mathcal{A}(s)}Q_t(s,a)$ and $\pi^*_t(s)\in\arg\max_{a\in\mathcal{A}(s)}Q_t(s,a)$.
+> 3. **Return** $V_0$ and the policy $\pi^*=(\pi^*_0,\dots,\pi^*_{T-1})$.
 
 > [!example]- Code: backward induction (NumPy)
 > ```python
 > # assumes: P[a, s, s'] = p(s'|s,a); R[t] of shape (A, S, S) = r_t(s, a, s'); terminal reward r_T (S,);
 > # horizon T. If only some actions are feasible in s, set Q[a, s] = -np.inf for the others before the max.
 > V = r_T.copy()                                     # V_T
-> mu = np.zeros((T, len(r_T)), dtype=int)
+> pi_star = np.zeros((T, len(r_T)), dtype=int)
 > for t in reversed(range(T)):                       # t = T-1, ..., 0
 >     Q = (P * (R[t] + V[None, None, :])).sum(-1)    # Q_t(a, s) = sum_s' p(s'|s,a) [r_t(s,a,s') + V_{t+1}(s')]
->     mu[t] = Q.argmax(0)                            # decision rule mu*_t(s)
+>     pi_star[t] = Q.argmax(0)                       # decision rule pi*_t(s)
 >     V = Q.max(0)                                   # V_t(s)
-> # now V = V_0, and mu[t] is the decision rule for stage t
+> # now V = V_0, and pi_star[t] is the decision rule for stage t
 > ```
 > Each pass of the loop costs $O(|\mathcal{S}|^2|\mathcal{A}|)$, which is the operation count below. For the chess match, the state is the net score, the two actions are timid and bold, and every stage reward is 0.
 
@@ -141,7 +141,7 @@ $V_t(s)$ is the **value-to-go**: the best expected reward obtainable in the $(T-
 **Theorem (finite-horizon DP).** For every $t$ and every $s$:
 
 1. $V_t(s)=\max_\pi V^\pi_t(s)$. In particular, $V_0(s_0)=V^*_0(s_0)$ for every initial state.
-2. The greedy policy $\pi^*=(\mu^*_0,\dots,\mu^*_{T-1})$ of the algorithm attains it: $V^{\pi^*}_t(s)=V_t(s)$, simultaneously for all $s$ and $t$. So $\pi^*$ is optimal from **every** initial state.
+2. The greedy policy $\pi^*=(\pi^*_0,\dots,\pi^*_{T-1})$ of the algorithm attains it: $V^{\pi^*}_t(s)=V_t(s)$, simultaneously for all $s$ and $t$. So $\pi^*$ is optimal from **every** initial state.
 
 > [!proof]- Proof (backward induction)
 > We prove, for $t=T,T-1,\dots,0$, the two-part claim
@@ -152,7 +152,7 @@ $V_t(s)$ is the **value-to-go**: the best expected reward obtainable in the $(T-
 >
 > **Base case** $t=T$. No decisions remain, so $V^\pi_T(s)=r_T(s)=V_T(s)$ for every policy.
 >
-> **Inductive step.** Assume (a) and (b) at $t+1$. Fix any policy $\pi$ and a state $s$, and write $a=\mu_t(s)$. Split off the first reward and condition on $s_{t+1}$ (tower rule). By the Markov property, once $s_{t+1}=s'$ is known, the rewards from stage $t+1$ on depend only on $s'$ and on $\mu_{t+1},\dots,\mu_{T-1}$, so their conditional expectation is $V^\pi_{t+1}(s')$:
+> **Inductive step.** Assume (a) and (b) at $t+1$. Fix any policy $\pi$ and a state $s$, and write $a=\pi_t(s)$. Split off the first reward and condition on $s_{t+1}$ (tower rule). By the Markov property, once $s_{t+1}=s'$ is known, the rewards from stage $t+1$ on depend only on $s'$ and on $\pi_{t+1},\dots,\pi_{T-1}$, so their conditional expectation is $V^\pi_{t+1}(s')$:
 > $$
 > V^\pi_t(s)=\sum_{s'}p(s'\mid s,a)\big[r_t(s,a,s')+V^\pi_{t+1}(s')\big].
 > $$
@@ -163,21 +163,21 @@ $V_t(s)$ is the **value-to-go**: the best expected reward obtainable in the $(T-
 > &\le\max_{a'\in\mathcal{A}(s)}\sum_{s'}p(s'\mid s,a')\big[r_t(s,a',s')+V_{t+1}(s')\big]=V_t(s).
 > \end{aligned}
 > $$
-> That is (a) at $t$. For $\pi^*$, both inequalities are equalities: the first by (b) at $t+1$, the second because $\mu^*_t(s)$ attains the max. That is (b) at $t$. $\blacksquare$
+> That is (a) at $t$. For $\pi^*$, both inequalities are equalities: the first by (b) at $t+1$, the second because $\pi^*_t(s)$ attains the max. That is (b) at $t$. $\blacksquare$
 >
 > **Randomized and history-dependent policies.** If $\pi$ chooses $a_t$ at random, possibly depending on the whole history $h_t$, the same computation reads $V^\pi_t(h_t)=\sum_a\pi_t(a\mid h_t)\sum_{s'}p(s'\mid s_t,a)[r_t+V^\pi_{t+1}(h_{t+1})]$. Bounding $V^\pi_{t+1}(h_{t+1})\le V_{t+1}(s')$ by induction, and an average over $a$ by the max over $a$, gives $V^\pi_t(h_t)\le V_t(s_t)$ again. So the larger policy class cannot beat $V_0$.
 
 > [!warning] Where the "max–expectation interchange" hides
-> A common way to write this proof splits the max over the whole tail policy, $\pi^t=(\mu_t,\pi^{t+1})$:
+> A common way to write this proof splits the max over the whole tail policy, $\pi_{t:}=(\pi_t,\pi_{t+1:})$:
 > $$
 > \begin{aligned}
-> \max_{\mu_t,\,\pi^{t+1}}\;&\mathbb{E}_{s'}\big[r_t+V^{\pi^{t+1}}_{t+1}(s')\big]\\
-> &=\max_{\mu_t}\;\mathbb{E}_{s'}\Big[r_t+\max_{\pi^{t+1}}V^{\pi^{t+1}}_{t+1}(s')\Big].
+> \max_{\pi_t,\,\pi_{t+1:}}\;&\mathbb{E}_{s'}\big[r_t+V^{\pi_{t+1:}}_{t+1}(s')\big]\\
+> &=\max_{\pi_t}\;\mathbb{E}_{s'}\Big[r_t+\max_{\pi_{t+1:}}V^{\pi_{t+1:}}_{t+1}(s')\Big].
 > \end{aligned}
 > $$
-> Moving the max **inside** the expectation is the crux. In general only "$\le$" holds: $\max_x\mathbb{E}[f(x,Y)]\le\mathbb{E}[\max_xf(x,Y)]$, since the right side may pick a different $x$ for each outcome $Y$. Equality holds here because a tail policy is a collection of *feedback* maps: it may act differently at each next state $s'$, and part (b) of the induction says that **one** tail policy, $(\mu^*_{t+1},\dots,\mu^*_{T-1})$, is optimal from every $s'$ simultaneously. For open-loop plans the interchange fails, and that gap is exactly the value of feedback (0.425 vs 0.537 in the chess match).[^bertsekas2017]
+> Moving the max **inside** the expectation is the crux. In general only "$\le$" holds: $\max_x\mathbb{E}[f(x,Y)]\le\mathbb{E}[\max_xf(x,Y)]$, since the right side may pick a different $x$ for each outcome $Y$. Equality holds here because a tail policy is a collection of *feedback* maps: it may act differently at each next state $s'$, and part (b) of the induction says that **one** tail policy, $(\pi^*_{t+1},\dots,\pi^*_{T-1})$, is optimal from every $s'$ simultaneously. For open-loop plans the interchange fails, and that gap is exactly the value of feedback (0.425 vs 0.537 in the chess match).[^bertsekas2017]
 
-The last step of the proof also uses a small fact worth stating on its own: maximizing over decision rules $\mu_t$ an expression that depends on $\mu_t$ only through $\mu_t(s)$ is the same as maximizing over the single action $a\in\mathcal{A}(s)$. This is why a search over $|\mathcal{A}|^{|\mathcal{S}|}$ decision rules collapses to $|\mathcal{S}|$ separate searches over $|\mathcal{A}|$ actions.
+The last step of the proof also uses a small fact worth stating on its own: maximizing over decision rules $\pi_t$ an expression that depends on $\pi_t$ only through $\pi_t(s)$ is the same as maximizing over the single action $a\in\mathcal{A}(s)$. This is why a search over $|\mathcal{A}|^{|\mathcal{S}|}$ decision rules collapses to $|\mathcal{S}|$ separate searches over $|\mathcal{A}|$ actions.
 
 ### Computational cost
 
@@ -279,7 +279,7 @@ A shop sells one product over a season of $T=12$ weeks.
 Backward induction (1) solves this in a fraction of a second. The optimal expected profit from an empty shop is $V_0(0)=113.62$; simulating the computed policy 40,000 times gives $113.74\pm0.19$ (95% interval), as it should.
 
 ![[Reinforcement Learning/images/finite-horizon-dp-inventory.svg]]
-*Figure 3: (a) the optimal order $\mu^*_t(s)$ for each week and stock level. (b) In every week the policy "orders up to" a level $S_t$, i.e. $\mu^*_t(s)=\max(S_t-s,0)$. The level follows the demand, but not symmetrically: weeks 0 and 11 have the same demand ($\lambda=2$) and the same stage rewards, yet $S_0=4$ while $S_{11}=2$.*
+*Figure 3: (a) the optimal order $\pi^*_t(s)$ for each week and stock level. (b) In every week the policy "orders up to" a level $S_t$, i.e. $\pi^*_t(s)=\max(S_t-s,0)$. The level follows the demand, but not symmetrically: weeks 0 and 11 have the same demand ($\lambda=2$) and the same stage rewards, yet $S_0=4$ while $S_{11}=2$.*
 
 The policy has a clean structure: in every week it orders up to a target level, $S_t=(4,5,6,6,7,7,7,7,6,6,4,2)$ (checked at every $t$ and $s$). Such **order-up-to** (base-stock) policies are classical in inventory theory.[^arrow1951] More important for us is the asymmetry at the ends of the season. Week 0 and week 11 look identical to a one-step analysis, but in week 11 any unsold unit only fetches the salvage price, so ordering is less attractive. That is non-stationarity caused purely by the horizon.
 
@@ -319,7 +319,7 @@ Two other limits lead to the next lectures:
 
 ## Key takeaways
 
-- With a fixed horizon $T$, the right object is a **non-stationary** policy $(\mu_0,\dots,\mu_{T-1})$: the best action depends on the time remaining as well as the state.
+- With a fixed horizon $T$, the right object is a **non-stationary** policy $(\pi_0,\dots,\pi_{T-1})$: the best action depends on the time remaining as well as the state.
 - **Principle of optimality:** the tail of an optimal policy is optimal for the tail subproblem from any state it reaches with positive probability.
 - **Backward induction** $V_T=r_T$, $V_t(s)=\max_a\mathbb{E}[r_t(s,a,s')+V_{t+1}(s')]$ gives the optimal value **and** a policy that is optimal from every state, in $O(T|\mathcal{S}|^2|\mathcal{A}|)$ time.
 - The proof hinges on feedback: one tail policy is optimal from every next state, which justifies swapping max and expectation. Open-loop plans lack this and can be much worse (chess: 0.425 vs 0.537).

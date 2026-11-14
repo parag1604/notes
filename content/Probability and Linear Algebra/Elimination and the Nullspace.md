@@ -84,12 +84,12 @@ $$
 
 ### Solving with two triangular systems
 
-Once $\mathbf{A}=\mathbf{L}\mathbf{U}$ is known, $\mathbf{A}\mathbf{x}=\mathbf{b}$ becomes $\mathbf{L}(\mathbf{U}\mathbf{x})=\mathbf{b}$. Call $\mathbf{c}=\mathbf{U}\mathbf{x}$ and solve two triangular systems:
+Once $\mathbf{A}=\mathbf{L}\mathbf{U}$ is known, $\mathbf{A}\mathbf{x}=\mathbf{b}$ becomes $\mathbf{L}(\mathbf{U}\mathbf{x})=\mathbf{b}$. Call $\mathbf{z}=\mathbf{U}\mathbf{x}$ and solve two triangular systems:
 
-1. **Forward substitution**, $\mathbf{L}\mathbf{c}=\mathbf{b}$, top to bottom.
-2. **Back substitution**, $\mathbf{U}\mathbf{x}=\mathbf{c}$, bottom to top.
+1. **Forward substitution**, $\mathbf{L}\mathbf{z}=\mathbf{b}$, top to bottom.
+2. **Back substitution**, $\mathbf{U}\mathbf{x}=\mathbf{z}$, bottom to top.
 
-With $\mathbf{b}=(1,3,6)$, forward substitution gives $c_1=1$, then $2c_1+c_2=3$ so $c_2=1$, then $-c_1+c_2+c_3=6$ so $c_3=6$. Back substitution gives $3x_3=6$ so $x_3=2$, then $3x_2+2x_3=1$ so $x_2=-1$, then $2x_1+x_2=1$ so $x_1=1$. The solution is $\mathbf{x}=(1,-1,2)$; checking, $\mathbf{A}\mathbf{x}=(2-1+0,\ 4-5+4,\ -2-2+10)=(1,3,6)$.
+With $\mathbf{b}=(1,3,6)$, forward substitution gives $z_1=1$, then $2z_1+z_2=3$ so $z_2=1$, then $-z_1+z_2+z_3=6$ so $z_3=6$. Back substitution gives $3x_3=6$ so $x_3=2$, then $3x_2+2x_3=1$ so $x_2=-1$, then $2x_1+x_2=1$ so $x_1=1$. The solution is $\mathbf{x}=(1,-1,2)$; checking, $\mathbf{A}\mathbf{x}=(2-1+0,\ 4-5+4,\ -2-2+10)=(1,3,6)$.
 
 Forward substitution is just elimination applied to $\mathbf{b}$: it performs on the right-hand side the same row operations that turned $\mathbf{A}$ into $\mathbf{U}$.
 
@@ -107,11 +107,11 @@ Forward substitution is just elimination applied to $\mathbf{b}$: it performs on
 >     return L, U
 >
 > def solve_lu(L, U, b):
->     n = len(b); c = np.zeros(n); x = np.zeros(n)
->     for i in range(n):                           # forward substitution: L c = b
->         c[i] = b[i] - L[i, :i] @ c[:i]
->     for i in reversed(range(n)):                 # back substitution: U x = c
->         x[i] = (c[i] - U[i, i+1:] @ x[i+1:]) / U[i, i]
+>     n = len(b); z = np.zeros(n); x = np.zeros(n)
+>     for i in range(n):                           # forward substitution: L z = b
+>         z[i] = b[i] - L[i, :i] @ z[:i]
+>     for i in reversed(range(n)):                 # back substitution: U x = z
+>         x[i] = (z[i] - U[i, i+1:] @ x[i+1:]) / U[i, i]
 >     return x
 >
 > A = np.array([[2, 1, 0], [4, 5, 2], [-2, 2, 5]])
@@ -139,7 +139,7 @@ $$
 \mathbf{L}=\begin{bmatrix}1&0&0\\3&1&0\\2&0&1\end{bmatrix},\qquad\mathbf{U}=\begin{bmatrix}1&2&3\\0&1&-1\\0&0&1\end{bmatrix}.
 $$
 
-A **permutation matrix** $\mathbf{P}$ is the identity with its rows reordered; $\mathbf{P}\mathbf{A}$ reorders the rows of $\mathbf{A}$ the same way. Note that the multipliers in $\mathbf{L}$ travel with their rows: $\ell=3$ belongs to the row $(3,7,8)$, which is now second. To solve $\mathbf{A}\mathbf{x}=\mathbf{b}$, apply the same exchange to $\mathbf{b}$: solve $\mathbf{L}\mathbf{c}=\mathbf{P}\mathbf{b}$, then $\mathbf{U}\mathbf{x}=\mathbf{c}$.
+A **permutation matrix** $\mathbf{P}$ is the identity with its rows reordered; $\mathbf{P}\mathbf{A}$ reorders the rows of $\mathbf{A}$ the same way. Note that the multipliers in $\mathbf{L}$ travel with their rows: $\ell=3$ belongs to the row $(3,7,8)$, which is now second. To solve $\mathbf{A}\mathbf{x}=\mathbf{b}$, apply the same exchange to $\mathbf{b}$: solve $\mathbf{L}\mathbf{z}=\mathbf{P}\mathbf{b}$, then $\mathbf{U}\mathbf{x}=\mathbf{z}$.
 
 Two remarks:
 - **If no non-zero entry exists below a zero pivot, the matrix is singular.** Exchanges cannot help, and $\mathbf{U}$ ends up with a zero on its diagonal. This is the case the rest of the lecture is about.
@@ -234,7 +234,7 @@ $$
 > [!note] Definition: nullspace
 > The **nullspace** of $\mathbf{A}\in\mathbb{R}^{m\times n}$ is $N(\mathbf{A})=\{\mathbf{x}\in\mathbb{R}^n:\mathbf{A}\mathbf{x}=\mathbf{0}\}$.
 
-It is a subspace of $\mathbb{R}^n$ (the space of inputs, not outputs): if $\mathbf{A}\mathbf{x}=\mathbf{0}$ and $\mathbf{A}\mathbf{y}=\mathbf{0}$ then $\mathbf{A}(c\mathbf{x}+d\mathbf{y})=\mathbf{0}$. In the column picture, a nullspace vector is a recipe for combining the columns into zero, so a non-zero nullspace exists exactly when the columns are dependent. By the boxed fact above, $N(\mathbf{A})=N(\operatorname{rref}(\mathbf{A}))$, and the reduced system is easy to solve.
+It is a subspace of $\mathbb{R}^n$ (the space of inputs, not outputs): if $\mathbf{A}\mathbf{x}=\mathbf{0}$ and $\mathbf{A}\mathbf{x}'=\mathbf{0}$ then $\mathbf{A}(c\mathbf{x}+d\mathbf{x}')=\mathbf{0}$. In the column picture, a nullspace vector is a recipe for combining the columns into zero, so a non-zero nullspace exists exactly when the columns are dependent. By the boxed fact above, $N(\mathbf{A})=N(\operatorname{rref}(\mathbf{A}))$, and the reduced system is easy to solve.
 
 ### Special solutions
 
@@ -345,7 +345,7 @@ Two consequences are worth stating on their own.
 - **A wide matrix always has a non-zero nullspace.** If $n>m$ then $r\le m<n$, so $n-r\ge n-m\ge1$. More unknowns than equations means at least $n-m$ free variables and a non-zero solution of $\mathbf{A}\mathbf{x}=\mathbf{0}$.
 - **Independent columns mean $N(\mathbf{A})=\{\mathbf{0}\}$.** If $r=n$ there are no free columns, and the only solution of $\mathbf{A}\mathbf{x}=\mathbf{0}$ is $\mathbf{x}=\mathbf{0}$. For a square matrix this is invertibility.
 
-In the Celsius–Fahrenheit design matrix of [[Column Space and Rank#The column space]], $n=3$ columns and $r=2$, so the nullspace is a line, spanned by $(32,1.8,-1)$: the one dependency $32\cdot\mathbf{1}+1.8\,\mathbf{c}-\mathbf{f}=\mathbf{0}$. For a model with $D$ weights fitted to $N<D$ data points, the nullspace of $\mathbf{X}$ has dimension at least $D-N$: that many directions in weight space change nothing about the training predictions.
+In the Celsius–Fahrenheit design matrix of [[Column Space and Rank#The data matrix and its column space]], $n=3$ columns and $r=2$, so the nullspace is a line, spanned by $(32,1.8,-1)$: the one dependency $32\cdot\mathbf{1}+1.8\,\mathbf{t}_{\mathrm{C}}-\mathbf{t}_{\mathrm{F}}=\mathbf{0}$. For a model with $D$ weights fitted to $N<D$ data points, the nullspace of $\mathbf{X}$ has dimension at least $D-N$: that many directions in weight space change nothing about the training predictions.
 
 ## The complete solution to Ax = b
 
@@ -367,9 +367,9 @@ The last row reads $0=b_1-b_2+b_3$. **This is the solvability condition**, the s
 To find one solution, set all free variables to zero and read off the pivot variables: $x_2=x_4=0$ gives $x_1=2$ and $x_3=1$, so the **particular solution** is $\mathbf{x}_p=(2,0,1,0)$. In the column picture, $2\mathbf{a}_1+\mathbf{a}_3=(2,4,2)+(1,3,2)=(3,7,4)$. Then
 
 > [!note] The complete solution
-> If $\mathbf{A}\mathbf{x}_p=\mathbf{b}$, then the solutions of $\mathbf{A}\mathbf{x}=\mathbf{b}$ are exactly $\mathbf{x}=\mathbf{x}_p+\mathbf{x}_n$ with $\mathbf{x}_n\in N(\mathbf{A})$.
+> If $\mathbf{A}\mathbf{x}_p=\mathbf{b}$, then the solutions of $\mathbf{A}\mathbf{x}=\mathbf{b}$ are exactly $\mathbf{x}=\mathbf{x}_p+\mathbf{x}_{\mathrm{null}}$ with $\mathbf{x}_{\mathrm{null}}\in N(\mathbf{A})$.
 
-The proof is one line each way. If $\mathbf{A}\mathbf{x}_n=\mathbf{0}$ then $\mathbf{A}(\mathbf{x}_p+\mathbf{x}_n)=\mathbf{b}+\mathbf{0}=\mathbf{b}$. Conversely, if $\mathbf{A}\mathbf{x}=\mathbf{b}$ then $\mathbf{A}(\mathbf{x}-\mathbf{x}_p)=\mathbf{b}-\mathbf{b}=\mathbf{0}$, so $\mathbf{x}-\mathbf{x}_p\in N(\mathbf{A})$. For the running example,
+The proof is one line each way. If $\mathbf{A}\mathbf{x}_{\mathrm{null}}=\mathbf{0}$ then $\mathbf{A}(\mathbf{x}_p+\mathbf{x}_{\mathrm{null}})=\mathbf{b}+\mathbf{0}=\mathbf{b}$. Conversely, if $\mathbf{A}\mathbf{x}=\mathbf{b}$ then $\mathbf{A}(\mathbf{x}-\mathbf{x}_p)=\mathbf{b}-\mathbf{b}=\mathbf{0}$, so $\mathbf{x}-\mathbf{x}_p\in N(\mathbf{A})$. For the running example,
 
 $$
 \mathbf{x}=\begin{bmatrix}2\\0\\1\\0\end{bmatrix}+c\begin{bmatrix}-2\\1\\0\\0\end{bmatrix}+d\begin{bmatrix}-1\\0\\-1\\1\end{bmatrix},\qquad c,d\in\mathbb{R}.
@@ -380,7 +380,7 @@ Geometrically, the solution set is the nullspace **shifted** by $\mathbf{x}_p$: 
 ![[Probability and Linear Algebra/images/elimination-and-the-nullspace-solution-sets.svg]]
 *Figure 4. The complete solution is the nullspace shifted by a particular solution. (a) One equation $x_1+x_2+x_3=3$ in three unknowns: $N(\mathbf{A})$ is the plane $x_1+x_2+x_3=0$, and the solutions form the parallel plane through $\mathbf{x}_p=(3,0,0)$. (b) Two equations, $x_1+x_2+x_3=3$ and $x_1+2x_2+3x_3=6$: elimination gives the special solution $\mathbf{s}=(1,-2,1)$ and $\mathbf{x}_p=(0,3,0)$, so the solutions form a line parallel to $N(\mathbf{A})$.*
 
-The particular solution is not unique (any solution can play its role), and neither is the basis of the nullspace. The *set* of solutions is unique. Among all solutions there is one of **smallest length**, the one with no nullspace component; it lies in the row space, and finding it is the job of the pseudo-inverse in [[The Four Fundamental Subspaces#The big picture]].
+The particular solution is not unique (any solution can play its role), and neither is the basis of the nullspace. The *set* of solutions is unique. Among all solutions there is one of **smallest length**, the one with no nullspace component; it lies in the row space, and finding it is the job of the pseudo-inverse in [[The Four Fundamental Subspaces#A teaser: the pseudo-inverse]].
 
 ### The four cases
 
@@ -404,7 +404,7 @@ The running example is in the last case ($r=2<m=3$ and $r<n=4$): $\mathbf{b}=(1,
 
 Fitting a linear model exactly means solving $\mathbf{X}\mathbf{w}=\mathbf{y}$ with $N$ equations (data points) and $D$ unknowns (weights), so the table above is a table of regression regimes.
 
-- **$N>D$ with independent features ($r=D<N$), the classical case.** At most one exact fit, and with noisy targets $\mathbf{y}\notin C(\mathbf{X})$, so in practice none. We settle for the closest fit: least squares in [[Orthogonality and Least Squares#Least squares]], which has a unique solution because $N(\mathbf{X})=\{\mathbf{0}\}$.
+- **$N>D$ with independent features ($r=D<N$), the classical case.** At most one exact fit, and with noisy targets $\mathbf{y}\notin C(\mathbf{X})$, so in practice none. We settle for the closest fit: least squares in [[Orthogonality and Least Squares#Least squares]], which has a unique solution because the nullspace of $\mathbf{X}$ is $\{\mathbf{0}\}$.
 - **$N<D$ with independent data points ($r=N<D$), the overparameterized case.** Every target vector is fitted exactly, by a $(D-N)$-dimensional family of weight vectors. Which one we get depends on the algorithm and on regularization. Ridge regression ([[Linear Models#MAP estimation and regularization]]) has a unique answer for every penalty $\lambda>0$, and as $\lambda\to0$ that answer tends to the shortest exact fit, the minimum-norm (pseudo-inverse) solution.
 - **Redundant features ($r<D$) in either regime.** The nullspace of $\mathbf{X}$ is non-zero, so the weights are not identifiable even when the predictions are. Least squares still has solutions, but infinitely many, and individual coefficients mean nothing until the redundancy is removed or regularized.
 
@@ -415,13 +415,13 @@ Fitting a linear model exactly means solving $\mathbf{X}\mathbf{w}=\mathbf{y}$ w
 - The reduced row echelon form is $\begin{bmatrix}\mathbf{I}&\mathbf{F}\\\mathbf{0}&\mathbf{0}\end{bmatrix}\mathbf{P}_c$. Its non-zero rows are the $\mathbf{R}$ of $\mathbf{A}=\mathbf{C}\mathbf{R}$, its pivot columns locate $\mathbf{C}$, and the dependent columns of $\mathbf{A}$ are $\mathbf{C}\mathbf{F}$.
 - Elimination does not change the nullspace. Each free column gives a special solution; together they are the columns of $\mathbf{N}=\mathbf{P}_c^\top\begin{bmatrix}-\mathbf{F}\\\mathbf{I}\end{bmatrix}$, a basis of $N(\mathbf{A})$.
 - Counting theorem: $\dim N(\mathbf{A})=n-r$. A wide matrix always has a non-zero nullspace.
-- The complete solution is $\mathbf{x}_p+\mathbf{x}_n$: the nullspace shifted by any one solution. Zero rows give solvability conditions; free columns give infinitely many solutions.
+- The complete solution is $\mathbf{x}_p+\mathbf{x}_{\mathrm{null}}$: the nullspace shifted by any one solution. Zero rows give solvability conditions; free columns give infinitely many solutions.
 
 ## Where this shows up next
 
 - [[The Four Fundamental Subspaces]] adds the left nullspace (where the solvability conditions come from) and proves that the nullspace is perpendicular to the row space.
 - [[Orthogonality and Least Squares]] handles the "0 solutions" case by projecting $\mathbf{b}$ onto $C(\mathbf{A})$, and replaces elimination by $\mathbf{A}=\mathbf{Q}\mathbf{R}$ for stability.
-- [[Eigenvalues and Eigenvectors]] finds eigenvectors as nullspace vectors of $\mathbf{A}-\lambda\mathbf{I}$.
+- [[Eigenvalues and Eigenvectors]] finds eigenvectors as nullspace vectors of $\mathbf{A}$ minus an eigenvalue times $\mathbf{I}$.
 - [[Five Factorizations of a Matrix]] compares $\mathbf{L}\mathbf{U}$ and $\mathbf{C}\mathbf{R}$ with the other factorizations and develops block elimination.
 - [[Linear Models]] and [[Matrix Factorization and Dimensionality Reduction]] meet underdetermined systems in overparameterized regression and the pseudo-inverse.
 

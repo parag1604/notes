@@ -55,10 +55,10 @@ $$
 p_X(x)=\mathbb{P}(X=x),\qquad p_X(x)\ge0,\qquad \sum_xp_X(x)=1.
 $$
 
-The PMF is the **ideal histogram**. Roll a die $N$ times and plot the fraction of each face: as $N$ grows, the bars settle at the PMF (Figure 2). This is the frequency model of [[Probability Basics#The frequency model|Probability Basics]] again, now for all values at once.
+The PMF is the **ideal histogram**. Roll a die $n$ times and plot the fraction of each face: as $n$ grows, the bars settle at the PMF (Figure 2). This is the frequency model of [[Probability Basics#The frequency model|Probability Basics]] again, now for all values at once.
 
 ![[Probability and Linear Algebra/images/random-variables-histograms.svg]]
-*Figure 2. Histograms of $N$ rolls of a fair die. With 30 rolls the bars are ragged; with 30 000 they sit on the PMF $1/6$ (dashed). The PMF is what histograms converge to.*
+*Figure 2. Histograms of $n$ rolls of a fair die. With 30 rolls the bars are ragged; with 30 000 they sit on the PMF $1/6$ (dashed). The PMF is what histograms converge to.*
 
 Different random variables can share a PMF. If $X$ is uniform on $\{-1,0,1\}$, then $Y=-X$ has exactly the same PMF, although $X\ne Y$ for most outcomes. The PMF describes the **distribution** of values, not the random variable itself.
 
@@ -113,7 +113,7 @@ $$
 
 Two pictures help.
 - **Centre of mass.** Place a weight $p_X(x)$ at each position $x$ on a rod. $\mathbb{E}[X]$ is the point where the rod balances. A heavy weight far out pulls the balance point towards it.
-- **The long-run average.** Average $N$ observations $x_1,\dots,x_N$ and group them by value: $\frac1N\sum_ix_i=\sum_xx\cdot\frac{\#\{i:x_i=x\}}{N}$. This is the expectation formula with the empirical histogram in place of the PMF. As $N$ grows, the histogram approaches the PMF (Figure 2), so the sample mean approaches $\mathbb{E}[X]$. The [[Sample Statistics#The law of large numbers|law of large numbers]] makes this precise.
+- **The long-run average.** Average $n$ observations $x_1,\dots,x_n$ and group them by value: $\frac1n\sum_ix_i=\sum_xx\cdot\frac{\#\{i:x_i=x\}}{n}$. This is the expectation formula with the empirical histogram in place of the PMF. As $n$ grows, the histogram approaches the PMF (Figure 2), so the sample mean approaches $\mathbb{E}[X]$. The [[Sample Statistics#The law of large numbers|law of large numbers]] makes this precise.
 
 The expectation need not be a value $X$ can take. A biased coin with $\mathbb{P}(\text{heads})=3/4$, coded $X\in\{0,1\}$, has $\mathbb{E}[X]=3/4$.
 
@@ -176,7 +176,7 @@ so the mean minimizes the expected **squared** error. The median minimizes the e
 *Figure 4. (a) A right-skewed (log-normal) density: the mode (1.15), median (1.65) and mean (1.97) separate, in that order. (b) For $X\ge0$, the mean equals the area between the CDF and 1, formula (2).*
 
 > [!warning] The mean need not exist
-> The expectation is defined only when $\sum|x|\,p_X(x)$ or $\int|x|\,f_X(x)\,dx$ is finite. The **Cauchy** density $f(x)=\frac{1}{\pi(1+x^2)}$ is symmetric about 0, yet has no mean. Its tails decay so slowly that $\int_0^\infty x\,f(x)\,dx=\infty$, and the left half gives $-\infty$, and $\infty-\infty$ is undefined. Averages of Cauchy samples never settle down ([[Sample Statistics#The law of large numbers|Sample Statistics]]). Similarly, $p(k)=\frac{6}{\pi^2k^2}$ for $k\ge1$ is a valid PMF with $\mathbb{E}[X]=\infty$.
+> The expectation is defined only when $\sum|x|\,p_X(x)$ or $\int|x|\,f_X(x)\,dx$ is finite. The **Cauchy** density $f(x)=\frac{1}{\pi(1+x^2)}$ is symmetric about 0, yet has no mean. Its tails decay so slowly that $\int_0^\infty x\,f(x)\,dx=\infty$, and the left half gives $-\infty$, and $\infty-\infty$ is undefined. Averages of Cauchy samples never settle down ([[Sample Statistics#The law of large numbers|Sample Statistics]]). Similarly, $p_X(k)=\frac{6}{\pi^2k^2}$ for $k\ge1$ is a valid PMF with $\mathbb{E}[X]=\infty$.
 
 ## Variance and moments
 
@@ -245,14 +245,14 @@ $$
 
 The intuition is that a non-negative quantity cannot often be much larger than its average. If the mean income is 50 000, at most 10% of people can earn 500 000 or more; otherwise those people alone would push the mean above 50 000.
 
-**Chebyshev's inequality.** If $X$ has mean $\mu$ and variance $\sigma^2$, then for $k>0$,
+**Chebyshev's inequality.** If $X$ has mean $\mu$ and variance $\sigma^2$, then for $\varepsilon>0$ and $k>0$,
 
 $$
-\mathbb{P}\big(|X-\mu|\ge k\big)\le\frac{\sigma^2}{k^2},\qquad\text{equivalently}\qquad\mathbb{P}\big(|X-\mu|\ge k\sigma\big)\le\frac{1}{k^2}.
+\mathbb{P}\big(|X-\mu|\ge \varepsilon\big)\le\frac{\sigma^2}{\varepsilon^2},\qquad\text{equivalently}\qquad\mathbb{P}\big(|X-\mu|\ge k\sigma\big)\le\frac{1}{k^2}.
 \tag{5}
 $$
 
-*Proof:* apply Markov to the non-negative variable $(X-\mu)^2$ with $a=k^2$.
+*Proof:* apply Markov to the non-negative variable $(X-\mu)^2$ with $a=\varepsilon^2$.
 
 Chebyshev holds for **every** distribution with a finite variance: at most 25% of the probability lies more than 2 standard deviations from the mean, and at most 11% more than 3. The price of this generality is looseness. For a Gaussian the true numbers are 4.6% and 0.3%. Figure 5b compares the bounds with the exact tail of an exponential distribution. Both bounds decay polynomially, while the true tail decays exponentially. [[Sample Statistics#Chernoff bounds|Chernoff bounds]] recover the exponential rate by applying Markov to $e^{sX}$ instead of $X$.
 
@@ -287,10 +287,10 @@ $$
 
 The tail formula follows because "$X>k$" means "the first $k$ trials all failed". By (2), $\mathbb{E}[X]=\sum_{k\ge0}(1-p)^k=1/p$, the same answer as first-step analysis gave.
 
-The geometric distribution is **memoryless**. Given that the first $m$ trials have failed, the number of further trials needed has the same distribution as if we had just started:
+The geometric distribution is **memoryless**. Given that the first $j$ trials have failed, the number of further trials needed has the same distribution as if we had just started:
 
 $$
-\mathbb{P}(X>m+k\mid X>m)=\frac{(1-p)^{m+k}}{(1-p)^{m}}=(1-p)^k=\mathbb{P}(X>k).
+\mathbb{P}(X>j+k\mid X>j)=\frac{(1-p)^{j+k}}{(1-p)^{j}}=(1-p)^k=\mathbb{P}(X>k).
 $$
 
 The coin does not remember its past failures (Figure 7a). This is also why the **gambler's fallacy** is a fallacy: after ten reds at roulette, black is not "due". Memorylessness characterizes the geometric distribution: it is the only distribution on $\{1,2,\dots\}$ with this property, because the condition forces $\mathbb{P}(X>k)=\mathbb{P}(X>1)^k$.
@@ -343,7 +343,7 @@ If the time until a light bulb fails is exponential, a bulb that has already bur
 *Figure 7. Memorylessness. (a) Geometric with $p=0.25$: the distribution of the number of further trials, given 3 failures so far (orange), equals the original distribution (blue). (b) Exponential with $\lambda=1$: of 200 000 simulated waits, those longer than 1.5 have a remaining wait (orange outline) distributed exactly like a fresh wait (blue).*
 
 > [!note]- Aside: the exponential is the only memoryless continuous distribution
-> Let $S(t)=\mathbb{P}(X>t)$ for a waiting time $X\ge0$. Memorylessness says $S(s+t)=S(s)\,S(t)$ for all $s,t\ge0$. Then $S(2t)=S(t)^2$, and more generally $S(qt)=S(t)^q$ for every rational $q>0$. A non-increasing function satisfying this on the rationals is determined everywhere, so $S(t)=S(1)^t=e^{-\lambda t}$ with $\lambda=-\ln S(1)$. Kumar proves this carefully, because the same functional equation produces the Poisson process.[^kumar2012]
+> Let $S(t)=\mathbb{P}(X>t)$ for a waiting time $X\ge0$. Memorylessness says $S(s+t)=S(s)\,S(t)$ for all $s,t\ge0$. Then $S(2t)=S(t)^2$, and more generally $S(rt)=S(t)^r$ for every rational $r>0$. A non-increasing function satisfying this on the rationals is determined everywhere, so $S(t)=S(1)^t=e^{-\lambda t}$ with $\lambda=-\ln S(1)$. Kumar proves this carefully, because the same functional equation produces the Poisson process.[^kumar2012]
 
 ### Gaussian
 
@@ -433,10 +433,10 @@ So the hazard is another complete description of the distribution. It is often t
 - **Increasing hazard** means wear-out: old machines fail more readily.
 - **Decreasing hazard** means "infant mortality": items that survive an initial period become more reliable.
 
-The **Weibull** family, $S(t)=e^{-(t/\eta)^k}$ with hazard $h(t)=\frac{k}{\eta}(t/\eta)^{k-1}$, covers all three cases with a single shape parameter $k$ (Figure 10). Real systems often show a "bathtub" hazard: decreasing early, flat during normal life, increasing at the end.
+The **Weibull** family, $S(t)=e^{-(t/\eta)^\kappa}$ with hazard $h(t)=\frac{\kappa}{\eta}(t/\eta)^{\kappa-1}$, covers all three cases with a single shape parameter $\kappa$ (Figure 10). Real systems often show a "bathtub" hazard: decreasing early, flat during normal life, increasing at the end.
 
 ![[Probability and Linear Algebra/images/random-variables-hazard.svg]]
-*Figure 10. Weibull lifetimes with scale 1. (a) The shape $k$ controls whether the hazard falls ($k<1$), stays constant ($k=1$, the exponential) or rises ($k>1$). (b) The corresponding survival functions.*
+*Figure 10. Weibull lifetimes with scale 1. (a) The shape $\kappa$ controls whether the hazard falls ($\kappa<1$), stays constant ($\kappa=1$, the exponential) or rises ($\kappa>1$). (b) The corresponding survival functions.*
 
 **Survival analysis**, the statistics of time-to-event data, is built on these functions.[^kalbfleisch2002] Its characteristic difficulty is **censoring**. A study ends while some patients are still alive, so for them we only know $T>t_{\text{end}}$. Methods such as the Kaplan–Meier estimator and Cox's proportional hazards model use these partial observations instead of discarding them. The same ideas apply to customer churn and to time-to-failure in reliability engineering.
 
@@ -477,7 +477,7 @@ Formula (7) answers "given $g$, what is the distribution of $g(U)$?". Sampling a
 
 Picture it on the graph of $F$ (Figure 12a). Spread points evenly up the vertical axis and map each one horizontally to the curve and down to the $x$-axis. Where the CDF is steep, which is where the density is high, a whole band of heights lands on a short stretch of $x$, so samples pile up there. Where the CDF is flat, they are sparse. Some examples:
 - **Exponential:** $F(x)=1-e^{-\lambda x}$ inverts to $X=-\ln(1-U)/\lambda$ (Figure 12b).
-- **Discrete:** cut $[0,1]$ into consecutive pieces of lengths $p_1,p_2,\dots$ and output $k$ if $U$ falls in the $k$-th piece. This is the generalized inverse of the staircase CDF.
+- **Discrete:** cut $[0,1]$ into consecutive pieces of lengths $p_X(1),p_X(2),\dots$ and output $k$ if $U$ falls in the $k$-th piece. This is the generalized inverse of the staircase CDF.
 - **Gaussian:** $X=\mu+\sigma\,\Phi^{-1}(U)$, with $\Phi^{-1}$ computed numerically.
 
 The converse, the **probability integral transform**, is just as useful. It turns any continuous variable into a uniform one, which is how calibration of predicted probabilities is checked and how Q–Q plots compare distributions.
@@ -495,7 +495,7 @@ The converse, the **probability integral transform**, is just as useful. It turn
 >     return -np.log1p(-u) / lam            # F^{-1}(u) = -ln(1-u)/lam
 >
 > def sample_discrete(values, probs, n):
->     cdf = np.cumsum(probs)                # cut [0,1] into pieces of length p_k
+>     cdf = np.cumsum(probs)                # cut [0,1] into pieces of length p_X(k)
 >     idx = np.searchsorted(cdf, rng.random(n), side="right")
 >     return np.asarray(values)[np.minimum(idx, len(values) - 1)]
 >
@@ -507,29 +507,29 @@ The converse, the **probability integral transform**, is just as useful. It turn
 
 ### Rejection sampling
 
-Inverse-CDF sampling needs $F^{-1}$, which is often unavailable, for example when we only know the density, or only know it up to a constant. **Rejection sampling** needs much less: a density $g$ that we *can* sample from, and a constant $M$ such that $f(x)\le M\,g(x)$ everywhere. The curve $Mg$ is called the **envelope**.
+Inverse-CDF sampling needs $F^{-1}$, which is often unavailable, for example when we only know the density, or only know it up to a constant. **Rejection sampling** needs much less: a density $q$ that we *can* sample from, and a constant $M$ such that $f(x)\le M\,q(x)$ everywhere. The curve $Mq$ is called the **envelope**.
 
 > [!example] Algorithm: rejection sampling
 > Repeat until a sample is accepted:
-> 1. Draw a proposal $X\sim g$.
+> 1. Draw a proposal $X\sim q$.
 > 2. Draw $U\sim\operatorname{Uniform}(0,1)$.
-> 3. Accept $X$ if $U\le\dfrac{f(X)}{M\,g(X)}$; otherwise reject it and go back to step 1.
+> 3. Accept $X$ if $U\le\dfrac{f(X)}{M\,q(X)}$; otherwise reject it and go back to step 1.
 
-The geometric picture explains why this works (Figure 13). The pair $\big(X,\,U\,Mg(X)\big)$ is a point uniformly distributed **under the graph of $Mg$**. Keeping only the points that fall under the graph of $f$ leaves points uniformly distributed under $f$. The $x$-coordinate of a point uniform under the graph of $f$ has density exactly $f$, because the amount of area above each $x$ is proportional to $f(x)$.
+The geometric picture explains why this works (Figure 13). The pair $\big(X,\,U\,Mq(X)\big)$ is a point uniformly distributed **under the graph of $Mq$**. Keeping only the points that fall under the graph of $f$ leaves points uniformly distributed under $f$. The $x$-coordinate of a point uniform under the graph of $f$ has density exactly $f$, because the amount of area above each $x$ is proportional to $f(x)$.
 
 > [!proof]- Proof that accepted samples have density $f$
 > For any $x$,
 >
 > $$
-> \mathbb{P}(X\le x,\ \text{accept})=\int_{-\infty}^{x}g(t)\,\frac{f(t)}{M\,g(t)}\,dt=\frac{F(x)}{M}.
+> \mathbb{P}(X\le x,\ \text{accept})=\int_{-\infty}^{x}q(t)\,\frac{f(t)}{M\,q(t)}\,dt=\frac{F(x)}{M}.
 > $$
 >
-> Letting $x\to\infty$ gives $\mathbb{P}(\text{accept})=1/M$. So $\mathbb{P}(X\le x\mid\text{accept})=F(x)$. The same calculation works if $f$ is known only up to a constant $Z$, as long as $f/Z\le Mg$; the acceptance probability becomes $Z/M$.
+> Letting $x\to\infty$ gives $\mathbb{P}(\text{accept})=1/M$. So $\mathbb{P}(X\le x\mid\text{accept})=F(x)$. The same calculation works if $f$ is known only up to a constant $C$, as long as $f/C\le Mq$; the acceptance probability becomes $C/M$.
 
-Each proposal is accepted independently with probability $1/M$, so the number of proposals per accepted sample is [[#Geometric and memorylessness|geometric]] with mean $M$. A tight envelope matters. In high dimensions it is usually impossible to find one: the volume between $Mg$ and $f$ grows exponentially with the dimension, and almost every proposal is rejected. This is the motivation for the Markov chain Monte Carlo methods in [[Markov Chains#Aside: Markov chain Monte Carlo|Markov Chains]], which give up independent samples in exchange for scaling to high dimensions.
+Each proposal is accepted independently with probability $1/M$, so the number of proposals per accepted sample is [[#Geometric and memorylessness|geometric]] with mean $M$. A tight envelope matters. In high dimensions it is usually impossible to find one: the volume between $Mq$ and $f$ grows exponentially with the dimension, and almost every proposal is rejected. This is the motivation for the Markov chain Monte Carlo methods in [[Markov Chains#Aside: Markov chain Monte Carlo|Markov Chains]], which give up independent samples in exchange for scaling to high dimensions.
 
 ![[Probability and Linear Algebra/images/random-variables-rejection.svg]]
-*Figure 13. Rejection sampling for a two-bump density on $[0,1]$ with a uniform proposal. Points are scattered uniformly under the envelope $Mg$ (dashed); those under the target $f$ are kept (orange). Their $x$-coordinates are samples from $f$. The fraction kept is $1/M\approx0.56$.*
+*Figure 13. Rejection sampling for a two-bump density on $[0,1]$ with a uniform proposal. Points are scattered uniformly under the envelope $Mq$ (dashed); those under the target $f$ are kept (orange). Their $x$-coordinates are samples from $f$. The fraction kept is $1/M\approx0.56$.*
 
 > [!example]- Code: rejection sampling
 > ```python
@@ -543,9 +543,9 @@ Each proposal is accepted independently with probability $1/M$, so the number of
 > def rejection_sample(n, M):
 >     out, proposals = [], 0
 >     while len(out) < n:
->         x = rng.random()                   # propose from g = Uniform(0, 1)
+>         x = rng.random()                   # propose from q = Uniform(0, 1)
 >         proposals += 1
->         if rng.random() * M <= f(x):       # accept with probability f(x) / (M g(x))
+>         if rng.random() * M <= f(x):       # accept with probability f(x) / (M q(x))
 >             out.append(x)
 >     return np.array(out), n / proposals
 >
@@ -618,22 +618,22 @@ $$
 A Poisson process has $\lambda^*(t)=\lambda$, ignoring the history. In a **Hawkes process**,[^hawkes1971] each past event at time $t_i$ adds a bump to the current rate:
 
 $$
-\lambda^*(t)=\mu+\sum_{t_i<t}\phi(t-t_i),\qquad\text{typically}\quad\phi(s)=\alpha\,e^{-\beta s}.
+\lambda^*(t)=\nu+\sum_{t_i<t}\phi(t-t_i),\qquad\text{typically}\quad\phi(s)=\alpha\,e^{-\beta s}.
 \tag{8}
 $$
 
-Here $\mu$ is the **baseline** rate of spontaneous events, and each event raises the intensity by $\alpha$, an excitation that decays at rate $\beta$. Events beget events, so they arrive in clusters (Figure 15).
+Here $\nu$ is the **baseline** rate of spontaneous events, and each event raises the intensity by $\alpha$, an excitation that decays at rate $\beta$. Events beget events, so they arrive in clusters (Figure 15).
 
 ![[Probability and Linear Algebra/images/random-variables-hawkes.svg]]
-*Figure 15. (a) A Hawkes process with $\mu=0.5$, $\alpha=0.8$ and $\beta=1.2$. The intensity (blue) jumps at each event (ticks) and decays back towards the baseline, so events cluster. (b) A Poisson process with the same long-run rate $\mu/(1-\alpha/\beta)=1.5$: the same average number of events, spread evenly.*
+*Figure 15. (a) A Hawkes process with $\nu=0.5$, $\alpha=0.8$ and $\beta=1.2$. The intensity (blue) jumps at each event (ticks) and decays back towards the baseline, so events cluster. (b) A Poisson process with the same long-run rate $\nu/(1-\alpha/\beta)=1.5$: the same average number of events, spread evenly.*
 
-**The branching view.** A Hawkes process is a family tree. "Immigrant" events arrive as a Poisson process with rate $\mu$. Every event, immigrant or not, independently gives birth to a Poisson number of "children", at delays drawn from the density $\phi/n^*$. The mean number of children per event is the **branching ratio**
+**The branching view.** A Hawkes process is a family tree. "Immigrant" events arrive as a Poisson process with rate $\nu$. Every event, immigrant or not, independently gives birth to a Poisson number of "children", at delays drawn from the density $\phi/n^*$. The mean number of children per event is the **branching ratio**
 
 $$
 n^*=\int_0^\infty\phi(s)\,ds=\frac{\alpha}{\beta}.
 $$
 
-- If $n^*<1$, each family dies out, the process is stationary, and each immigrant founds a cluster of $1+n^*+n^{*2}+\cdots=1/(1-n^*)$ events on average. The long-run rate is therefore $\mu/(1-n^*)$. Taking expectations in (8) gives the same answer: the mean rate $\bar\lambda$ satisfies $\bar\lambda=\mu+n^*\bar\lambda$.
+- If $n^*<1$, each family dies out, the process is stationary, and each immigrant founds a cluster of $1+n^*+n^{*2}+\cdots=1/(1-n^*)$ events on average. The long-run rate is therefore $\nu/(1-n^*)$. Taking expectations in (8) gives the same answer: the mean rate $\lambda_\infty$ satisfies $\lambda_\infty=\nu+n^*\lambda_\infty$.
 - If $n^*\ge1$, the families can grow forever and the process explodes.
 
 For earthquakes, Ogata's ETAS model fits exactly this structure.[^ogata1988] Laub, Taimre and Pollett give a gentle introduction to Hawkes processes.[^laub2015]
@@ -643,9 +643,9 @@ For earthquakes, Ogata's ETAS model fits exactly this structure.[^ogata1988] Lau
 We cannot simulate a Hawkes process by adding exponential gaps, because the rate changes after every event. Instead we use thinning, as for the inhomogeneous Poisson process. The difficulty is that we need an upper bound on the intensity, and the intensity depends on events not yet simulated. Ogata's observation is that with a decaying kernel the intensity can only **decrease** until the next event.[^ogata1981] So its current value is a valid upper bound, until we accept the next event.
 
 > [!example] Algorithm: Ogata's thinning for a Hawkes process
-> Start at $t=0$ with no events.
+> Start at $t=0$ with no events, and simulate up to time $t_{\max}$.
 > 1. Set $\bar\lambda=\lambda^*(t)$, the current intensity. It bounds the intensity until the next event.
-> 2. Draw a candidate gap $W\sim\text{Exponential}(\bar\lambda)$ and move to $t\leftarrow t+W$. If $t>T$, stop.
+> 2. Draw a candidate gap $W\sim\text{Exponential}(\bar\lambda)$ and move to $t\leftarrow t+W$. If $t>t_{\max}$, stop.
 > 3. With probability $\lambda^*(t)/\bar\lambda$, accept: record an event at $t$, which raises the intensity by $\alpha$. Otherwise reject the candidate.
 > 4. Go to step 1.
 
@@ -656,22 +656,22 @@ Step 3 is rejection sampling: candidates come from a Poisson process with the en
 > import numpy as np
 > rng = np.random.default_rng(0)
 >
-> def hawkes(mu, alpha, beta, T):
->     """Events of a Hawkes process with intensity mu + sum_i alpha*exp(-beta*(t - t_i))."""
+> def hawkes(nu, alpha, beta, T):
+>     """Events of a Hawkes process with intensity nu + sum_i alpha*exp(-beta*(t - t_i))."""
 >     t, events, excite = 0.0, [], 0.0       # excite = self-excitation at the current time
 >     while True:
->         lam_bar = mu + excite              # an upper bound: the intensity only decays until the next event
+>         lam_bar = nu + excite              # an upper bound: the intensity only decays until the next event
 >         w = rng.exponential(1 / lam_bar)   # candidate from a Poisson process with rate lam_bar
 >         t += w
 >         excite *= np.exp(-beta * w)        # decay the excitation to the candidate time
 >         if t > T:
 >             return np.array(events)
->         if rng.random() * lam_bar <= mu + excite:   # keep it with probability lambda*(t) / lam_bar
+>         if rng.random() * lam_bar <= nu + excite:   # keep it with probability lambda*(t) / lam_bar
 >             events.append(t)
 >             excite += alpha                # the new event raises the intensity
 >
-> ev = hawkes(mu=0.5, alpha=0.8, beta=1.2, T=20_000)
-> print(len(ev) / 20_000, 0.5 / (1 - 0.8 / 1.2))   # empirical rate vs mu / (1 - alpha/beta) = 1.5
+> ev = hawkes(nu=0.5, alpha=0.8, beta=1.2, T=20_000)
+> print(len(ev) / 20_000, 0.5 / (1 - 0.8 / 1.2))   # empirical rate vs nu / (1 - alpha/beta) = 1.5
 > ```
 >
 > The exponential kernel makes the excitation a single number that decays by a factor $e^{-\beta w}$, so each step costs $O(1)$. The implementation was checked against the time-rescaling theorem: the compensator $\int\lambda^*$ evaluated between consecutive events gives i.i.d. Exponential(1) values.

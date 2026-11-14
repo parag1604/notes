@@ -17,7 +17,7 @@ next: "[[Monte Carlo and Temporal-Difference Learning]]"
 >
 > **Code:** [Actor-Critic](https://github.com/parag1604/Actor-Critic): batch, online and A2C/GAE actor-critic, a Gaussian actor for continuous control, and Soft Actor-Critic.
 
-**Notation used here.** The actor is $\pi_\theta$ and the critic has its own parameters $\phi$ ($\hat V_\phi$ or $\hat Q_\phi$). The TD error is $\delta_t$ and an advantage estimate is $\hat A_t$. In the convergence section the actor's step size is $\alpha_t$ and the critic's is $\beta_t$. A deterministic policy is $\mu_\theta(s)$, as in the series notation. Two local symbols: the entropy temperature is $\tau$, and the Polyak (soft target-update) rate is $\kappa$.
+**Notation used here.** The actor is $\pi_\theta$ and the critic has its own parameters $\phi$ ($\hat V_\phi$ or $\hat Q_\phi$). The TD error is $\delta_t$ and an advantage estimate is $\hat A_t$. In the convergence section the actor's step size is $\alpha_t$ and the critic's is $\beta_t$. A deterministic actor is also written $\pi_\theta$, with $a=\pi_\theta(s)$, as in the series notation; the sections on deterministic policy gradients and DDPG/TD3 say when $\pi_\theta$ is deterministic. Two local symbols: the entropy temperature is $\tau$, and the Polyak (soft target-update) rate is $\kappa$.
 
 ## Motivation
 
@@ -33,14 +33,14 @@ In the [[Introduction to Reinforcement Learning#Anatomy of an RL algorithm|anato
 
 ### The policy gradient in terms of values
 
-Start from the policy gradient with reward-to-go. We use the discounted objective $J(\theta)=\mathbb{E}_{\tau\sim p_\theta}\big[\sum_{t\ge0}\gamma^tr(s_t,a_t)\big]$ and write $p_\theta(s_t)$ for the distribution of the state at time $t$ under $\pi_\theta$. In expectation over everything that happens *after* $(s_t,a_t)$, the reward-to-go is $Q^{\pi_\theta}(s_t,a_t)$, so by the tower rule
+Start from the policy gradient with reward-to-go. We use the discounted objective $J(\theta)=\mathbb{E}_{\pi_\theta}\big[\sum_{t\ge0}\gamma^tr(s_t,a_t)\big]$ and write $p_\theta(s_t)$ for the distribution of the state at time $t$ under $\pi_\theta$. In expectation over everything that happens *after* $(s_t,a_t)$, the reward-to-go is $Q^{\pi_\theta}(s_t,a_t)$, so by the tower rule
 
 $$
 \nabla_\theta J(\theta)=\sum_{t\ge0}\gamma^t\,\mathbb{E}_{s_t\sim p_\theta(s_t),\,a_t\sim\pi_\theta(\cdot\mid s_t)}\Big[\nabla_\theta\log\pi_\theta(a_t\mid s_t)\,Q^{\pi_\theta}(s_t,a_t)\Big].
 \tag{1}
 $$
 
-This is the **policy gradient theorem**.[^sutton1999] (The factor $\gamma^t$ is discussed in [Discount factors](#discount-factors) below.) Its message: if we knew $Q^\pi$ exactly, a single sampled action per visited state would give an unbiased gradient term, with no need to wait for the rest of the trajectory.
+This is the **policy gradient theorem**.[^sutton1999] (The factor $\gamma^t$ is discussed in [[#Discount factors|Discount factors]] below.) Its message: if we knew $Q^\pi$ exactly, a single sampled action per visited state would give an unbiased gradient term, with no need to wait for the rest of the trajectory.
 
 Any function of the state alone can be subtracted, because the score has mean zero under the policy:
 
@@ -143,7 +143,7 @@ Option 2 is the **exact** gradient of the discounted objective. Start from the f
 Option 1 drops the $\gamma^t$ and treats a decision at $t=500$ as just as important as one at $t=0$. It is **not** the gradient of the discounted objective. In general it is not the gradient of any objective,[^nota2020] and natural actor-critic algorithms built on it are biased.[^thomas2014] Yet option 1 is what almost every implementation uses, including the CartPole code below. The reason: what we usually *want* is the long-run (undiscounted or average) reward, and $\gamma$ is only a variance-reduction device that shortens the effective horizon of the reward-to-go to about $1/(1-\gamma)$ steps. Under that reading, every state the policy visits should count equally, and option 1 is a deliberately biased, low-variance approximation of the gradient we care about.
 
 > [!note] Which one is used where
-> The tabular experiments in this lecture (Figures 1, 2 and 5) use option 2, so that every estimator targets the exact gradient and bias can be measured. The CartPole experiment (Figure 3) uses option 1, like most deep RL code. Sutton and Barto's one-step actor-critic keeps the factor, as a running product $I\leftarrow\gamma I$.[^suttonbarto]
+> The tabular experiments in this lecture (Figures 1, 2 and 5) use option 2, so that every estimator targets the exact gradient and bias can be measured. The CartPole experiment (Figure 3) uses option 1, like most deep RL code. Sutton and Barto's one-step actor-critic keeps the factor $\gamma^t$, updated as a running product (multiplied by $\gamma$ after every step).[^suttonbarto]
 
 ---
 
@@ -202,12 +202,12 @@ The price of sharing is a combined loss,
 
 $$
 \begin{aligned}
-\mathcal{L}(\theta)={}&-\sum_i\log\pi_\theta(a_i\mid s_i)\,\operatorname{sg}\big[\hat A_i\big]+c_V\sum_i\big(\hat V_\theta(s_i)-y_i\big)^2\\
-&-c_H\sum_i\mathcal{H}\big(\pi_\theta(\cdot\mid s_i)\big),
+\mathcal{L}(\theta)={}&-\sum_i\log\pi_\theta(a_i\mid s_i)\,\operatorname{sg}\big[\hat A_i\big]+\nu_V\sum_i\big(\hat V_\theta(s_i)-y_i\big)^2\\
+&-\nu_H\sum_i\mathcal{H}\big(\pi_\theta(\cdot\mid s_i)\big),
 \end{aligned}
 $$
 
-where $\operatorname{sg}[\cdot]$ is stop-gradient. The weights $c_V$ and $c_H$ must balance gradients of very different scales, and the two heads can interfere through the trunk. The optional entropy bonus $c_H\mathcal{H}$ discourages premature collapse to a deterministic policy. The advantage must be detached in the actor term: we want to move the *policy* towards good actions, not move the critic to make the advantage look larger.
+where $\operatorname{sg}[\cdot]$ is stop-gradient. The weights $\nu_V$ and $\nu_H$ must balance gradients of very different scales, and the two heads can interfere through the trunk. The optional entropy bonus $\nu_H\mathcal{H}$ discourages premature collapse to a deterministic policy. The advantage must be detached in the actor term: we want to move the *policy* towards good actions, not move the critic to make the advantage look larger.
 
 ### Parallel workers: A2C and A3C
 
@@ -361,38 +361,38 @@ This is the pathwise estimator from [[Policy Gradients#Straight-Through Gumbel-S
 
 ### Deterministic policy gradients
 
-Push this to the limit: let the actor be **deterministic**, $a=\mu_\theta(s)$, with continuous actions. There is then no distribution over actions to differentiate, and the gradient must come entirely from the critic.
+Push this to the limit: let the actor be **deterministic**, $a=\pi_\theta(s)$, with continuous actions. In this section and the next, $\pi_\theta(s)$ is an action, not a distribution over actions. There is then no distribution over actions to differentiate, and the gradient must come entirely from the critic.
 
 > [!note] Theorem (deterministic policy gradient; Silver et al., 2014)
-> Let $\mathcal{A}\subseteq\mathbb{R}^{d_a}$ be continuous, and let $p(s'\mid s,a)$, $r(s,a)$, $\mu_\theta(s)$ and their derivatives be continuous and bounded, so that differentiation and integration may be exchanged. For $J(\theta)=\mathbb{E}_{s_0\sim\rho_0}\big[V^{\mu_\theta}(s_0)\big]$ with $\gamma<1$,
+> Let the action space $\mathcal{A}$ be a continuous subset of a Euclidean space, and let $p(s'\mid s,a)$, $r(s,a)$, $\pi_\theta(s)$ and their derivatives be continuous and bounded, so that differentiation and integration may be exchanged. For $J(\theta)=\mathbb{E}_{s_0\sim\rho_0}\big[V^{\pi_\theta}(s_0)\big]$ with $\gamma<1$,
 > $$
-> \nabla_\theta J(\theta)=\sum_{t\ge0}\gamma^t\,\mathbb{E}_{s_t\sim p_\theta(s_t)}\Big[\nabla_\theta\mu_\theta(s_t)\,\nabla_aQ^{\mu_\theta}(s_t,a)\big|_{a=\mu_\theta(s_t)}\Big],
+> \nabla_\theta J(\theta)=\sum_{t\ge0}\gamma^t\,\mathbb{E}_{s_t\sim p_\theta(s_t)}\Big[\nabla_\theta\pi_\theta(s_t)\,\nabla_aQ^{\pi_\theta}(s_t,a)\big|_{a=\pi_\theta(s_t)}\Big],
 > $$
-> where $\nabla_\theta\mu_\theta(s)$ is the Jacobian of the action with respect to $\theta$ (transposed, $\dim\theta\times d_a$).
+> where $\nabla_\theta\pi_\theta(s)$ is the Jacobian of the action with respect to $\theta$, transposed: one row per parameter and one column per action coordinate.
 
 > [!proof]- Proof sketch
-> Write $\mu=\mu_\theta$. For a deterministic policy $V^\mu(s)=Q^\mu(s,\mu(s))$ and $Q^\mu(s,a)=r(s,a)+\gamma\int p(s'\mid s,a)V^\mu(s')\,ds'$. The parameter $\theta$ enters $V^\mu(s)$ in two places: through the action $\mu(s)$ chosen now, and through the policy followed afterwards, i.e. through $V^\mu(s')$. By the chain rule,
+> Write $\pi=\pi_\theta$ (deterministic). For a deterministic policy $V^\pi(s)=Q^\pi(s,\pi(s))$ and $Q^\pi(s,a)=r(s,a)+\gamma\int p(s'\mid s,a)V^\pi(s')\,ds'$. The parameter $\theta$ enters $V^\pi(s)$ in two places: through the action $\pi(s)$ chosen now, and through the policy followed afterwards, i.e. through $V^\pi(s')$. By the chain rule,
 > $$
-> \nabla_\theta V^\mu(s)=\nabla_\theta\mu(s)\,\nabla_aQ^\mu(s,a)\big|_{a=\mu(s)}+\gamma\int p\big(s'\mid s,\mu(s)\big)\,\nabla_\theta V^\mu(s')\,ds'.
+> \nabla_\theta V^\pi(s)=\nabla_\theta\pi(s)\,\nabla_aQ^\pi(s,a)\big|_{a=\pi(s)}+\gamma\int p\big(s'\mid s,\pi(s)\big)\,\nabla_\theta V^\pi(s')\,ds'.
 > $$
-> The second term has the same form one step later. Unrolling it $k$ times and letting $k\to\infty$ (the remainder is bounded by $\gamma^k$ times a constant) gives $\nabla_\theta V^\mu(s_0)=\sum_t\gamma^t\,\mathbb{E}\big[\nabla_\theta\mu(s_t)\nabla_aQ^\mu(s_t,a)|_{a=\mu(s_t)}\mid s_0\big]$. Average over $s_0\sim\rho_0$.
+> The second term has the same form one step later. Unrolling it $k$ times and letting $k\to\infty$ (the remainder is bounded by $\gamma^k$ times a constant) gives $\nabla_\theta V^\pi(s_0)=\sum_t\gamma^t\,\mathbb{E}\big[\nabla_\theta\pi(s_t)\nabla_aQ^\pi(s_t,a)|_{a=\pi(s_t)}\mid s_0\big]$. Average over $s_0\sim\rho_0$.
 
-The deterministic gradient is the expectation over states only. An off-policy version simply averages the same expression over the states in a buffer, $\mathbb{E}_{s\sim\mathcal{R}}\big[\nabla_\theta\mu_\theta(s)\nabla_a\hat Q_\phi(s,a)|_{a=\mu_\theta(s)}\big]$, and needs **no importance weights**, because there is no integral over actions to correct. Silver et al. also show that the stochastic policy gradient converges to the deterministic one as the policy's noise shrinks to zero.[^silver2014]
+The deterministic gradient is the expectation over states only. An off-policy version simply averages the same expression over the states in a buffer, $\mathbb{E}_{s\sim\mathcal{R}}\big[\nabla_\theta\pi_\theta(s)\nabla_a\hat Q_\phi(s,a)|_{a=\pi_\theta(s)}\big]$, and needs **no importance weights**, because there is no integral over actions to correct. Silver et al. also show that the stochastic policy gradient converges to the deterministic one as the policy's noise shrinks to zero.[^silver2014]
 
 ### DDPG and TD3
 
-**DDPG** (deep deterministic policy gradient; Lillicrap et al., 2016)[^lillicrap2016] makes this work with neural networks. It can be read as "approximate Q-learning for continuous actions", where the actor $\mu_\theta(s)\approx\arg\max_a\hat Q_\phi(s,a)$ is a learned maximizer.
+**DDPG** (deep deterministic policy gradient; Lillicrap et al., 2016)[^lillicrap2016] makes this work with neural networks. It can be read as "approximate Q-learning for continuous actions", where the actor $\pi_\theta(s)\approx\arg\max_a\hat Q_\phi(s,a)$ is a learned maximizer.
 
-- **Critic target:** $y_i=r_i+\gamma\,\hat Q_{\bar\phi}\big(s_i',\mu_{\bar\theta}(s_i')\big)$, computed with **target networks** $\bar\phi,\bar\theta$.
+- **Critic target:** $y_i=r_i+\gamma\,\hat Q_{\bar\phi}\big(s_i',\pi_{\bar\theta}(s_i')\big)$, computed with **target networks** $\bar\phi,\bar\theta$.
 - **Soft target updates:** after each step, $\bar\phi\leftarrow\kappa\phi+(1-\kappa)\bar\phi$ and the same for $\bar\theta$, with small $\kappa$ (the paper uses $0.001$). The targets then move slowly, which stabilizes the regression, the same idea as the target network of DQN.[^mnih2015]
-- **Actor:** a gradient step along $\frac1B\sum_i\nabla_\theta\mu_\theta(s_i)\nabla_a\hat Q_\phi(s_i,a)|_{a=\mu_\theta(s_i)}$.
+- **Actor:** a gradient step along $\frac1B\sum_i\nabla_\theta\pi_\theta(s_i)\nabla_a\hat Q_\phi(s_i,a)|_{a=\pi_\theta(s_i)}$.
 - **Exploration:** a deterministic policy does not explore, so noise is added to the actions it executes. The paper used temporally correlated Ornstein–Uhlenbeck noise; plain Gaussian noise is common later.
 
 DDPG is sample-efficient but brittle. Its main failure mode is the **maximization bias** familiar from [[Q-Learning and SARSA]]: the actor climbs whatever errors the critic has, so the critic's overestimates are selected and then bootstrapped into the targets. **TD3** (twin delayed DDPG; Fujimoto et al., 2018)[^fujimoto2018] adds three targeted fixes:
 
 1. **Clipped double-Q learning.** Learn two critics and use the smaller target, $y_i=r_i+\gamma\min_{j=1,2}\hat Q_{\bar\phi_j}(s_i',\tilde a_i')$. A pessimistic target counteracts the upward bias, in the spirit of double Q-learning.
-2. **Target policy smoothing.** Evaluate the target at a noisy action, $\tilde a'=\operatorname{clip}\big(\mu_{\bar\theta}(s')+\operatorname{clip}(\epsilon,-c,c),\,a_{\text{low}},a_{\text{high}}\big)$ with $\epsilon\sim\mathcal{N}(0,\tilde\sigma^2)$. Similar actions should have similar values, so the actor cannot exploit narrow spikes in $\hat Q$.
-3. **Delayed policy updates.** Update the actor (and the targets) only every $d$ critic updates (the paper uses $d=2$), so the actor follows a critic that has had time to settle. This is a crude version of the two-timescale idea below.
+2. **Target policy smoothing.** Evaluate the target at a noisy action, $\tilde a'=\operatorname{clip}\big(\pi_{\bar\theta}(s')+\operatorname{clip}(\xi,-c,c),\,a_{\text{low}},a_{\text{high}}\big)$ with $\xi\sim\mathcal{N}(0,\tilde\sigma^2)$. Similar actions should have similar values, so the actor cannot exploit narrow spikes in $\hat Q$.
+3. **Delayed policy updates.** Update the actor (and the targets) only once every few critic updates (every second one in the paper), so the actor follows a critic that has had time to settle. This is a crude version of the two-timescale idea below.
 
 > [!example]- Code: the TD3 critic target, and the Polyak update (PyTorch)
 > ```python
@@ -489,7 +489,7 @@ The critic's error is orthogonal to the features the actor uses, so the actor ne
 
 ### Two-timescale stochastic approximation
 
-The online actor-critic updates the critic and the actor at the same time. The critic chases $V^{\pi_\theta}$, which moves whenever $\theta$ moves. The fix that makes this analyzable is to let the actor move **more slowly** than the critic. Then the critic sees an almost frozen policy and has time to converge to its fixed point, while the actor sees an almost converged critic. In general form, with a fast iterate $\mathbf{w}_t$ (the critic) and a slow iterate $\theta_t$ (the actor):
+The online actor-critic updates the critic and the actor at the same time. The critic chases $V^{\pi_\theta}$, which moves whenever $\theta$ moves. The fix that makes this analysable is to let the actor move **more slowly** than the critic. Then the critic sees an almost frozen policy and has time to converge to its fixed point, while the actor sees an almost converged critic. In general form, with a fast iterate $\mathbf{w}_t$ (the critic) and a slow iterate $\theta_t$ (the actor):
 
 $$
 \begin{aligned}
@@ -502,7 +502,7 @@ $$
 > Assume:
 > 1. $h$ and $g$ are Lipschitz.
 > 2. The step sizes satisfy $\sum_t\alpha_t=\sum_t\beta_t=\infty$, $\sum_t(\alpha_t^2+\beta_t^2)<\infty$, and $\alpha_t/\beta_t\to0$ (the actor is slower).
-> 3. $M^{(1)}_t$ and $M^{(2)}_t$ are martingale-difference sequences with respect to $\mathcal{F}_t=\sigma(\mathbf{w}_m,\theta_m,M^{(1)}_m,M^{(2)}_m:m\le t)$, with $\mathbb{E}\big[\lVert M^{(i)}_{t+1}\rVert^2\mid\mathcal{F}_t\big]\le K\big(1+\lVert\mathbf{w}_t\rVert^2+\lVert\theta_t\rVert^2\big)$.
+> 3. $M^{(1)}_t$ and $M^{(2)}_t$ are martingale-difference sequences with respect to the history $\mathcal{F}_t$ of $\mathbf{w}_m,\theta_m,M^{(1)}_m,M^{(2)}_m$ for $m\le t$, with $\mathbb{E}\big[\lVert M^{(i)}_{t+1}\rVert^2\mid\mathcal{F}_t\big]\le K\big(1+\lVert\mathbf{w}_t\rVert^2+\lVert\theta_t\rVert^2\big)$.
 > 4. The iterates stay bounded: $\sup_t\big(\lVert\mathbf{w}_t\rVert+\lVert\theta_t\rVert\big)<\infty$ almost surely.
 > 5. For each fixed $\theta$, the ODE $\dot{\mathbf{w}}=h(\mathbf{w},\theta)$ has a globally asymptotically stable equilibrium $\mathbf{w}^*(\theta)$, and $\theta\mapsto\mathbf{w}^*(\theta)$ is Lipschitz.
 > 6. The ODE $\dot\theta=g\big(\mathbf{w}^*(\theta),\theta\big)$ has a globally asymptotically stable equilibrium $\theta^*$.
@@ -532,7 +532,7 @@ The result: with a TD(1) critic, $\liminf_t\lVert\nabla_\theta\bar J(\theta_t)\r
 The theorem is sufficient, not necessary. What actually goes wrong when the timescales are reversed? Consider a "fork": from $s_0$, going left reaches a state that pays $0.5$ and ends; going right enters a chain of 6 states with no reward and then pays $1$. All rewards carry $\mathcal{N}(0,0.3^2)$ noise, and $\gamma=0.95$. Right is optimal ($Q^*(s_0,\text{right})=0.95^6=0.735$ against $0.95\cdot0.5=0.475$), but its value reaches $s_0$ only after the critic has propagated it six steps back. We run the online actor-critic with a tabular TD(0) critic, starting from $\hat V=0$, under three step-size schedules for 200,000 steps and 40 seeds each.
 
 ![[Reinforcement Learning/images/actor-critic-two-timescale.svg]]
-*Figure 5: online actor-critic on the fork MDP (median and 10–90% range over 40 seeds). Left: probability of the optimal action. Right: the critic's estimate of the gap between right and left, $\gamma[\hat V(B_1)-\hat V(A)]$; the true gap is 0.26 (dashed). With the critic faster than the actor, all 40 runs end with $\pi(\text{right}\mid s_0)>0.9$; with equal step sizes too. With the actor 10 times faster than the critic, all 40 runs lock onto the left branch, $\pi(\text{right}\mid s_0)<0.1$, and the critic's gap stays near $-0.48$.*
+*Figure 5: online actor-critic on the fork MDP (median and 10–90% range over 40 seeds). Left: probability of the optimal action. Right: the critic's estimate of the gap between right and left, $\gamma$ times the value of the first state of the right branch minus that of the left state; the true gap is 0.26 (dashed). With the critic faster than the actor, all 40 runs end with $\pi(\text{right}\mid s_0)>0.9$; with equal step sizes too. With the actor 10 times faster than the critic, all 40 runs lock onto the left branch, $\pi(\text{right}\mid s_0)<0.1$, and the critic's gap stays near $-0.48$.*
 
 The failure in the third schedule is exactly the one the theory guards against. Early on, the critic still values the right branch at about $0$ while the left branch pays $0.5$ immediately. A fast actor acts on this stale opinion and commits to the left. After that the right branch is almost never visited, so the critic never learns that it was better. On this easy problem equal step sizes also worked, and converged faster than the strictly two-timescale schedule, whose actor steps are 10 times smaller. Two timescales are a guarantee, not a speed-up. The practical counterparts are TD3's delayed actor updates, several critic steps per actor step, and a larger learning rate for the critic than for the actor.
 

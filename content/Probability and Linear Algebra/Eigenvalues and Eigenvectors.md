@@ -21,7 +21,7 @@ next: "[[First-Order Optimization]]"
 > - The trace is the sum of the eigenvalues and the determinant is their product. The Rayleigh quotient $\mathbf{x}^\top\mathbf{S}\mathbf{x}/\mathbf{x}^\top\mathbf{x}$ ranges exactly between $\lambda_{\min}$ and $\lambda_{\max}$.
 > - In practice eigenvalues are computed by iteration (power iteration, the QR algorithm), never from the characteristic polynomial.
 >
-> **Notation in this lecture:** $\mathbf{X}$ is the matrix whose columns are eigenvectors, following Strang. In the machine-learning lectures $\mathbf{X}\in\mathbb{R}^{N\times D}$ is the data matrix; the two never meet here. Symmetric matrices are written $\mathbf{S}$ and their orthonormal eigenvector matrices $\mathbf{Q}$.
+> **Notation in this lecture:** $\mathbf{X}$ is the matrix whose columns are eigenvectors, following Strang. In the machine-learning lectures $\mathbf{X}\in\mathbb{R}^{N\times D}$ is the data matrix; here it appears only once, centred, as $\bar{\mathbf{X}}$ in the section on covariance matrices. Symmetric matrices are written $\mathbf{S}$ and their orthonormal eigenvector matrices $\mathbf{Q}$. Iterates are $\mathbf{z}_k$ (power iteration) and $\mathbf{A}^{(k)}$ (QR algorithm), so $\mathbf{x}_i$ always denotes an eigenvector.
 
 ## Motivation
 
@@ -80,7 +80,7 @@ $$
 
 This is the **characteristic equation**. Expanding the determinant gives a polynomial of degree $n$ in $\lambda$, the **characteristic polynomial**. Then:
 - by the fundamental theorem of algebra it has exactly $n$ roots in $\mathbb{C}$, **counted with multiplicity**, so every $n\times n$ matrix has $n$ eigenvalues in that sense;
-- for a real matrix the coefficients are real, so complex eigenvalues come in conjugate pairs $a\pm ib$;
+- for a real matrix the coefficients are real, so complex eigenvalues come in conjugate pairs $\lambda$ and $\bar\lambda$;
 - once $\lambda$ is known, its eigenvectors are the non-zero vectors in the nullspace $N(\mathbf{A}-\lambda\mathbf{I})$, found by elimination. This nullspace is the **eigenspace** of $\lambda$.
 
 For a $2\times2$ matrix the characteristic polynomial is short enough to remember:
@@ -114,10 +114,10 @@ $$
 > The number of times $\lambda$ repeats as a root is its **algebraic multiplicity** (2 for both). The dimension of its eigenspace is its **geometric multiplicity** (2 for $3\mathbf{I}$, 1 for $\mathbf{J}$). The geometric multiplicity is never larger than the algebraic one, and when it is smaller, eigenvectors are missing. We meet the consequences [[#Not every matrix is diagonalizable|below]].
 
 > [!example] Example 3: a rotation has complex eigenvalues
-> The $90°$ rotation $\mathbf{R}=\begin{bmatrix}0&-1\\1&0\end{bmatrix}$ turns *every* non-zero vector, so it can have no real eigenvector. Its trace is 0 and its determinant is 1, so $\lambda^2+1=0$ and $\lambda=\pm i$. Allowing complex vectors, $\mathbf{x}=(1,-i)$ works:
+> The $90°$ rotation $\mathbf{G}=\begin{bmatrix}0&-1\\1&0\end{bmatrix}$ turns *every* non-zero vector, so it can have no real eigenvector. Its trace is 0 and its determinant is 1, so $\lambda^2+1=0$ and $\lambda=\pm i$. Allowing complex vectors, $\mathbf{x}=(1,-i)$ works:
 >
 > $$
-> \mathbf{R}\begin{bmatrix}1\\-i\end{bmatrix}=\begin{bmatrix}i\\1\end{bmatrix}=i\begin{bmatrix}1\\-i\end{bmatrix},
+> \mathbf{G}\begin{bmatrix}1\\-i\end{bmatrix}=\begin{bmatrix}i\\1\end{bmatrix}=i\begin{bmatrix}1\\-i\end{bmatrix},
 > $$
 >
 > and its conjugate $(1,i)$ has eigenvalue $-i$. A rotation by angle $\theta$ has eigenvalues $\cos\theta\pm i\sin\theta=e^{\pm i\theta}$: the angle lives in the eigenvalues' phase, and $|\lambda|=1$ because rotations preserve length (as shown for every orthogonal matrix in [[Orthogonality and Least Squares#Orthonormal vectors and orthogonal matrices|Orthogonality and Least Squares]]).
@@ -127,8 +127,8 @@ $$
 If $\mathbf{A}\mathbf{x}=\lambda\mathbf{x}$, then several related matrices keep the **same eigenvector** $\mathbf{x}$, with predictable eigenvalues:
 - $\mathbf{A}^2\mathbf{x}=\mathbf{A}(\lambda\mathbf{x})=\lambda\mathbf{A}\mathbf{x}=\lambda^2\mathbf{x}$, and in general $\mathbf{A}^k\mathbf{x}=\lambda^k\mathbf{x}$;
 - if $\mathbf{A}$ is invertible, $\mathbf{A}^{-1}\mathbf{x}=\lambda^{-1}\mathbf{x}$ (multiply (1) by $\mathbf{A}^{-1}/\lambda$). So $\mathbf{A}$ is invertible exactly when $0$ is not an eigenvalue;
-- $(\mathbf{A}+c\mathbf{I})\mathbf{x}=(\lambda+c)\mathbf{x}$: a **shift** moves every eigenvalue by $c$;
-- any polynomial $p(\mathbf{A})$ has eigenvalue $p(\lambda)$.
+- $(\mathbf{A}+\sigma\mathbf{I})\mathbf{x}=(\lambda+\sigma)\mathbf{x}$: a **shift** moves every eigenvalue by $\sigma$;
+- any polynomial $g(\mathbf{A})$ has eigenvalue $g(\lambda)$.
 
 For Example 1, $\mathbf{A}^{-1}$ has eigenvalues $\tfrac15$ and $\tfrac12$, and $\mathbf{A}^3$ has $125$ and $8$.
 
@@ -229,10 +229,10 @@ $$
 Replace 3 by $0.9$: the off-diagonal entry $k\,(0.9)^{k-1}$ first **grows** (to about 3.9 at $k=9$) before the geometric decay wins. Figure 2(b) shows this transient. The eigenvalues decide where the powers end up, but for non-diagonalizable (and, more generally, non-symmetric) matrices they do not tell the whole story along the way.
 
 > [!proof]- Proof for any square matrix
-> Use the Schur form $\mathbf{A}=\mathbf{U}\mathbf{T}\mathbf{U}^{*}$, so $\mathbf{A}^k=\mathbf{U}\mathbf{T}^k\mathbf{U}^{*}$ and it is enough to study the triangular $\mathbf{T}$, whose diagonal holds the eigenvalues. If some $|\lambda|\ge1$, take its eigenvector $\mathbf{x}$: $\lVert\mathbf{A}^k\mathbf{x}\rVert=|\lambda|^k\lVert\mathbf{x}\rVert\not\to0$. Conversely, suppose $\rho=\rho(\mathbf{A})<1$. Write $\mathbf{T}=\mathbf{D}+\mathbf{N}$ with $\mathbf{D}$ diagonal and $\mathbf{N}$ strictly upper triangular, so $\mathbf{N}^n=\mathbf{0}$. Expanding $(\mathbf{D}+\mathbf{N})^k$, each product contains at most $n-1$ factors of $\mathbf{N}$, and there are at most $\binom{k}{j}\le k^j$ products with $j$ such factors. So every entry of $\mathbf{T}^k$ is bounded by $C\,k^{n-1}\rho^{\,k-n+1}$ for a constant $C$, and a polynomial times $\rho^k$ tends to 0.
+> Use the Schur form $\mathbf{A}=\mathbf{U}\mathbf{T}\mathbf{U}^{*}$, so $\mathbf{A}^k=\mathbf{U}\mathbf{T}^k\mathbf{U}^{*}$ and it is enough to study the triangular $\mathbf{T}$, whose diagonal holds the eigenvalues. If some $|\lambda|\ge1$, take its eigenvector $\mathbf{x}$: $\lVert\mathbf{A}^k\mathbf{x}\rVert=|\lambda|^k\lVert\mathbf{x}\rVert\not\to0$. Conversely, suppose $\rho=\rho(\mathbf{A})<1$. Write $\mathbf{T}=\mathbf{D}+\mathbf{K}$ with $\mathbf{D}$ diagonal and $\mathbf{K}$ strictly upper triangular, so $\mathbf{K}^n=\mathbf{0}$. Expanding $(\mathbf{D}+\mathbf{K})^k$, each product contains at most $n-1$ factors of $\mathbf{K}$, and there are at most $\binom{k}{j}\le k^j$ products with $j$ such factors. So every entry of $\mathbf{T}^k$ is bounded by $C\,k^{n-1}\rho^{\,k-n+1}$ for a constant $C$, and a polynomial times $\rho^k$ tends to 0.
 
 ![[Probability and Linear Algebra/images/eigenvalues-and-eigenvectors-powers.svg]]
-*Figure 2. (a) The entries of $\mathbf{P}^n$ for the two-state chain below. Both rows approach $(0.6,\,0.4)$ and the gap halves at every step, because the second eigenvalue is $0.5$. (b) Norms of $\mathbf{A}^k$ on a log scale. Spectral radius $0.9$ decays geometrically; spectral radius $1.05$ explodes; the defective matrix with eigenvalue $0.9$ repeated first grows to about 3.9 near $k=9$ and only then decays.*
+*Figure 2. (a) The entries of $\mathbf{P}^k$ for the two-state chain below. Both rows approach $(0.6,\,0.4)$ and the gap halves at every step, because the second eigenvalue is $0.5$. (b) Norms of $\mathbf{A}^k$ on a log scale. Spectral radius $0.9$ decays geometrically; spectral radius $1.05$ explodes; the defective matrix with eigenvalue $0.9$ repeated first grows to about 3.9 near $k=9$ and only then decays.*
 
 ### Example: a two-state Markov chain
 
@@ -242,7 +242,7 @@ $$
 \mathbf{P}=\begin{bmatrix}0.8&0.2\\0.3&0.7\end{bmatrix}.
 $$
 
-The $n$-step transition probabilities are the entries of $\mathbf{P}^n$. Every row of $\mathbf{P}$ sums to 1, so $\mathbf{P}\mathbf{1}=\mathbf{1}$: the all-ones vector $(1,1)$ is an eigenvector with $\lambda_1=1$. The trace is $1.5$, so $\lambda_2=0.5$, and $\mathbf{P}-0.5\mathbf{I}=\begin{bmatrix}0.3&0.2\\0.3&0.2\end{bmatrix}$ gives the eigenvector $(2,-3)$. Then
+The $k$-step transition probabilities are the entries of $\mathbf{P}^k$. Every row of $\mathbf{P}$ sums to 1, so $\mathbf{P}\mathbf{1}=\mathbf{1}$: the all-ones vector $(1,1)$ is an eigenvector with $\lambda_1=1$. The trace is $1.5$, so $\lambda_2=0.5$, and $\mathbf{P}-0.5\mathbf{I}=\begin{bmatrix}0.3&0.2\\0.3&0.2\end{bmatrix}$ gives the eigenvector $(2,-3)$. Then
 
 $$
 \mathbf{X}=\begin{bmatrix}1&2\\1&-3\end{bmatrix},\qquad
@@ -253,12 +253,12 @@ and (5) gives every power in closed form:
 
 $$
 \begin{aligned}
-\mathbf{P}^n&=\mathbf{X}\begin{bmatrix}1&0\\0&0.5^n\end{bmatrix}\mathbf{X}^{-1}\\
-&=\begin{bmatrix}0.6&0.4\\0.6&0.4\end{bmatrix}+0.5^n\begin{bmatrix}0.4&-0.4\\-0.6&0.6\end{bmatrix}.
+\mathbf{P}^k&=\mathbf{X}\begin{bmatrix}1&0\\0&0.5^k\end{bmatrix}\mathbf{X}^{-1}\\
+&=\begin{bmatrix}0.6&0.4\\0.6&0.4\end{bmatrix}+0.5^k\begin{bmatrix}0.4&-0.4\\-0.6&0.6\end{bmatrix}.
 \end{aligned}
 $$
 
-The eigenvalue $1$ produces the permanent part, whose identical rows $(0.6,0.4)$ are the **stationary distribution**: in the long run the machine is up 60% of the days, whatever its state today. The eigenvalue $0.5$ produces the transient part, which halves every day (Figure 2a). By $n=10$ the rows are $(0.6004,\,0.3996)$ and $(0.5994,\,0.4006)$.
+The eigenvalue $1$ produces the permanent part, whose identical rows $(0.6,0.4)$ are the **stationary distribution**: in the long run the machine is up 60% of the days, whatever its state today. The eigenvalue $0.5$ produces the transient part, which halves every day (Figure 2a). By $k=10$ the rows are $(0.6004,\,0.3996)$ and $(0.5994,\,0.4006)$.
 
 Two lessons generalize. The stationary distribution $\boldsymbol\pi$, which satisfies $\boldsymbol\pi\mathbf{P}=\boldsymbol\pi$, is an eigenvector of $\mathbf{P}^\top$ with eigenvalue 1 (a *left* eigenvector of $\mathbf{P}$), as in [[Markov Chains#The stationary distribution|Markov Chains]]. And the speed of convergence is set by the second-largest $|\lambda|$; this is the [[Markov Chains#Aside: mixing and the spectral gap|spectral gap]].
 
@@ -285,7 +285,7 @@ $$
 \mathbf{u}(t)=\tfrac12e^{-t}\begin{bmatrix}1\\1\end{bmatrix}+\tfrac12e^{-3t}\begin{bmatrix}1\\-1\end{bmatrix}.
 $$
 
-The fast mode ($e^{-3t}$) dies first and the solution settles along the slow eigenvector. The generator matrices of [[Markov Chains#Transition matrices and the Kolmogorov equations|continuous-time Markov chains]] are an instance, with $e^{t\mathbf{Q}}$ as the transition matrix.
+The fast mode ($e^{-3t}$) dies first and the solution settles along the slow eigenvector. The generator matrices of [[Markov Chains#Transition matrices and the Kolmogorov equations|continuous-time Markov chains]] are an instance, with the exponential of the generator matrix as the transition matrix.
 
 ### Not every matrix is diagonalizable
 
@@ -328,16 +328,16 @@ with trace 4 and determinant 3, so $\lambda^2-4\lambda+3=0$, $\lambda_1=3$ with 
 > [!note] Theorem
 > Eigenvectors of a symmetric matrix that belong to **different** eigenvalues are orthogonal.
 
-The proof is short enough to give in full, and it uses every assumption once. Let $\mathbf{S}\mathbf{x}=\lambda\mathbf{x}$ and $\mathbf{S}\mathbf{y}=\alpha\mathbf{y}$ with $\lambda\ne\alpha$. Compute $\mathbf{x}^\top\mathbf{S}\mathbf{y}$ in two ways:
+The proof is short enough to give in full, and it uses every assumption once. Let $\mathbf{S}\mathbf{x}=\lambda\mathbf{x}$ and $\mathbf{S}\mathbf{y}=\beta\mathbf{y}$ with $\lambda\ne\beta$. Compute $\mathbf{x}^\top\mathbf{S}\mathbf{y}$ in two ways:
 
 $$
 \begin{aligned}
-\mathbf{x}^\top\mathbf{S}\mathbf{y}&=\mathbf{x}^\top(\alpha\mathbf{y})=\alpha\,\mathbf{x}^\top\mathbf{y},\\
+\mathbf{x}^\top\mathbf{S}\mathbf{y}&=\mathbf{x}^\top(\beta\mathbf{y})=\beta\,\mathbf{x}^\top\mathbf{y},\\
 \mathbf{x}^\top\mathbf{S}\mathbf{y}&=(\mathbf{S}^\top\mathbf{x})^\top\mathbf{y}=(\mathbf{S}\mathbf{x})^\top\mathbf{y}=\lambda\,\mathbf{x}^\top\mathbf{y}.
 \end{aligned}
 $$
 
-Subtracting, $(\lambda-\alpha)\,\mathbf{x}^\top\mathbf{y}=0$, and since $\lambda\ne\alpha$, $\mathbf{x}^\top\mathbf{y}=0$. The symmetry $\mathbf{S}^\top=\mathbf{S}$ is what lets $\mathbf{S}$ move from $\mathbf{y}$ onto $\mathbf{x}$; for the non-symmetric $\mathbf{A}$ of Example 1 this step fails, and the eigenvectors $(1,1)$ and $(1,-2)$ are indeed not orthogonal.
+Subtracting, $(\lambda-\beta)\,\mathbf{x}^\top\mathbf{y}=0$, and since $\lambda\ne\beta$, $\mathbf{x}^\top\mathbf{y}=0$. The symmetry $\mathbf{S}^\top=\mathbf{S}$ is what lets $\mathbf{S}$ move from $\mathbf{y}$ onto $\mathbf{x}$; for the non-symmetric $\mathbf{A}$ of Example 1 this step fails, and the eigenvectors $(1,1)$ and $(1,-2)$ are indeed not orthogonal.
 
 ### The spectral theorem
 
@@ -400,8 +400,8 @@ We usually order the eigenvalues $\lambda_1\ge\lambda_2\ge\cdots\ge\lambda_n$. B
 > print(np.allclose(Q.T @ Q, np.eye(2)))         # orthonormal eigenvectors
 > print(np.allclose(S, sum(l * np.outer(q, q) for l, q in zip(lam, Q.T))))   # spectral sum
 >
-> R = np.array([[0., -1], [1, 0]])
-> print(np.linalg.eigvals(R))                    # [0.+1.j 0.-1.j]
+> G = np.array([[0., -1], [1, 0]])                # 90-degree rotation
+> print(np.linalg.eigvals(G))                    # [0.+1.j 0.-1.j]
 > ```
 
 ## Positive definite matrices
@@ -509,18 +509,18 @@ $$
 
 Both follow from the characteristic polynomial. Its roots are the eigenvalues, so $\det(\lambda\mathbf{I}-\mathbf{A})=(\lambda-\lambda_1)\cdots(\lambda-\lambda_n)$. Setting $\lambda=0$ gives $\det(-\mathbf{A})=(-1)^n\lambda_1\cdots\lambda_n$, which is the product rule. The coefficient of $\lambda^{n-1}$ is $-(\lambda_1+\cdots+\lambda_n)$ on the right; on the left, only the product of the diagonal entries $(\lambda-a_{11})\cdots(\lambda-a_{nn})$ contributes to $\lambda^{n-1}$ (every other term of the determinant misses at least two diagonal entries), giving $-(a_{11}+\cdots+a_{nn})$. Both identities hold with multiplicity and with complex eigenvalues.
 
-For Example 1, $5+2=7=4+3$ and $5\cdot2=10=12-2$. These checks catch most hand-calculation errors. For $2\times2$ matrices they also give a quick formula.[^3b1b-trick] The eigenvalues have mean $m=\tfrac12\operatorname{tr}(\mathbf{A})$ and product $p=\det(\mathbf{A})$, so
+For Example 1, $5+2=7=4+3$ and $5\cdot2=10=12-2$. These checks catch most hand-calculation errors. For $2\times2$ matrices they also give a quick formula.[^3b1b-trick] The eigenvalues have mean $\lambda_{\mathrm{mean}}=\tfrac12\operatorname{tr}(\mathbf{A})$ and product $p=\det(\mathbf{A})$, so
 
 $$
-\lambda=m\pm\sqrt{m^2-p}.
+\lambda=\lambda_{\mathrm{mean}}\pm\sqrt{\lambda_{\mathrm{mean}}^2-p}.
 $$
 
-For Example 1, $m=3.5$ and $p=10$ give $3.5\pm\sqrt{2.25}=3.5\pm1.5$, that is, 5 and 2.
+For Example 1, $\lambda_{\mathrm{mean}}=3.5$ and $p=10$ give $3.5\pm\sqrt{2.25}=3.5\pm1.5$, that is, 5 and 2.
 
 Some consequences:
 - $\det\mathbf{A}=0$ exactly when some eigenvalue is 0, matching "invertible iff 0 is not an eigenvalue";
 - a positive definite matrix has positive determinant and positive trace. For $2\times2$ symmetric matrices the two together are also sufficient, but not in general: $\operatorname{diag}(-1,-1,5)$ has trace 3 and determinant 5;
-- the determinant is the factor by which $\mathbf{A}$ scales volume, the $|\det J|$ of change of variables; in the eigenvector basis that factor is visibly the product of the stretches.
+- the determinant is the factor by which $\mathbf{A}$ scales volume, the absolute Jacobian determinant of change of variables; in the eigenvector basis that factor is visibly the product of the stretches.
 
 ### The Rayleigh quotient
 
@@ -573,35 +573,35 @@ By hand, we solved $\det(\mathbf{A}-\lambda\mathbf{I})=0$. On a computer this is
 **Power iteration** repeatedly multiplies a starting vector by $\mathbf{A}$ and normalizes:
 
 $$
-\mathbf{x}_{k+1}=\frac{\mathbf{A}\mathbf{x}_k}{\lVert\mathbf{A}\mathbf{x}_k\rVert}.
+\mathbf{z}_{k+1}=\frac{\mathbf{A}\mathbf{z}_k}{\lVert\mathbf{A}\mathbf{z}_k\rVert}.
 $$
 
-By (6), $\mathbf{A}^k\mathbf{x}_0=c_1\lambda_1^k\big(\mathbf{x}_1+\sum_{i\ge2}\tfrac{c_i}{c_1}(\lambda_i/\lambda_1)^k\mathbf{x}_i\big)$. If $|\lambda_1|>|\lambda_2|\ge\cdots$ and $c_1\ne0$ (true for a random start, with probability 1), every other component shrinks like $|\lambda_2/\lambda_1|^k$ and the direction converges to $\mathbf{x}_1$. The method dates back to von Mises in 1929.[^vonmises1929] For a symmetric matrix, the Rayleigh quotient $\mathbf{x}_k^\top\mathbf{S}\mathbf{x}_k$ estimates $\lambda_1$ (with error of order $|\lambda_2/\lambda_1|^{2k}$, twice as fast as the vector).
+By (6), $\mathbf{A}^k\mathbf{z}_0=c_1\lambda_1^k\big(\mathbf{x}_1+\sum_{i\ge2}\tfrac{c_i}{c_1}(\lambda_i/\lambda_1)^k\mathbf{x}_i\big)$. If $|\lambda_1|>|\lambda_2|\ge\cdots$ and $c_1\ne0$ (true for a random start, with probability 1), every other component shrinks like $|\lambda_2/\lambda_1|^k$ and the direction converges to $\mathbf{x}_1$. The method dates back to von Mises in 1929.[^vonmises1929] For a symmetric matrix, the Rayleigh quotient $\mathbf{z}_k^\top\mathbf{S}\mathbf{z}_k$ estimates $\lambda_1$ (with error of order $|\lambda_2/\lambda_1|^{2k}$, twice as fast as the vector).
 
 > [!example] Example: power iteration by hand
-> Take $\mathbf{A}=\begin{bmatrix}4&1\\2&3\end{bmatrix}$ and $\mathbf{x}_0=(1,0)$, skipping the normalization (it only rescales):
+> Take $\mathbf{A}=\begin{bmatrix}4&1\\2&3\end{bmatrix}$ and $\mathbf{z}_0=(1,0)$, skipping the normalization (it only rescales):
 >
 > $$
-> \mathbf{x}_1=\begin{bmatrix}4\\2\end{bmatrix},\quad
-> \mathbf{x}_2=\begin{bmatrix}18\\14\end{bmatrix},\quad
-> \mathbf{x}_3=\begin{bmatrix}86\\78\end{bmatrix},\quad
-> \mathbf{x}_4=\begin{bmatrix}422\\406\end{bmatrix}.
+> \mathbf{z}_1=\begin{bmatrix}4\\2\end{bmatrix},\quad
+> \mathbf{z}_2=\begin{bmatrix}18\\14\end{bmatrix},\quad
+> \mathbf{z}_3=\begin{bmatrix}86\\78\end{bmatrix},\quad
+> \mathbf{z}_4=\begin{bmatrix}422\\406\end{bmatrix}.
 > $$
 >
 > The ratio of the two components, $0.5,\ 0.78,\ 0.91,\ 0.96$, approaches 1, the direction of $(1,1)$. The growth of the first component, $4,\ 4.5,\ 4.78,\ 4.91$, approaches $\lambda_1=5$. The exact formula explains the rate: $(1,0)=\tfrac23(1,1)+\tfrac13(1,-2)$, so
 >
 > $$
-> \mathbf{x}_k=\tfrac23\,5^k\begin{bmatrix}1\\1\end{bmatrix}+\tfrac13\,2^k\begin{bmatrix}1\\-2\end{bmatrix},
+> \mathbf{z}_k=\tfrac23\,5^k\begin{bmatrix}1\\1\end{bmatrix}+\tfrac13\,2^k\begin{bmatrix}1\\-2\end{bmatrix},
 > $$
 >
 > and the unwanted component shrinks relative to the wanted one by $2/5$ per step (Figure 5a).
 
 ![[Probability and Linear Algebra/images/eigenvalues-and-eigenvectors-power-iteration.svg]]
-*Figure 5. (a) The hand example: the directions of $\mathbf{x}_k=\mathbf{A}^k\mathbf{x}_0$ swing towards the dominant eigenvector $(1,1)$, closing the gap by a factor $2/5$ per step. (b) Power iteration on a random $30\times30$ covariance matrix with $\lambda_2/\lambda_1=0.84$. The distance to the top eigenvector falls geometrically, parallel to the predicted rate $(\lambda_2/\lambda_1)^t$.*
+*Figure 5. (a) The hand example: the directions of $\mathbf{z}_k=\mathbf{A}^k\mathbf{z}_0$ swing towards the dominant eigenvector $(1,1)$, closing the gap by a factor $2/5$ per step. (b) Power iteration on a random $30\times30$ covariance matrix with $\lambda_2/\lambda_1=0.84$. The distance to the top eigenvector falls geometrically, parallel to the predicted rate $(\lambda_2/\lambda_1)^k$.*
 
 Power iteration needs only matrix–vector products, so it works on huge sparse matrices that could never be factorized; [[Markov Chains#PageRank: the stationary distribution of the web|PageRank]] is computed this way. Its limitations follow from the same formula:
 - **Speed.** When $|\lambda_2/\lambda_1|$ is close to 1, convergence is slow (Figure 5b needs about 60 steps for 5 digits).
-- **Largest magnitude, not largest value.** It finds the eigenvalue of largest $|\lambda|$. For $\operatorname{diag}(1,-3)$ it converges to $\lambda=-3$, with the iterates flipping sign at every step; if $\lambda$ and $-\lambda$ tie for the largest magnitude, the direction never settles. A **shift** fixes both: power iteration on $\mathbf{S}+c\mathbf{I}$ (with large enough $c$) finds the largest $\lambda$, and on $(\mathbf{S}-\sigma\mathbf{I})^{-1}$ (**inverse iteration**) finds the eigenvalue nearest $\sigma$.
+- **Largest magnitude, not largest value.** It finds the eigenvalue of largest $|\lambda|$. For $\operatorname{diag}(1,-3)$ it converges to $\lambda=-3$, with the iterates flipping sign at every step; if $\lambda$ and $-\lambda$ tie for the largest magnitude, the direction never settles. A **shift** fixes both: power iteration on $\mathbf{S}+\sigma\mathbf{I}$ (with large enough $\sigma$) finds the largest $\lambda$, and on $(\mathbf{S}-\sigma\mathbf{I})^{-1}$ (**inverse iteration**) finds the eigenvalue nearest $\sigma$.
 - **One eigenvector at a time.** For the next one, use **deflation**. If $\mathbf{S}$ is symmetric and $(\lambda_1,\mathbf{q}_1)$ has been found, then
 
 $$
@@ -610,10 +610,10 @@ $$
 
 by (7). The deflated matrix has the same eigenvectors, with $\lambda_1$ replaced by 0, so power iteration on it finds $(\lambda_2,\mathbf{q}_2)$. For our $\mathbf{S}$, $\mathbf{S}-3\mathbf{q}_1\mathbf{q}_1^\top=\begin{bmatrix}0.5&-0.5\\-0.5&0.5\end{bmatrix}=\mathbf{q}_2\mathbf{q}_2^\top$. PCA uses the same identity to extract [[Matrix Factorization and Dimensionality Reduction#More components: deflation|one component after another]].
 
-**The QR algorithm** computes all eigenvalues at once, and it is what `numpy.linalg.eig` and `eigh` run underneath (through LAPACK). Factor $\mathbf{A}_t=\mathbf{Q}_t\mathbf{R}_t$ by [[Orthogonality and Least Squares#Gram–Schmidt and A = QR|Gram–Schmidt]], then multiply the factors in the **reverse** order:
+**The QR algorithm** computes all eigenvalues at once, and it is what `numpy.linalg.eig` and `eigh` run underneath (through LAPACK). Starting from $\mathbf{A}^{(0)}=\mathbf{A}$, factor $\mathbf{A}^{(k)}=\mathbf{Q}^{(k)}\mathbf{R}^{(k)}$ by [[Orthogonality and Least Squares#Gram–Schmidt and A = QR|Gram–Schmidt]], then multiply the factors in the **reverse** order:
 
 $$
-\mathbf{A}_{t+1}=\mathbf{R}_t\mathbf{Q}_t=\mathbf{Q}_t^\top\mathbf{A}_t\mathbf{Q}_t.
+\mathbf{A}^{(k+1)}=\mathbf{R}^{(k)}\mathbf{Q}^{(k)}=\mathbf{Q}^{(k)\top}\mathbf{A}^{(k)}\mathbf{Q}^{(k)}.
 $$
 
 The second form shows that every iterate is **similar** to $\mathbf{A}$, so the eigenvalues never change. Under mild conditions the iterates converge to the triangular Schur form (diagonal, for symmetric $\mathbf{A}$), with the eigenvalues on the diagonal in decreasing order of magnitude. It can be shown to be power iteration applied to a whole orthonormal basis at once.[^francis1961]<sup>,</sup>[^trefethen1997]
@@ -622,12 +622,12 @@ The second form shows that every iterate is **similar** to $\mathbf{A}$, so the 
 > For $\mathbf{S}=\begin{bmatrix}2&1\\1&2\end{bmatrix}$, Gram–Schmidt on the columns gives
 >
 > $$
-> \mathbf{Q}_0=\frac{1}{\sqrt5}\begin{bmatrix}2&-1\\1&2\end{bmatrix},\qquad
-> \mathbf{R}_0=\begin{bmatrix}\sqrt5&4/\sqrt5\\0&3/\sqrt5\end{bmatrix},
+> \mathbf{Q}^{(0)}=\frac{1}{\sqrt5}\begin{bmatrix}2&-1\\1&2\end{bmatrix},\qquad
+> \mathbf{R}^{(0)}=\begin{bmatrix}\sqrt5&4/\sqrt5\\0&3/\sqrt5\end{bmatrix},
 > $$
 >
 > $$
-> \mathbf{A}_1=\mathbf{R}_0\mathbf{Q}_0=\begin{bmatrix}2.8&0.6\\0.6&1.2\end{bmatrix}.
+> \mathbf{A}^{(1)}=\mathbf{R}^{(0)}\mathbf{Q}^{(0)}=\begin{bmatrix}2.8&0.6\\0.6&1.2\end{bmatrix}.
 > $$
 >
 > The trace (4) and determinant ($3.36-0.36=3$) are unchanged, as similarity demands. The off-diagonal entry fell from 1 to 0.6, and the diagonal moved towards $(3,1)$. Continuing, the off-diagonal entries are $0.22$, $0.074$, $0.025$, $0.0082$: each step multiplies them by about $\lambda_2/\lambda_1=1/3$, the same rate as power iteration.
@@ -677,7 +677,7 @@ Production solvers add three refinements: a first reduction to tridiagonal (symm
 - [[Matrix Factorization and Dimensionality Reduction]] builds the SVD from the eigenvectors of $\mathbf{A}^\top\mathbf{A}$ and $\mathbf{A}\mathbf{A}^\top$, proves Eckart–Young, and derives PCA and kernel PCA as eigenproblems.
 - [[Markov Chains]] uses the eigenvalue 1 for stationary distributions, the spectral gap for mixing, and power iteration for PageRank.
 - [[Clustering and Expectation Maximization]] clusters graphs with the bottom eigenvectors of the Laplacian; [[Discriminant Analysis]] solves a generalized eigenproblem.
-- In reinforcement learning, the policy-evaluation matrix $\mathbf{I}-\gamma\mathbf{P}^\pi$ is invertible because the eigenvalues of $\gamma\mathbf{P}^\pi$ have magnitude at most $\gamma<1$ ([[Introduction to Reinforcement Learning#Matrix form and closed-form policy evaluation|Introduction to RL]]), and TD learning with [[Linear Function Approximation]] converges because a certain matrix is positive definite.
+- In reinforcement learning, the policy-evaluation matrix $\mathbf{I}-\gamma\mathbf{P}$, with $\mathbf{P}$ the transition matrix under the policy, is invertible because the eigenvalues of $\gamma\mathbf{P}$ have magnitude at most $\gamma<1$ ([[Introduction to Reinforcement Learning#Matrix form and closed-form policy evaluation|Introduction to RL]]), and TD learning with [[Linear Function Approximation]] converges because a certain matrix is positive definite.
 - Weight initialization in [[Neural Networks#Initialization|Neural Networks]] is about keeping products of many matrices from exploding or vanishing, the matrix-power story of (6).
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->

@@ -88,7 +88,7 @@ $$
 
 This is the **InfoNCE** loss.[^oord2018] Read it as an $N$-way classification problem: "which of these $N$ candidates belongs with $\mathbf{x}$?", solved by softmax regression whose logits are similarities. Everything in the first half of this lecture is (2) with different choices of what counts as a positive and where the negatives come from.
 
-Its gradient makes the push and pull explicit. Writing $s_j=\operatorname{sim}(\mathbf{z}_{\mathbf{x}},\mathbf{z}_{\mathbf{y}_j})$ with $j=1$ the positive, and $p_j=e^{s_j/\tau}/\sum_k e^{s_k/\tau}$ the softmax,
+Its gradient makes the push and pull explicit. Writing $s_j=\operatorname{sim}(\mathbf{z}_{\mathbf{x}},\mathbf{z}_{\mathbf{y}_j})$ with $j=1$ the positive, and $p_j=e^{s_j/\tau}/\sum_l e^{s_l/\tau}$ the softmax,
 
 $$
 \frac{\partial\mathcal{L}_{\mathrm{InfoNCE}}}{\partial s_j}
@@ -100,27 +100,27 @@ The positive's similarity is pushed **up** with force $(1-p_1)/\tau$; each negat
 > [!tip] Intuition
 > Picture an energy landscape over all pairs. A good one has valleys at the compatible pairs and hills everywhere else. Pulling positives down digs the valleys; pushing negatives up raises the hills. Every method in this lecture digs valleys the same way. They differ in **where they find points to push up**: the rest of the batch (SimCLR), a queue of old embeddings (MoCo), class prototypes (cross-entropy), or nowhere at all, with some other mechanism preventing a flat landscape (BYOL, Barlow Twins).
 
-An older, margin-based form makes the same point without a softmax.[^hadsell2006] Take the distance $d=\lVert\mathbf{z}-\mathbf{z}'\rVert$ between two embeddings as the energy, and minimize
+An older, margin-based form makes the same point without a softmax.[^hadsell2006] Take the distance $r=\lVert\mathbf{z}-\mathbf{z}'\rVert$ between two embeddings as the energy, and minimize
 
 $$
 \ell(\mathbf{z},\mathbf{z}')=
 \begin{cases}
-\tfrac12 d^2 & \text{similar pair},\\
-\tfrac12\max(0,\,m-d)^2 & \text{dissimilar pair}.
+\tfrac12 r^2 & \text{similar pair},\\
+\tfrac12\max(0,\,\delta-r)^2 & \text{dissimilar pair}.
 \end{cases}
 $$
 
-Positives are pulled into a valley; negatives are pushed away only until they clear a margin $m$. Without the second case, $d=0$ for all pairs is optimal: collapse again. The `version0.py` script of the code repository trains a variant of this pairwise loss on MNIST, with a binary cross-entropy on "same digit?" in place of the margin.
+Positives are pulled into a valley; negatives are pushed away only until they clear a margin $\delta$. Without the second case, $r=0$ for all pairs is optimal: collapse again. The `version0.py` script of the code repository trains a variant of this pairwise loss on MNIST, with a binary cross-entropy on "same digit?" in place of the margin.
 
 ### NCE and InfoNCE
 
-The name comes from **noise-contrastive estimation** (NCE).[^gutmann2010] NCE was invented to fit an unnormalized density $\tilde p_\theta(\mathbf{x})=e^{-E_\theta(\mathbf{x})}$ by turning density estimation into **binary** classification: tell data points from samples of a known noise distribution $q$. With $\nu$ noise samples per data point, logistic regression with the logit
+The name comes from **noise-contrastive estimation** (NCE).[^gutmann2010] NCE was invented to fit an unnormalized density $\tilde p_\theta(\mathbf{x})=e^{-E_\theta(\mathbf{x})}$ by turning density estimation into **binary** classification: tell data points from samples of a known noise distribution $p_{\mathrm{n}}$. With $\nu$ noise samples per data point, logistic regression with the logit
 
 $$
-\log\tilde p_\theta(\mathbf{x})+c-\log\big(\nu\,q(\mathbf{x})\big)
+\log\tilde p_\theta(\mathbf{x})+b-\log\big(\nu\,p_{\mathrm{n}}(\mathbf{x})\big)
 $$
 
-is fitted, where the log-normalizer $c$ is just another learned parameter. Gutmann and Hyvärinen proved that, as the sample grows, the fitted $\tilde p_\theta e^{c}$ converges to the true normalized density. The [[Score-Based Models]] lecture meets NCE again as an alternative to score matching.
+is fitted, where the log-normalizer $b$ is just another learned parameter. Gutmann and Hyvärinen proved that, as the sample grows, the fitted $\tilde p_\theta e^{b}$ converges to the true normalized density. The [[Score-Based Models]] lecture meets NCE again as an alternative to score matching.
 
 InfoNCE changes two things:
 
@@ -128,7 +128,7 @@ InfoNCE changes two things:
 |---|---|---|
 | task | binary: is this point data or noise? | $N$-way: which candidate is the true partner? |
 | what is modelled | a density $p(\mathbf{x})$ | a compatibility of pairs, $p(\mathbf{y}\mid\mathbf{x})/p(\mathbf{y})$ |
-| negatives | from a known noise density $q$, which must be evaluated | other data points, which need no density |
+| negatives | from a known noise density $p_{\mathrm{n}}$, which must be evaluated | other data points, which need no density |
 | goal | a consistent density estimate | a useful encoder |
 
 The second row deserves a word. With enough capacity, the critic that minimizes (2) satisfies $e^{-E^*(\mathbf{x},\mathbf{y})/\tau}\propto p(\mathbf{y}\mid\mathbf{x})/p(\mathbf{y})$: the density *ratio* of "drawn together" to "drawn independently".[^oord2018] The negatives can come from the data precisely because the ratio's denominator is the data's own marginal.
@@ -151,28 +151,28 @@ $$
 Minimizing the loss maximizes a lower bound on the information the two views share. The bound has a ceiling: since $\mathcal{L}_{\mathrm{InfoNCE}}\ge 0$, the right-hand side never exceeds $\log N$. With $N=4096$ candidates, InfoNCE cannot certify more than $\log 4096\approx 8.3$ nats, however much information the views share. This is not a weakness of InfoNCE in particular: McAllester and Stratos proved that *any* distribution-free high-confidence lower bound on MI needs a number of samples exponential in the MI.[^mcallester2018]
 
 > [!proof]- Proof of the bound (3)
-> Set up the classification problem behind (2). Draw $\mathbf{x}\sim p(\mathbf{x})$, pick the index $K$ of the positive uniformly from $\{1,\dots,N\}$, draw $\mathbf{y}_K\sim p(\mathbf{y}\mid\mathbf{x})$ and draw the other $N-1$ candidates independently from $p(\mathbf{y})$. The InfoNCE loss with critic $s(\mathbf{x},\mathbf{y})$ is the expected cross-entropy between the true index $K$ and the model's guess $\operatorname{softmax}_j s(\mathbf{x},\mathbf{y}_j)$.
+> Set up the classification problem behind (2). Draw $\mathbf{x}\sim p(\mathbf{x})$, pick the index $J$ of the positive uniformly from $\{1,\dots,N\}$, draw $\mathbf{y}_J\sim p(\mathbf{y}\mid\mathbf{x})$ and draw the other $N-1$ candidates independently from $p(\mathbf{y})$. The InfoNCE loss with critic $s(\mathbf{x},\mathbf{y})$ is the expected cross-entropy between the true index $J$ and the model's guess $\operatorname{softmax}_j s(\mathbf{x},\mathbf{y}_j)$.
 >
-> **Step 1: cross-entropy is at least the conditional entropy.** For any guess, the expected cross-entropy is at least $H(K\mid X,Y_{1:N})$, with equality for the Bayes posterior (cross-entropy = entropy + KL, and KL $\ge0$). So
+> **Step 1: cross-entropy is at least the conditional entropy.** For any guess, the expected cross-entropy is at least $H(J\mid X,Y_{1:N})$, with equality for the Bayes posterior (cross-entropy = entropy + KL, and KL $\ge0$). So
 >
 > $$
-> \mathcal{L}_{\mathrm{InfoNCE}}\ge H(K\mid X,Y_{1:N})=\log N-I(K;X,Y_{1:N}),
+> \mathcal{L}_{\mathrm{InfoNCE}}\ge H(J\mid X,Y_{1:N})=\log N-I(J;X,Y_{1:N}),
 > $$
 >
-> because $H(K)=\log N$ for a uniform $K$.
+> because $H(J)=\log N$ for a uniform $J$.
 >
-> **Step 2: the index carries no more information than the pair.** Without $\mathbf{x}$, every $\mathbf{y}_j$ has marginal $p(\mathbf{y})$ whichever index is the positive, so $I(K;Y_{1:N})=0$ and, by the chain rule, $I(K;X,Y_{1:N})=I(K;X\mid Y_{1:N})$. The chain rule also gives
+> **Step 2: the index carries no more information than the pair.** Without $\mathbf{x}$, every $\mathbf{y}_j$ has marginal $p(\mathbf{y})$ whichever index is the positive, so $I(J;Y_{1:N})=0$ and, by the chain rule, $I(J;X,Y_{1:N})=I(J;X\mid Y_{1:N})$. The chain rule also gives
 >
 > $$
 > \begin{aligned}
-> I(X;K,Y_{1:N})&=I(X;Y_{1:N})+I(X;K\mid Y_{1:N})\ge I(X;K\mid Y_{1:N}),\\
-> I(X;K,Y_{1:N})&=I(X;K)+I(X;Y_{1:N}\mid K)=0+I(X;Y).
+> I(X;J,Y_{1:N})&=I(X;Y_{1:N})+I(X;J\mid Y_{1:N})\ge I(X;J\mid Y_{1:N}),\\
+> I(X;J,Y_{1:N})&=I(X;J)+I(X;Y_{1:N}\mid J)=0+I(X;Y).
 > \end{aligned}
 > $$
 >
-> In the second line, $X$ alone says nothing about $K$, and given $K$, $X$ is linked only to $\mathbf{y}_K$, whose joint law with $\mathbf{x}$ is $p(\mathbf{x},\mathbf{y})$. Together, $I(K;X,Y_{1:N})\le I(X;Y)$.
+> In the second line, $X$ alone says nothing about $J$, and given $J$, $X$ is linked only to $\mathbf{y}_J$, whose joint law with $\mathbf{x}$ is $p(\mathbf{x},\mathbf{y})$. Together, $I(J;X,Y_{1:N})\le I(X;Y)$.
 >
-> **Step 3.** Combine: $\mathcal{L}_{\mathrm{InfoNCE}}\ge\log N-I(X;Y)$, which is (3). The same argument with $I(K;X,Y_{1:N})\le H(K)=\log N$ shows that the loss is non-negative, so the bound is capped at $\log N$. Poole et al. place this bound in a family of variational MI bounds and discuss its bias–variance trade-off.[^poole2019] $\blacksquare$
+> **Step 3.** Combine: $\mathcal{L}_{\mathrm{InfoNCE}}\ge\log N-I(X;Y)$, which is (3). The same argument with $I(J;X,Y_{1:N})\le H(J)=\log N$ shows that the loss is non-negative, so the bound is capped at $\log N$. Poole et al. place this bound in a family of variational MI bounds and discuss its bias–variance trade-off.[^poole2019] $\blacksquare$
 
 ![Three curves of the InfoNCE estimate against the true mutual information of correlated Gaussians. Each follows the diagonal at first and then flattens at log N: 2.1 for N=8, 4.2 for N=64 and 6.2 for N=512.](Machine%20Learning/images/self-supervised-representation-learning-mi-bound.svg)
 
@@ -203,8 +203,8 @@ Take a batch of $2B$ embeddings (each image augmented twice, for good measure) w
 
 $$
 \mathcal{L}_{\mathrm{SupCon}}
-=\sum_{i}\frac{-1}{|P(i)|}\sum_{p\in P(i)}
-\log\frac{e^{\operatorname{sim}(\mathbf{z}_i,\mathbf{z}_p)/\tau}}{\sum_{a\in A(i)}e^{\operatorname{sim}(\mathbf{z}_i,\mathbf{z}_a)/\tau}} .
+=\sum_{i}\frac{-1}{|P(i)|}\sum_{i^+\in P(i)}
+\log\frac{e^{\operatorname{sim}(\mathbf{z}_i,\mathbf{z}_{i^+})/\tau}}{\sum_{a\in A(i)}e^{\operatorname{sim}(\mathbf{z}_i,\mathbf{z}_a)/\tau}} .
 \tag{4}
 $$
 
@@ -237,11 +237,11 @@ Now remove the labels. Where do positives come from? From **augmentation**. Two 
 SimCLR[^chen2020] is the simplest complete recipe, and nearly every later method is a variation of it (Figure 4, top).
 1. Sample a batch of $B$ images. Augment each twice, giving $2B$ views.
 2. Encode each view, $\mathbf{h}=f_\theta(t(\mathbf{x}))$, and project it with a small MLP, $\mathbf{z}=g_\theta(\mathbf{h})$.
-3. For each view $i$, the other view of the same image, $j(i)$, is the positive and the remaining $2B-2$ views are negatives. Minimize the loss averaged over all $2B$ anchors (**NT-Xent**, normalized temperature-scaled cross-entropy):
+3. For each view $i$, the other view of the same image, $i^+$, is the positive and the remaining $2B-2$ views are negatives. Minimize the loss averaged over all $2B$ anchors (**NT-Xent**, normalized temperature-scaled cross-entropy):
 
 $$
 \mathcal{L}_{\mathrm{SimCLR}}
-=\frac{1}{2B}\sum_{i=1}^{2B}-\log\frac{e^{\operatorname{sim}(\mathbf{z}_i,\mathbf{z}_{j(i)})/\tau}}{\sum_{k\ne i}e^{\operatorname{sim}(\mathbf{z}_i,\mathbf{z}_k)/\tau}} .
+=\frac{1}{2B}\sum_{i=1}^{2B}-\log\frac{e^{\operatorname{sim}(\mathbf{z}_i,\mathbf{z}_{i^+})/\tau}}{\sum_{l\ne i}e^{\operatorname{sim}(\mathbf{z}_i,\mathbf{z}_l)/\tau}} .
 \tag{5}
 $$
 
@@ -259,7 +259,7 @@ A linear probe on SimCLR features of a ResNet-50 with four times the usual width
 *Figure 4. Three ways to train on pairs of views. SimCLR takes its negatives from the batch; MoCo from a queue of keys made by a slowly moving copy of the encoder; BYOL and SimSiam use no negatives and break the symmetry between the branches instead.*
 
 > [!example]- Code: InfoNCE and supervised contrastive losses in PyTorch
-> Both losses as single matrix operations. `supcon` with each sample's second view as its only positive reduces to `info_nce`; the test script checks this, and checks both against explicit loops.
+> Both losses as single matrix operations. `supcon` with each sample's second view as its only positive reduces to `info_nce`; we checked this, and both losses, against explicit loops.
 > ```python
 > import torch
 > import torch.nn.functional as F
@@ -323,7 +323,7 @@ Why not simply let the query encoder produce the keys? Because the queue holds k
 > # each step: loss, k = moco_loss(...); loss.backward(); opt.step(); momentum_update(...)
 > #            queue = torch.cat([k, queue])[:H]               # enqueue the newest keys, drop the oldest
 > ```
-> Compared with SimCLR's `info_nce`, the negatives come from `queue` instead of the other views in the batch, so their number $H$ no longer depends on the batch size. The new keys are enqueued only after the loss is computed, so a key is never its own negative.
+> Compared with SimCLR's `info_nce`, the negatives come from `queue` instead of the other views in the batch, so their number, `H`, no longer depends on the batch size. The new keys are enqueued only after the loss is computed, so a key is never its own negative.
 
 MoCo v2 added SimCLR's projection head and stronger augmentations, and then outperformed SimCLR with a batch of only 256.[^chen2020mocov2] The `version3.py` script of the code repository implements MoCo on MNIST, and `version4.py` fine-tunes the MoCo encoder with only 1000 labels, reaching about 95% test accuracy against about 93% from a random initialization.
 
@@ -331,7 +331,7 @@ MoCo v2 added SimCLR's projection head and stronger augmentations, and then outp
 
 Not all negatives are equally useful. Random negatives are mostly easy, so far from the anchor that they contribute almost nothing to the gradient. Two refinements:
 - **Hard negative sampling** reweights negatives towards those most similar to the anchor, with an importance weight $\propto e^{\beta\operatorname{sim}}$. A low temperature does a softer version of the same thing.[^robinson2021]
-- **Debiasing.** Some "negatives" are really images of the same class: a different dog photo is a false negative for a dog anchor. With $C$ roughly balanced classes, about $1/C$ of random negatives are false. Debiased contrastive learning corrects the negative term for this rate.[^chuang2020]
+- **Debiasing.** Some "negatives" are really images of the same class: a different dog photo is a false negative for a dog anchor. With $K$ roughly balanced classes, about $1/K$ of random negatives are false. Debiased contrastive learning corrects the negative term for this rate.[^chuang2020]
 
 The two pull in opposite directions: the hardest negatives are disproportionately likely to be false negatives. Robinson et al. combine both corrections.[^robinson2021]
 
@@ -369,13 +369,13 @@ and found that across many trained encoders, lower values of both predict better
 >     """log E exp(-t ||z - z'||^2) over distinct pairs in the batch."""
 >     return torch.pdist(z).pow(2).mul(-t).exp().mean().log()
 > ```
-> Both are cheap enough to log during training. For points spread evenly on the unit circle, `uniform_loss` approaches $\log I_0(4)-4\approx-1.575$, the floor quoted in Figure 5; a collapsed embedding gives 0.
+> Both are cheap enough to log during training. For points spread evenly on the unit circle, `uniform_loss` approaches about $-1.575$, the floor quoted in Figure 5; a collapsed embedding gives 0.
 
 This picture also explains collapse. Alignment alone is solved perfectly by mapping every input to the same point: $\mathcal{L}_{\mathrm{align}}=0$, with no information left. Uniformity alone is solved by scattering inputs at random. It is the tension between the two that produces a useful representation: spread out as much as possible, *except* along the directions the augmentations say do not matter.
 
 ![Four panels. Top left: embeddings at initialization bunched in one part of the circle. Top right: after InfoNCE training, spread around the circle with each class on an arc. Bottom left: with the alignment loss only, all points collapse to one spot. Bottom right: training trajectories in the plane of uniformity versus alignment loss.](Machine%20Learning/images/self-supervised-representation-learning-alignment-uniformity.svg)
 
-*Figure 5. The toy encoder of Figure 3, with 2-dimensional embeddings. At initialization the embeddings bunch together in one region of the circle. InfoNCE training lowers the alignment loss from 0.176 to 0.017 and the uniformity loss from −0.33 to −1.57, within 0.002 of its minimum on the circle ($\log I_0(4)-4$, dotted), and 10-NN accuracy is 96.5%. Minimizing the alignment loss alone sends both losses to 0: every input lands on the same point, and 10-NN accuracy falls to 30.1% (chance is 16.7%).*
+*Figure 5. The toy encoder of Figure 3, with 2-dimensional embeddings. At initialization the embeddings bunch together in one region of the circle. InfoNCE training lowers the alignment loss from 0.176 to 0.017 and the uniformity loss from −0.33 to −1.57, within 0.002 of its minimum on the circle ($\approx-1.575$, dotted), and 10-NN accuracy is 96.5%. Minimizing the alignment loss alone sends both losses to 0: every input lands on the same point, and 10-NN accuracy falls to 30.1% (chance is 16.7%).*
 
 ### Why should any of this help downstream?
 
@@ -411,7 +411,7 @@ where $\operatorname{sg}$ treats its argument as a constant. Remove the stop-gra
 Why does this work, when collapse is a perfectly good minimizer of the loss? The stop-gradient means the network is **not** doing gradient descent on any fixed loss. Chen and He read SimSiam as an alternating, EM-like procedure: one step fixes the targets and fits the predictor and encoder to them; the next recomputes the targets.[^chen2021simsiam] Tian et al. analysed the learning dynamics of linear versions and showed that the predictor aligns with the eigenbasis of the embedding correlation, and that the stop-gradient and predictor together keep the training dynamics away from the collapsed fixed point.[^tian2021] There is no complete theory for the nonlinear case.
 
 > [!example]- Code: a BYOL step in PyTorch
-> The online network and predictor are trained by any optimizer; call `update_target()` after each optimizer step. Setting `m=0` and sharing weights gives SimSiam. The test script checks that no gradient reaches the target and that the moving-average update is exact.
+> The online network and predictor are trained by any optimizer; call `update_target()` after each optimizer step. Setting `m=0` and sharing weights gives SimSiam. We checked that no gradient reaches the target and that the moving-average update is exact.
 > ```python
 > import copy
 > import torch
@@ -439,11 +439,11 @@ Why does this work, when collapse is a perfectly good minimizer of the loss? The
 
 The second family attacks collapse directly, with a loss term that is large for collapsed embeddings. Collapse means the embedding coordinates have no variance (complete) or are redundant copies of each other (dimensional). So penalize exactly that.
 
-**Barlow Twins**[^zbontar2021] standardizes each embedding coordinate over the batch and computes the $d\times d$ **cross-correlation matrix** $\mathbf{C}$ between the two views, $C_{ab}=\frac{1}{B}\sum_i z^{(1)}_{ia}z^{(2)}_{ib}$. The loss drives $\mathbf{C}$ towards the identity:
+**Barlow Twins**[^zbontar2021] standardizes each embedding coordinate over the batch and computes the $d\times d$ **cross-correlation matrix** $\mathbf{C}$ between the two views, $C_{uv}=\frac{1}{B}\sum_i z^{(1)}_{iu}z^{(2)}_{iv}$. The loss drives $\mathbf{C}$ towards the identity:
 
 $$
 \mathcal{L}_{\mathrm{BT}}
-=\sum_{a}\big(1-C_{aa}\big)^2+\lambda\sum_{a\ne b}C_{ab}^2 .
+=\sum_{u}\big(1-C_{uu}\big)^2+\lambda\sum_{u\ne v}C_{uv}^2 .
 $$
 
 - The diagonal term makes each coordinate agree across the two views: **invariance**.
@@ -451,7 +451,7 @@ $$
 
 **VICReg**[^bardes2022] (Variance–Invariance–Covariance Regularization) splits the same idea into three explicit terms for embeddings $\mathbf{Z},\mathbf{Z}'\in\mathbb{R}^{B\times d}$ of the two views:
 - **Invariance:** the mean squared distance between $\mathbf{z}_i$ and $\mathbf{z}'_i$.
-- **Variance:** a hinge $\frac1d\sum_a\max\big(0,\,1-\operatorname{std}(\mathbf{Z}_{:,a})\big)$ that keeps every coordinate's standard deviation over the batch at least 1. This term alone rules out complete collapse.
+- **Variance:** a hinge $\frac1d\sum_u\max\big(0,\,1-\operatorname{std}(\mathbf{Z}_{:,u})\big)$ that keeps every coordinate's standard deviation over the batch at least 1. This term alone rules out complete collapse.
 - **Covariance:** the sum of squared off-diagonal entries of the covariance matrix of $\mathbf{Z}$, divided by $d$. This decorrelates the coordinates, against dimensional collapse.
 
 Unlike Barlow Twins, the variance and covariance terms are applied to each branch separately, so the two branches need not share weights or even modalities. Both methods are close relatives of [[Matrix Factorization and Dimensionality Reduction|PCA]]: they ask for decorrelated coordinates, and the redundancy-reduction terms are a soft form of whitening.
@@ -488,10 +488,10 @@ Unlike Barlow Twins, the variance and covariance terms are applied to each branc
 
 ### Self-distillation: DINO
 
-**DINO**[^caron2021] (self-**di**stillation with **no** labels) treats the moving-average network as a teacher and the trained one as a student. Both end in a softmax over $K$ "prototype" dimensions ($K=65536$), and the student is trained to match the teacher's output distribution on a different view by cross-entropy, $-\sum_k P^{(t)}_k\log P^{(s)}_k$. This is the classifier-with-prototypes picture from SupCon again, except that the "labels" are the teacher's own soft predictions. It is close to the clustering-based SwAV, which assigns views to learned prototypes and predicts one view's assignment from the other.[^caron2020]
+**DINO**[^caron2021] (self-**di**stillation with **no** labels) treats the moving-average network as a teacher and the trained one as a student. Both end in a softmax over $K$ "prototype" dimensions ($K=65536$), and the student is trained to match the teacher's output distribution on a different view by cross-entropy, $-\sum_k p^{\text{teacher}}_k\log p^{\text{student}}_k$. This is the classifier-with-prototypes picture from SupCon again, except that the "labels" are the teacher's own soft predictions. It is close to the clustering-based SwAV, which assigns views to learned prototypes and predicts one view's assignment from the other.[^caron2020]
 
 Two failure modes threaten a self-distillation loss: every image put in the same prototype, or a uniform output that says nothing. DINO counters them with a pair of opposing operations on the teacher's logits:
-- **Centering:** subtract a running mean $\mathbf{c}$ of the teacher's logits over batches. No single prototype can win for every image, but on its own this pushes the output towards uniform.
+- **Centring:** subtract a running mean $\mathbf{c}$ of the teacher's logits over batches. No single prototype can win for every image, but on its own this pushes the output towards uniform.
 - **Sharpening:** a low teacher temperature (0.04–0.07, against 0.1 for the student) makes the teacher's output peaked, pushing away from uniform.
 
 DINO also uses **multi-crop**: the student sees two large "global" crops and several small "local" crops, the teacher only the global ones, so the student must infer the whole from a part. Trained on ViTs, DINO's features have remarkable properties: the self-attention maps of the class token segment the main object without any segmentation labels, and $k$-NN classification on the frozen features is nearly as good as a linear probe.[^caron2021]
@@ -504,7 +504,7 @@ A different pretext task needs no pairs at all: **hide part of the input and pre
 
 ### Masked autoencoders
 
-A **masked autoencoder** (MAE)[^he2022mae] splits an image into patches, as in the [[Sequence Models|Vision Transformer]], and drops a random **75%** of them.
+A **masked autoencoder** (MAE)[^he2022mae] splits an image into patches, as in the [[Sequence Models#The Vision Transformer|Vision Transformer]], and drops a random **75%** of them.
 - A ViT **encoder** processes only the visible 25% of the patches. This alone makes pre-training three or more times faster.
 - A small **decoder** receives the encoded visible patches plus a learned "mask token" at each missing position, and reconstructs the missing pixels (normalized per patch).
 - The loss is the mean squared error on the **masked** patches only.
@@ -578,7 +578,7 @@ Balestriero et al.'s *Cookbook of Self-Supervised Learning* collects these recip
 - A contrastive loss is a softmax over energies, normalized over a small **candidate set** instead of over everything: pull the positive pair together, push the negatives apart, weighted by how plausible they look. This is InfoNCE. It lower-bounds mutual information, but never by more than $\log N$.
 - With labels deciding the positives it is **supervised contrastive learning**, which, like cross-entropy against class prototypes, packs each class into a tight cluster. With augmentations deciding them it is **SimCLR**; **MoCo** takes its negatives from a queue kept consistent by a slowly moving key encoder.
 - The InfoNCE optimum balances **alignment** (positives together) and **uniformity** (everything spread out). Alignment alone collapses.
-- Non-contrastive methods prevent collapse with asymmetry (predictor and stop-gradient in **BYOL** and **SimSiam**; centering and sharpening in **DINO**) or with decorrelation (**Barlow Twins**, **VICReg**). Dimensional collapse is subtler than complete collapse; watch the spectrum.
+- Non-contrastive methods prevent collapse with asymmetry (predictor and stop-gradient in **BYOL** and **SimSiam**; centring and sharpening in **DINO**) or with decorrelation (**Barlow Twins**, **VICReg**). Dimensional collapse is subtler than complete collapse; watch the spectrum.
 - Predictive methods hide part of the input: **MAE** reconstructs pixels, **JEPA** predicts representations.
 - **CLIP** is symmetric InfoNCE across images and text; class names written as captions give zero-shot classifiers.
 

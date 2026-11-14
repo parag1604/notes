@@ -23,7 +23,7 @@ next: "[[Index (Reinforcement Learning)]]"
 
 The planning lectures ([[Finite-Horizon Dynamic Programming]], [[Dynamic Programming]], [[Stochastic Shortest Path Problems]]) assumed that someone hands us the MDP. With $p(s'\mid s,a)$ and $r(s,a)$ in hand, value iteration and policy iteration compute an optimal policy without a single interaction with the world. The first half of the series took the opposite stance: the model-free methods ([[Policy Gradients]], [[Q-Learning and SARSA]], ...) never write the model down at all.
 
-There is a middle road, and it is often the most sample-efficient one: **learn the model from experience, then plan with it**. A transition $(s_t,a_t,r_t,s_{t+1})$ is a labelled example for a supervised problem ("what happens if I do $a$ in $s$?"). That supervision is far richer than the scalar return that model-free methods learn from. Levine's CS 285 lectures organise the subject into three questions,[^cs285] and this lecture follows the same arc:
+There is a middle road, and it is often the most sample-efficient one: **learn the model from experience, then plan with it**. A transition $(s_t,a_t,r_t,s_{t+1})$ is a labelled example for a supervised problem ("what happens if I do $a$ in $s$?"). That supervision is far richer than the scalar return that model-free methods learn from. Levine's CS 285 lectures organize the subject into three questions,[^cs285] and this lecture follows the same arc:
 
 1. **Learn a model, then plan with it.** How good does the model have to be? What goes wrong when it is not? (Sections on certainty equivalence and on planning with learned models.)
 2. **Mix learning and planning.** Dyna uses the model to generate extra, simulated experience for an ordinary model-free learner.
@@ -64,9 +64,9 @@ Each row $\hat p(\cdot\mid s,a)$ is the empirical distribution of a categorical 
 How accurate must $\hat p$ and $\hat r$ be? The answer is a short, very useful calculation.
 
 > [!tip] Intuition
-> A one-step error in $\hat p$ misplaces a fraction of probability mass, and the misplaced mass carries a value of size at most $R_{\max}/(1-\gamma)$. The error is made at every step, and in a discounted problem errors are summed over an effective horizon of $1/(1-\gamma)$ steps. One factor of $1/(1-\gamma)$ comes from the size of values, another from the accumulation, so transition errors are amplified by $1/(1-\gamma)^2$. This is the discounted cousin of the $\epsilon T^2$ compounding in [[Imitation Learning#Analysis: why errors compound|behaviour cloning]].
+> A one-step error in $\hat p$ misplaces a fraction of probability mass, and the misplaced mass carries a value of size at most $r_{\max}/(1-\gamma)$. The error is made at every step, and in a discounted problem errors are summed over an effective horizon of $1/(1-\gamma)$ steps. One factor of $1/(1-\gamma)$ comes from the size of values, another from the accumulation, so transition errors are amplified by $1/(1-\gamma)^2$. This is the discounted cousin of the $\epsilon T^2$ compounding in [[Imitation Learning#Analysis: why errors compound|behaviour cloning]].
 
-**Simulation lemma.** Let $M$ and $\hat M$ share $\mathcal{S}$, $\mathcal{A}$ and $\gamma\in[0,1)$, with $|r(s,a)|\le R_{\max}$. Suppose that for all $(s,a)$
+**Simulation lemma.** Let $M$ and $\hat M$ share $\mathcal{S}$, $\mathcal{A}$ and $\gamma\in[0,1)$, with $|r(s,a)|\le r_{\max}$. Suppose that for all $(s,a)$
 
 $$
 |r(s,a)-\hat r(s,a)|\le\epsilon_r,\qquad \big\lVert p(\cdot\mid s,a)-\hat p(\cdot\mid s,a)\big\rVert_1\le\epsilon_p .
@@ -75,7 +75,7 @@ $$
 Then for every (stationary, possibly stochastic) policy $\pi$, writing $V^\pi$ and $\hat V^\pi$ for its values in $M$ and $\hat M$,
 
 $$
-\big\lVert V^\pi-\hat V^\pi\big\rVert_\infty\le\frac{\epsilon_r}{1-\gamma}+\frac{\gamma\,\epsilon_p\,R_{\max}}{(1-\gamma)^2}. \tag{1}
+\big\lVert V^\pi-\hat V^\pi\big\rVert_\infty\le\frac{\epsilon_r}{1-\gamma}+\frac{\gamma\,\epsilon_p\,r_{\max}}{(1-\gamma)^2}. \tag{1}
 $$
 
 > [!proof]- Proof
@@ -96,10 +96,10 @@ $$
 > \Big|\sum_{s'}\Delta(s')V^\pi(s')\Big|=\Big|\sum_{s'}\Delta(s')\big(V^\pi(s')-c\big)\Big|\le\lVert\Delta\rVert_1\,\max_{s'}\big|V^\pi(s')-c\big|.
 > $$
 >
-> Since $|V^\pi|\le R_{\max}/(1-\gamma)$, choosing $c=0$ gives at most $\epsilon_p R_{\max}/(1-\gamma)$ (choosing $c$ as the midpoint of the range of $V^\pi$ gives the slightly sharper "half the span"). Averaging over $a\sim\pi(\cdot\mid s)$ keeps the bound. Combining,
+> Since $|V^\pi|\le r_{\max}/(1-\gamma)$, choosing $c=0$ gives at most $\epsilon_p r_{\max}/(1-\gamma)$ (choosing $c$ as the midpoint of the range of $V^\pi$ gives the slightly sharper "half the span"). Averaging over $a\sim\pi(\cdot\mid s)$ keeps the bound. Combining,
 >
 > $$
-> \lVert V^\pi-\hat V^\pi\rVert_\infty\le\frac{1}{1-\gamma}\Big(\epsilon_r+\frac{\gamma\,\epsilon_p R_{\max}}{1-\gamma}\Big).
+> \lVert V^\pi-\hat V^\pi\rVert_\infty\le\frac{1}{1-\gamma}\Big(\epsilon_r+\frac{\gamma\,\epsilon_p r_{\max}}{1-\gamma}\Big).
 > $$
 
 What we actually care about is how good the **CE policy** $\hat\pi$ (greedy with respect to $\hat V^*$, hence optimal in $\hat M$) is in the real MDP. Call the right-hand side of (1) $\epsilon_V$. Then
@@ -134,10 +134,10 @@ $$
 > [!proof]- Proof
 > For any two distributions, $\lVert\hat p-p\rVert_1=2\max_{B\subseteq\mathcal{S}}\big(\hat p(B)-p(B)\big)$; the maximum is attained at $B=\{s':\hat p(s')>p(s')\}$. For a fixed set $B$, $\hat p(B)$ is the mean of $n$ i.i.d. Bernoulli$\big(p(B)\big)$ indicators, so Hoeffding's inequality (see [[Multi-Armed Bandits#Aside: concentration inequalities|the bandits lecture]]) gives $\Pr\big(\hat p(B)-p(B)\ge\varepsilon/2\big)\le e^{-2n(\varepsilon/2)^2}=e^{-n\varepsilon^2/2}$. A union bound over the at most $2^{|\mathcal{S}|}$ sets gives $\Pr\big(\lVert\hat p-p\rVert_1\ge\varepsilon\big)\le 2^{|\mathcal{S}|}e^{-n\varepsilon^2/2}$. Setting the right-hand side to $\delta$ and solving for $\varepsilon$ gives the claim.
 
-Apply it to all $|\mathcal{S}||\mathcal{A}|$ rows (replace $\delta$ by $\delta/(|\mathcal{S}||\mathcal{A}|)$, another union bound) and, for simplicity, take the reward as known ($\epsilon_r=0$). By (2), the CE policy is $\varepsilon$-optimal as soon as $2\gamma\epsilon_pR_{\max}/(1-\gamma)^2\le\varepsilon$, which holds with probability $1-\delta$ once
+Apply it to all $|\mathcal{S}||\mathcal{A}|$ rows (replace $\delta$ by $\delta/(|\mathcal{S}||\mathcal{A}|)$, another union bound) and, for simplicity, take the reward as known ($\epsilon_r=0$). By (2), the CE policy is $\varepsilon$-optimal as soon as $2\gamma\epsilon_pr_{\max}/(1-\gamma)^2\le\varepsilon$, which holds with probability $1-\delta$ once
 
 $$
-n\ \ge\ \frac{8\gamma^2R_{\max}^2}{\varepsilon^2(1-\gamma)^4}\Big(|\mathcal{S}|\ln2+\ln\frac{|\mathcal{S}||\mathcal{A}|}{\delta}\Big).
+n\ \ge\ \frac{8\gamma^2r_{\max}^2}{\varepsilon^2(1-\gamma)^4}\Big(|\mathcal{S}|\ln2+\ln\frac{|\mathcal{S}||\mathcal{A}|}{\delta}\Big).
 $$
 
 So the total number of samples, $n|\mathcal{S}||\mathcal{A}|$, is of order $|\mathcal{S}|^2|\mathcal{A}|/\big(\varepsilon^2(1-\gamma)^4\big)$ up to logarithms. Two remarks keep this in perspective.
@@ -156,11 +156,11 @@ Suppose the agent, early on, tries an action once and is unlucky. The model now 
 
 The bandit remedy carries over: be **optimistic in the face of uncertainty**. Plan in a model whose rewards are inflated where data are scarce, so that the planner *wants* to visit poorly-known pairs.
 
-- **R-max**[^rmax] treats every pair visited fewer than $m$ times as leading to a fictitious state paying $R_{\max}$ forever; **E³**[^e3] explicitly balances exploring unknown states and exploiting known ones. Both were the first algorithms with polynomial sample-complexity guarantees for general MDPs.
+- **R-max**[^rmax] treats every pair visited fewer than $m$ times as leading to a fictitious state paying $r_{\max}$ forever; **E³**[^e3] explicitly balances exploring unknown states and exploiting known ones. Both were the first algorithms with polynomial sample-complexity guarantees for general MDPs.
 - **MBIE-EB**[^mbie] adds a count-based bonus $\beta/\sqrt{N(s,a)}$ to $\hat r(s,a)$, the direct analogue of the [[Multi-Armed Bandits#Upper Confidence Bound (UCB)|UCB]] bonus.
 
 ![[Reinforcement Learning/images/model-based-rl-exploration.svg]]
-*Figure 2: three certainty-equivalence agents on a six-state "river-swim" chain (20 runs of 5000 steps, $\gamma=0.95$; bands show the 10th–90th percentiles). Swimming left is easy and pays $0.005$ at the left bank; swimming right succeeds only with probability $0.35$ per step, and pays $1$ per step at the right bank. All three agents re-plan by value iteration on the count-based model after every step. The greedy agent never reached the right bank in any run (total reward 25). Adding $\varepsilon=0.1$ random actions helped in 1 run out of 20 (mean total 184). An optimistic agent with bonus $0.3/\sqrt{N(s,a)}$ (and unvisited pairs valued as $R_{\max}/(1-\gamma)$) reached it in all 20 runs, collecting about 4000.*
+*Figure 2: three certainty-equivalence agents on a six-state "river-swim" chain (20 runs of 5000 steps, $\gamma=0.95$; bands show the 10th–90th percentiles). Swimming left is easy and pays $0.005$ at the left bank; swimming right succeeds only with probability $0.35$ per step, and pays $1$ per step at the right bank. All three agents re-plan by value iteration on the count-based model after every step. The greedy agent never reached the right bank in any run (total reward 25). Adding $\varepsilon=0.1$ random actions helped in 1 run out of 20 (mean total 184). An optimistic agent with bonus $0.3/\sqrt{N(s,a)}$ (and unvisited pairs valued as $r_{\max}/(1-\gamma)$) reached it in all 20 runs, collecting about 4000.*
 
 Random ($\varepsilon$-greedy) exploration fails here for the same reason it is weak in bandits, only worse: to see the reward, the agent must take the "unpromising" action several times *in a row*, and the probability of doing so by chance decays exponentially with the length of the chain.
 
@@ -178,7 +178,7 @@ with $\mathbf{C}_s\succeq0$ and $\mathbf{C}_a\succ0$. Run the [[Finite-Horizon D
 
 $$
 \begin{aligned}
-\mu_t(s)&=-\mathbf{K}_ts,\qquad \mathbf{K}_t=\big(\mathbf{C}_a+\mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{B}\big)^{-1}\mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{A},\\
+\pi_t(s)&=-\mathbf{K}_ts,\qquad \mathbf{K}_t=\big(\mathbf{C}_a+\mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{B}\big)^{-1}\mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{A},\\
 \mathbf{P}_t&=\mathbf{C}_s+\mathbf{A}^\top\mathbf{P}_{t+1}\mathbf{A}-\mathbf{A}^\top\mathbf{P}_{t+1}\mathbf{B}\,\mathbf{K}_t,\\
 c_t&=c_{t+1}+\operatorname{tr}\big(\mathbf{P}_{t+1}\boldsymbol\Sigma_w\big),
 \end{aligned}
@@ -186,7 +186,7 @@ $$
 
 starting from $\mathbf{P}_T=0$, $c_T=0$. This is the discrete-time **Riccati recursion**. The noise covariance appears only in the constant $c_t$; the gains $\mathbf{K}_t$ are the same as for the noise-free system. That is the original certainty-equivalence principle.[^simon1956]
 
-LQR matters for model-based RL in two ways. First, it is the simplest instance of "learn a model, then plan": fit $\mathbf{A},\mathbf{B}$ by least squares on observed transitions (system identification) and run the Riccati recursion. Second, it is the inner loop of the standard trajectory optimisers for nonlinear models: **iLQR / DDP** repeatedly linearise the dynamics and quadratise the reward around the current trajectory, solve the resulting LQR, and update the trajectory.[^tassa2012]
+LQR matters for model-based RL in two ways. First, it is the simplest instance of "learn a model, then plan": fit $\mathbf{A},\mathbf{B}$ by least squares on observed transitions (system identification) and run the Riccati recursion. Second, it is the inner loop of the standard trajectory optimizers for nonlinear models: **iLQR / DDP** repeatedly linearize the dynamics and quadratize the reward around the current trajectory, solve the resulting LQR, and update the trajectory.[^tassa2012]
 
 ## Dyna: learning, planning and acting in one loop
 
@@ -200,7 +200,7 @@ The planning updates are the same update rule applied to imagined data. So plann
 
 > [!example] Algorithm: tabular Dyna-Q (deterministic environment)
 > Inputs: step size $\alpha$, exploration rate $\varepsilon$, planning steps $n$.
-> 1. Initialise $Q(s,a)=0$ for all $(s,a)$ and an empty model.
+> 1. Initialize $Q(s,a)=0$ for all $(s,a)$ and an empty model.
 > 2. Observe the initial state $s$.
 > 3. Choose $a$ $\varepsilon$-greedily from $Q(s,\cdot)$, take it, observe $r$ and $s'$.
 > 4. **Direct RL:** $Q(s,a)\leftarrow Q(s,a)+\alpha\big[r+\gamma\max_{a'}Q(s',a')-Q(s,a)\big]$, with the $\max$ term set to $0$ if $s'$ is terminal.
@@ -229,7 +229,7 @@ For a stochastic environment, the model stores counts instead of a single outcom
 Why does episode 1 not benefit? Until the goal has been found once, every stored reward is $0$ and every $Q$ is $0$, so the planning updates change nothing. As soon as the goal is reached, the next real step and its $n$ planning updates start pushing value backwards. With Q-learning alone the value moves back one state per visit; with $n=50$ planning updates per step it spreads along the whole remembered path within a few real steps.
 
 > [!note] Refinements
-> - **Prioritised sweeping**[^moore1993] replaces the uniform choice in step 6 with a priority queue: update first the pairs whose predecessors' values have just changed the most. It plans backwards from where the news is.
+> - **Prioritized sweeping**[^moore1993] replaces the uniform choice in step 6 with a priority queue: update first the pairs whose predecessors' values have just changed the most. It plans backwards from where the news is.
 > - **Changing environments.** A model that is wrong in a way that makes things look worse than they are is corrected by experience; one that makes things look *better* than they are can be ignored forever if the agent stops visiting. Sutton & Barto's Dyna-Q+ adds a small exploration bonus that grows with the time since a pair was last tried.[^suttonbarto]
 
 ## Planning with learned models in continuous spaces
@@ -249,13 +249,13 @@ A **probabilistic** model outputs a distribution, typically $\mathcal{N}\big(s+\
 - **Aleatoric** uncertainty is noise in the system itself. A probabilistic model captures it with $\boldsymbol\Sigma_\phi$, and more data do not remove it.
 - **Epistemic** uncertainty is our ignorance about the model, large wherever data are scarce. A single network, even a probabilistic one, does not represent it: far from the data, it simply extrapolates, often confidently.
 
-A cheap and effective handle on epistemic uncertainty is a **bootstrap ensemble**:[^ensembles] train $B$ models on resampled versions of $\mathcal{D}$ (or simply from different random initialisations). Where data are plentiful they agree; where data are absent they disagree. **PETS** (probabilistic ensembles with trajectory sampling)[^pets] combines both: an ensemble of probabilistic networks, with each imagined trajectory propagated through the members.
+A cheap and effective handle on epistemic uncertainty is a **bootstrap ensemble**:[^ensembles] train $B$ models on resampled versions of $\mathcal{D}$ (or simply from different random initializations). Where data are plentiful they agree; where data are absent they disagree. **PETS** (probabilistic ensembles with trajectory sampling)[^pets] combines both: an ensemble of probabilistic networks, with each imagined trajectory propagated through the members.
 
 ### Why "fit once, then plan" fails
 
 The naive procedure is: run some base policy (for example random actions), fit $f_\phi$ to the data, plan with it. This is how classical system identification works, and it works well when the model has a few physical parameters. With an expressive model it usually fails, for a reason we have met before. The model is accurate under the **state distribution of the data-collection policy**. The planner then steers into states the base policy never visited, where the model is wrong, and the planner's decisions there are based on fiction. This is the same distribution shift as in [[Imitation Learning]], and it has the same fix as DAgger: **collect data with the current planner and aggregate it**, refit, repeat. Ross and Bagnell made the analogy precise, with DAgger-style guarantees for this loop.[^ross2012]
 
-The planner makes things worse than plain distribution shift: it is an *optimiser*, and optimisers seek out errors. Among all action sequences, it will prefer exactly those along which the model predicts unrealistically high reward. Averaging the predicted return over ensemble members penalises sequences on which the members disagree, which is one reason ensembles help.
+The planner makes things worse than plain distribution shift: it is an *optimizer*, and optimizers seek out errors. Among all action sequences, it will prefer exactly those along which the model predicts unrealistically high reward. Averaging the predicted return over ensemble members penalizes sequences on which the members disagree, which is one reason ensembles help.
 
 ### Model-predictive control
 
@@ -271,8 +271,8 @@ $$
 - **Cross-entropy method (CEM):**[^rubinstein1999] iteratively refit a sampling distribution to the best samples.
 
 > [!example] Algorithm: cross-entropy method for MPC
-> 1. Initialise a Gaussian over action sequences, mean $\mathbf{m}\in\mathbb{R}^{H\times d_a}$ (for example, the previous plan shifted by one step) and standard deviation $\boldsymbol\sigma$.
-> 2. Sample $K$ sequences $a^{(j)}_{0:H-1}\sim\mathcal{N}(\mathbf{m},\operatorname{diag}\boldsymbol\sigma^2)$, clipped to the action bounds.
+> 1. Initialize a Gaussian over action sequences, mean $\mathbf{m}\in\mathbb{R}^{H\times d_a}$ (for example, the previous plan shifted by one step) and standard deviation $\boldsymbol\sigma$.
+> 2. Sample $L$ sequences $a^{(j)}_{0:H-1}\sim\mathcal{N}(\mathbf{m},\operatorname{diag}\boldsymbol\sigma^2)$, clipped to the action bounds.
 > 3. Roll each out in the model and compute its predicted return $\hat J^{(j)}$ (with an ensemble, the average over members).
 > 4. Keep the $E$ sequences with the largest $\hat J^{(j)}$ (the *elites*) and set $\mathbf{m},\boldsymbol\sigma$ to their mean and standard deviation.
 > 5. Repeat steps 2–4 for a few iterations.
@@ -280,17 +280,17 @@ $$
 
 > [!example]- Code: one CEM planning call (NumPy)
 > ```python
-> # assumes: predicted_return(acts) -> (K,) returns of K action sequences acts (K, H, d_a), rolled out in the
+> # assumes: predicted_return(acts) -> (L,) returns of L action sequences acts (L, H, d_a), rolled out in the
 > # learned model from the current state; initial mean m and std sigma of shape (H, d_a); bounds a_low, a_high
 > for _ in range(n_iters):
->     acts = np.clip(m + sigma * rng.standard_normal((K, *m.shape)), a_low, a_high)   # step 2
+>     acts = np.clip(m + sigma * rng.standard_normal((L, *m.shape)), a_low, a_high)   # step 2
 >     J = predicted_return(acts)                                                     # step 3
 >     elites = acts[np.argsort(J)[-E:]]                                              # step 4: the E best
 >     m, sigma = elites.mean(0), elites.std(0) + 1e-6
 > action = m[0]                      # step 6: execute only the first action, then replan from the new state
 > ```
 
-Both planners are derivative-free and embarrassingly parallel, but they scale poorly with $H\cdot d_a$, the dimension of the search space. Gradient-based trajectory optimisation (iLQR above) or, for discrete actions, Monte Carlo tree search (as in MuZero[^muzero]) take over when that becomes the bottleneck.
+Both planners are derivative-free and embarrassingly parallel, but they scale poorly with $H\cdot d_a$, the dimension of the search space. Gradient-based trajectory optimization (iLQR above) or, for discrete actions, Monte Carlo tree search (as in MuZero[^muzero]) take over when that becomes the bottleneck.
 
 ### A worked example: swinging up a pendulum
 
@@ -310,14 +310,14 @@ The loop is the aggregated one described above: iteration 0 fits the model to 5 
 
 ## Model-based policy learning
 
-MPC never stores a policy: it re-optimises at every step, which is expensive at run time, and each plan is open-loop over its horizon. The third use of a model is to **learn a closed-loop policy** $\pi_\theta$ from it. CS 285 discusses two routes.[^cs285]
+MPC never stores a policy: it re-optimizes at every step, which is expensive at run time, and each plan is open-loop over its horizon. The third use of a model is to **learn a closed-loop policy** $\pi_\theta$ from it. CS 285 discusses two routes.[^cs285]
 
 ### Backpropagating through the model
 
-If both $f_\phi$ and a deterministic policy $\mu_\theta$ are differentiable, the predicted return
+If both $f_\phi$ and a deterministic policy $a=\pi_\theta(s)$ are differentiable, the predicted return
 
 $$
-\hat J(\theta)=\sum_{t=0}^{H-1}r(\hat s_t,\mu_\theta(\hat s_t)),\qquad \hat s_{t+1}=f_\phi\big(\hat s_t,\mu_\theta(\hat s_t)\big),
+\hat J(\theta)=\sum_{t=0}^{H-1}r(\hat s_t,\pi_\theta(\hat s_t)),\qquad \hat s_{t+1}=f_\phi\big(\hat s_t,\pi_\theta(\hat s_t)\big),
 $$
 
 is a differentiable function of $\theta$, and we can follow its gradient as in backpropagation through time. This pathwise gradient has low variance compared with the score-function estimator of [[Policy Gradients]], and PILCO used it with Gaussian-process models to learn cart-pole swing-up from seconds of data.[^pilco]
@@ -328,7 +328,7 @@ The difficulty is conditioning. $\partial\hat J/\partial\theta$ contains product
 
 The surprisingly effective alternative is to keep a model-free learner and use the model only as a **data generator**, the deep-RL version of Dyna. Long imagined rollouts suffer compounding error, while one-step rollouts from the start state never reach later states. The compromise is **branched short rollouts**: start $k$-step model rollouts from states sampled from the *real* replay buffer, so the rollouts cover the states the agent actually visits while each stays short enough to be accurate.
 
-**MBPO** (model-based policy optimisation)[^mbpo] does exactly this: a PETS-style ensemble, rollouts of a few steps branched from real states, and soft actor-critic trained mostly on the model-generated transitions. Janner et al. bound the gap between the model's and the real return, and the bound trades off rollout length against model error, which motivates short rollouts. Earlier variants of the idea include model-based acceleration[^gu2016] (imagined transitions added to a Q-learning buffer) and model-based value expansion[^mve] (a few model steps used to sharpen Q-learning targets).
+**MBPO** (model-based policy optimization)[^mbpo] does exactly this: a PETS-style ensemble, rollouts of a few steps branched from real states, and soft actor-critic trained mostly on the model-generated transitions. Janner et al. bound the gap between the model's and the real return, and the bound trades off rollout length against model error, which motivates short rollouts. Earlier variants of the idea include model-based acceleration[^gu2016] (imagined transitions added to a Q-learning buffer) and model-based value expansion[^mve] (a few model steps used to sharpen Q-learning targets).
 
 ### World models
 
@@ -337,7 +337,7 @@ For high-dimensional observations such as images, predicting the next frame pixe
 ## Key takeaways
 
 - The planning algorithms need $p$ and $r$. **Model-based RL learns them** from transitions, which are rich supervised data, and then plans; with an exact model it is just DP.
-- **Certainty equivalence** (count-based $\hat p,\hat r$ + VI/PI) is consistent. The **simulation lemma** bounds the value error by $\epsilon_r/(1-\gamma)+\gamma\epsilon_pR_{\max}/(1-\gamma)^2$, and the CE policy loses at most twice that. Sample complexity is polynomial; sharp analyses give $\tilde O\big(|\mathcal{S}||\mathcal{A}|/(\varepsilon^2(1-\gamma)^3)\big)$ with a generative model.
+- **Certainty equivalence** (count-based $\hat p,\hat r$ + VI/PI) is consistent. The **simulation lemma** bounds the value error by $\epsilon_r/(1-\gamma)+\gamma\epsilon_pr_{\max}/(1-\gamma)^2$, and the CE policy loses at most twice that. Sample complexity is polynomial; sharp analyses give $\tilde O\big(|\mathcal{S}||\mathcal{A}|/(\varepsilon^2(1-\gamma)^3)\big)$ with a generative model.
 - Online, a greedy planner **exploits model errors** and stops collecting the data that would correct them. Optimism (R-max, E³, count bonuses) is the remedy, as in bandits.
 - **Dyna** makes planning just "learning from simulated experience": a few planning updates per real step can cut the real experience needed by a large factor.
 - In continuous spaces: fit a dynamics model by regression, **aggregate data** collected by the planner (distribution shift, as in DAgger), **replan** every step (MPC) because errors compound, and use **ensembles** so the planner cannot exploit epistemic uncertainty. LQR is the case where planning is closed-form.

@@ -19,7 +19,7 @@ next: "[[Normalizing Flows]]"
 > - With **straight lines** from noise to data the regression target is just $\mathbf{x}_1-\mathbf{x}_0$. Straight paths are cheap to integrate, and **rectified flow** (reflow) and **minibatch optimal transport** make the learned flow straighter still, down to one or two steps.
 > - **Diffusion models are flow matching with a curved path.** Velocity, noise prediction, data prediction and the score are four parameterizations of one function, and the probability flow ODE is the diffusion model's flow.
 >
-> **Notation and time direction:** in this lecture **$t=0$ is noise and $t=1$ is data**, the convention of the flow-matching papers and of the companion code. This is the **reverse** of the [[Denoising Diffusion Models|diffusion lecture]], where $\mathbf{x}_0$ is data and $\mathbf{x}_T$ noise. Here $\mathbf{x}_0\sim p_0=\mathcal{N}(\mathbf{0},\mathbf{I})$ is noise and $\mathbf{x}_1\sim q$ is data, so the diffusion lecture's $(\mathbf{x}_0,\boldsymbol\epsilon)$ is our $(\mathbf{x}_1,\mathbf{x}_0)$, and a continuous diffusion time $s\in[0,1]$ (or step $s=\tau/T$) corresponds to $t=1-s$. Subscripts on $\mathbf{x}$ denote time, not data indices. The table in [[Flow Matching#Diffusion as flow matching|Diffusion as flow matching]] collects all conversions.
+> **Notation and time direction:** in this lecture **$t=0$ is noise and $t=1$ is data**, the convention of the flow-matching papers and of the companion code. This is the **reverse** of the [[Denoising Diffusion Models|diffusion lecture]], where $\mathbf{x}_0$ is data and $\mathbf{x}_T$ noise. Here $\mathbf{x}_0\sim p_0=\mathcal{N}(\mathbf{0},\mathbf{I})$ is noise and $\mathbf{x}_1\sim q$ is data, so the diffusion lecture's $(\mathbf{x}_0,\boldsymbol\epsilon)$ is our $(\mathbf{x}_1,\mathbf{x}_0)$, and a continuous diffusion time $s\in[0,1]$ (or $s=\tau/T$ for the diffusion lecture's discrete step, written $\tau$ here because $t$ is taken) corresponds to $t=1-s$. Subscripts on $\mathbf{x}$ denote time, not data indices. The table in [[Flow Matching#Diffusion as flow matching|Diffusion as flow matching]] collects all conversions.
 >
 > **Code:** [Conditional-Flow-Matching](https://github.com/parag1604/Conditional-Flow-Matching): flow matching from scratch, from a 2-D toy (with the one-step "mean" failure and a no-time ablation) to 64×64 CelebA faces with a U-Net, EMA and Euler/midpoint/Heun/RK4 samplers, a conditional flow for 24→64 super-resolution, and minibatch-OT pairing in 2-D.
 
@@ -52,10 +52,10 @@ Now start not one particle but a whole distribution, $\mathbf{x}_0\sim p_0$. At 
 
 ## Probability paths and the continuity equation
 
-How does a velocity field change a density? Think of probability as a fluid. The mass inside a fixed region can change only by flowing through the region's boundary. In one dimension, the mass in an interval $[a,b]$ is $\int_a^bp_t\,dx$, and the rate at which it crosses a point $x$ is the **flux** $p_t(x)\,u_t(x)$: density times speed. Mass enters at $a$ and leaves at $b$, so
+How does a velocity field change a density? Think of probability as a fluid. The mass inside a fixed region can change only by flowing through the region's boundary. In one dimension, the mass in an interval $[x_-,x_+]$ is $\int_{x_-}^{x_+}p_t\,dx$, and the rate at which it crosses a point $x$ is the **flux** $p_t(x)\,u_t(x)$: density times speed. Mass enters at $x_-$ and leaves at $x_+$, so
 
 $$
-\frac{d}{dt}\int_a^bp_t(x)\,dx=p_t(a)u_t(a)-p_t(b)u_t(b)=-\int_a^b\frac{\partial}{\partial x}\big(p_tu_t\big)\,dx.
+\frac{d}{dt}\int_{x_-}^{x_+}p_t(x)\,dx=p_t(x_-)u_t(x_-)-p_t(x_+)u_t(x_+)=-\int_{x_-}^{x_+}\frac{\partial}{\partial x}\big(p_tu_t\big)\,dx.
 $$
 
 This holds for every interval, so the integrands agree. In $D$ dimensions the derivative becomes a divergence, and we get the **continuity equation**:
@@ -65,22 +65,22 @@ $$
 \tag{2}
 $$
 
-Two quick checks. A constant velocity $u_t(x)=c$ in 1-D should translate the density, $p_t(x)=p_0(x-ct)$; indeed $\partial_tp_t=-c\,p_0'$ and $\partial_x(p_tc)=c\,p_0'$, which sum to zero. And a velocity field pointing outwards, $\nabla\cdot\mathbf{u}_t>0$, spreads particles apart, so the density at a moving particle drops.
+Two quick checks. A constant velocity $u_t(x)=b$ in 1-D should translate the density, $p_t(x)=p_0(x-bt)$; indeed $\partial_tp_t=-b\,p_0'$ and $\partial_x(p_tb)=b\,p_0'$, which sum to zero. And a velocity field pointing outwards, $\nabla\cdot\mathbf{u}_t>0$, spreads particles apart, so the density at a moving particle drops.
 
 > [!proof]- Derivation of the continuity equation from the ODE
-> Take any smooth test function $\varphi$ that vanishes outside a bounded set, and track its average along the flow, $\mathbb{E}[\varphi(\mathbf{x}_t)]=\int\varphi(\mathbf{x})\,p_t(\mathbf{x})\,d\mathbf{x}$. Differentiating the integral form,
+> Take any smooth test function $f$ that vanishes outside a bounded set, and track its average along the flow, $\mathbb{E}[f(\mathbf{x}_t)]=\int f(\mathbf{x})\,p_t(\mathbf{x})\,d\mathbf{x}$. Differentiating the integral form,
 >
 > $$
-> \frac{d}{dt}\mathbb{E}[\varphi(\mathbf{x}_t)]=\int\varphi\,\frac{\partial p_t}{\partial t}\,d\mathbf{x}.
+> \frac{d}{dt}\mathbb{E}[f(\mathbf{x}_t)]=\int f\,\frac{\partial p_t}{\partial t}\,d\mathbf{x}.
 > $$
 >
-> Differentiating along trajectories instead, by the chain rule and (1), $\tfrac{d}{dt}\varphi(\mathbf{x}_t)=\nabla\varphi(\mathbf{x}_t)^\top\mathbf{u}_t(\mathbf{x}_t)$, so
+> Differentiating along trajectories instead, by the chain rule and (1), $\tfrac{d}{dt}f(\mathbf{x}_t)=\nabla f(\mathbf{x}_t)^\top\mathbf{u}_t(\mathbf{x}_t)$, so
 >
 > $$
-> \frac{d}{dt}\mathbb{E}[\varphi(\mathbf{x}_t)]=\int\nabla\varphi^\top\mathbf{u}_t\,p_t\,d\mathbf{x}=-\int\varphi\,\nabla\cdot\big(p_t\mathbf{u}_t\big)\,d\mathbf{x}.
+> \frac{d}{dt}\mathbb{E}[f(\mathbf{x}_t)]=\int\nabla f^\top\mathbf{u}_t\,p_t\,d\mathbf{x}=-\int f\,\nabla\cdot\big(p_t\mathbf{u}_t\big)\,d\mathbf{x}.
 > $$
 >
-> The last step is integration by parts (the divergence theorem); the boundary term vanishes because $\varphi$ does. The two expressions agree for every test function, so $\partial_tp_t=-\nabla\cdot(p_t\mathbf{u}_t)$.
+> The last step is integration by parts (the divergence theorem); the boundary term vanishes because $f$ does. The two expressions agree for every test function, so $\partial_tp_t=-\nabla\cdot(p_t\mathbf{u}_t)$.
 
 > [!note] Likelihoods come for free (a preview)
 > Expanding (2) along a trajectory gives $\tfrac{d}{dt}\log p_t(\mathbf{x}_t)=-\nabla\cdot\mathbf{u}_t(\mathbf{x}_t)$: the log-density at a moving particle changes at minus the rate at which the flow expands volume. Integrating from noise to data,
@@ -91,7 +91,7 @@ Two quick checks. A constant velocity $u_t(x)=c$ in 1-D should translate the den
 >
 > the continuous-time version of the change-of-variables formula, with the log-determinant of the Jacobian replaced by an integrated trace. Flow matching never trains on this quantity, but a trained flow can evaluate it, using Hutchinson's trace estimator from [[Score-Based Models#Sliced score matching|sliced score matching]]. The [[Normalizing Flows]] lecture builds models around exactly this formula.
 
-One more fact matters below: **the velocity field generating a given path is not unique.** Adding any field $\mathbf{w}_t$ with $\nabla\cdot(p_t\mathbf{w}_t)=0$, such as a rotation around a radially symmetric density, leaves (2) unchanged. Different fields with the same marginals move individual particles differently. Flow matching picks one particular field, and the rectified-flow and optimal-transport sections are about picking a good one.
+One more fact matters below: **the velocity field generating a given path is not unique.** Adding any field $\tilde{\mathbf{u}}_t$ with $\nabla\cdot(p_t\tilde{\mathbf{u}}_t)=0$, such as a rotation around a radially symmetric density, leaves (2) unchanged. Different fields with the same marginals move individual particles differently. Flow matching picks one particular field, and the rectified-flow and optimal-transport sections are about picking a good one.
 
 ## The flow matching objective
 
@@ -175,7 +175,7 @@ This is the same move as [[Score-Based Models#Denoising score matching|denoising
 
 ### Conditioning on both ends
 
-A slightly more general view, used by rectified flow and by the optimal-transport section, conditions on a **pair** $\mathbf{z}=(\mathbf{x}_0,\mathbf{x}_1)$ drawn from a **coupling** $\pi(\mathbf{x}_0,\mathbf{x}_1)$, any joint distribution whose marginals are the noise $p_0$ and the data $q$.[^tong2024] Given the pair, the path is deterministic, $\mathbf{x}_t=\boldsymbol\psi_t(\mathbf{x}_0,\mathbf{x}_1)$, and so is its velocity. The proofs above go through verbatim with $\mathbf{x}_1$ replaced by $\mathbf{z}$. The **independent coupling**, $\pi=p_0\times q$, draws noise and data separately; it is what we have used so far.
+A slightly more general view, used by rectified flow and by the optimal-transport section, conditions on a **pair** $\boldsymbol\xi=(\mathbf{x}_0,\mathbf{x}_1)$ drawn from a **coupling** $\pi(\mathbf{x}_0,\mathbf{x}_1)$, any joint distribution whose marginals are the noise $p_0$ and the data $q$.[^tong2024] Given the pair, the path is deterministic, $\mathbf{x}_t=\boldsymbol\psi_t(\mathbf{x}_0,\mathbf{x}_1)$, and so is its velocity. The proofs above go through verbatim with $\mathbf{x}_1$ replaced by $\boldsymbol\xi$. The **independent coupling**, $\pi=p_0\times q$, draws noise and data separately; it is what we have used so far.
 
 ## Gaussian conditional paths
 
@@ -234,7 +234,7 @@ Putting the pieces together, flow matching with the straight-line path is a few 
 
 > [!example] Algorithm: sampling with Euler steps
 > 1. Draw $\mathbf{x}\sim\mathcal{N}(\mathbf{0},\mathbf{I})$ and choose a number of steps $n$, with step size $h=1/n$.
-> 2. For $k=0,\dots,n-1$, with $t=kh$: update $\mathbf{x}\leftarrow\mathbf{x}+h\,\mathbf{v}_\theta(\mathbf{x},t)$.
+> 2. For $j=0,\dots,n-1$, with $t=jh$: update $\mathbf{x}\leftarrow\mathbf{x}+h\,\mathbf{v}_\theta(\mathbf{x},t)$.
 > 3. Return $\mathbf{x}$, an approximate sample from the data distribution.
 
 > [!example]- Code: flow matching in PyTorch (training and Euler sampling)
@@ -289,7 +289,7 @@ Two properties of the learned field explain most practical surprises.
 Sampling is numerical integration of (1), and the cost is counted in **network evaluations** (NFE). Write $h$ for the step and $\mathbf{v}(\mathbf{x},t)$ for the learned field.
 - **Euler**: $\mathbf{x}_{t+h}=\mathbf{x}_t+h\,\mathbf{v}(\mathbf{x}_t,t)$. One evaluation per step; the error per step is $O(h^2)$, so the global error is $O(h)$. It is exact when trajectories are straight lines traversed at constant speed, which is the whole point of straight paths.
 - **Midpoint**: take half an Euler step, evaluate the field there, and use that slope for the full step: $\mathbf{x}_{t+h}=\mathbf{x}_t+h\,\mathbf{v}\big(\mathbf{x}_t+\tfrac h2\mathbf{v}(\mathbf{x}_t,t),\,t+\tfrac h2\big)$. Two evaluations per step, global error $O(h^2)$.
-- **Heun** (the trapezoidal rule as predictor–corrector): an Euler step predicts $\tilde{\mathbf{x}}=\mathbf{x}_t+h\,\mathbf{v}(\mathbf{x}_t,t)$, and the update averages the two slopes, $\mathbf{x}_{t+h}=\mathbf{x}_t+\tfrac h2\big[\mathbf{v}(\mathbf{x}_t,t)+\mathbf{v}(\tilde{\mathbf{x}},t+h)\big]$. Two evaluations per step, global error $O(h^2)$. Karras et al. popularized it for diffusion sampling.[^karras2022]
+- **Heun** (the trapezoidal rule as predictor–corrector): an Euler step predicts $\bar{\mathbf{x}}=\mathbf{x}_t+h\,\mathbf{v}(\mathbf{x}_t,t)$, and the update averages the two slopes, $\mathbf{x}_{t+h}=\mathbf{x}_t+\tfrac h2\big[\mathbf{v}(\mathbf{x}_t,t)+\mathbf{v}(\bar{\mathbf{x}},t+h)\big]$. Two evaluations per step, global error $O(h^2)$. Karras et al. popularized it for diffusion sampling.[^karras2022]
 - **Adaptive solvers** (e.g. Dormand–Prince RK45) pick the step size from an error estimate. They are accurate but spend many evaluations where the field is stiff.
 
 > [!example]- Code: Euler, midpoint and Heun steps
@@ -400,7 +400,7 @@ Once the flow is nearly straight, $\mathbf{Z}_1\approx\mathbf{Z}_0+\mathbf{v}(\m
 
 Reflow straightens the flow after the fact. A cheaper idea is to start from a better coupling. The ideal coupling for squared distance is the **optimal transport plan** between noise and data. Its straight lines never cross at intermediate times (a classical property of optimal transport), so the conditional velocity at each point is already unambiguous, the marginal flow follows the straight lines, and it is the optimal transport map itself.[^peyre2019]
 
-Computing the OT plan between two continuous distributions is out of reach, but within a minibatch it is an **assignment problem**: given $B$ noise samples and $B$ data samples, find the permutation $\sigma$ minimizing $\sum_i\lVert\mathbf{x}_0^{(i)}-\mathbf{x}_1^{(\sigma(i))}\rVert^2$. Solve it exactly (the Hungarian algorithm, $O(B^3)$) or approximately (Sinkhorn iterations), re-pair the batch, and train with the unchanged loss. This is **OT-CFM**,[^tong2024] proposed at the same time as **multisample flow matching**.[^pooladian2023] As $B\to\infty$ the minibatch plans approach the true OT plan. With finite batches the coupling is only approximately optimal, but it already removes most crossings, which both straightens the flow and lowers the variance of the regression target.
+Computing the OT plan between two continuous distributions is out of reach, but within a minibatch it is an **assignment problem**: given $B$ noise samples and $B$ data samples, find the permutation $\rho$ minimizing $\sum_i\lVert\mathbf{x}_0^{(i)}-\mathbf{x}_1^{(\rho(i))}\rVert^2$. Solve it exactly (the Hungarian algorithm, $O(B^3)$) or approximately (Sinkhorn iterations), re-pair the batch, and train with the unchanged loss. This is **OT-CFM**,[^tong2024] proposed at the same time as **multisample flow matching**.[^pooladian2023] As $B\to\infty$ the minibatch plans approach the true OT plan. With finite batches the coupling is only approximately optimal, but it already removes most crossings, which both straightens the flow and lowers the variance of the regression target.
 
 > [!example]- Code: minibatch OT pairing
 > Drop-in before computing the loss: pair the noise batch `x0` with the data batch `x1`, then train as before.
@@ -531,7 +531,7 @@ $$
 \tag{12}
 $$
 
-where $\lambda=0$ is unconditional, $\lambda=1$ conditional and $\lambda>1$ guided, the convention of the [[Denoising Diffusion Models|diffusion lecture]] (Ho and Salimans write $\lambda=1+w$). Why is this the same guidance? By (10), the velocity is an affine function of the score, $\mathbf{u}_t=A_t\mathbf{x}+B_t\nabla\log p_t$, with coefficients that depend only on the path. The conditional and unconditional fields share $A_t$ and $B_t$, so (12) is the velocity of the guided score $\nabla\log p_t(\mathbf{x})+\lambda\nabla\log p_t(y\mid\mathbf{x})$. As in diffusion, guided samples are not samples from $q(\mathbf{x}_1\mid y)$: guidance trades diversity for samples that are more typical of the condition.
+where $\lambda=0$ is unconditional, $\lambda=1$ conditional and $\lambda>1$ guided, the convention of the [[Denoising Diffusion Models|diffusion lecture]] (Ho and Salimans' guidance weight is $\lambda-1$). Why is this the same guidance? By (10), the velocity is an affine function of the score, $\mathbf{u}_t=A_t\mathbf{x}+C_t\nabla\log p_t$, with coefficients that depend only on the path. The conditional and unconditional fields share $A_t$ and $C_t$, so (12) is the velocity of the guided score $\nabla\log p_t(\mathbf{x})+\lambda\nabla\log p_t(y\mid\mathbf{x})$. As in diffusion, guided samples are not samples from $q(\mathbf{x}_1\mid y)$: guidance trades diversity for samples that are more typical of the condition.
 
 ![[Machine Learning/images/flow-matching-guidance.svg]]
 *Figure 7. Classifier-free guidance on the eight Gaussians. The label $y=1$ is more likely for modes on the right: $p(y=1\mid\text{mode})$ is 0.9 for the rightmost mode, 0.1 for the leftmost, and in between for the others. One network was trained with 20% label dropout and sampled for $y=1$ (100 midpoint steps). "Right" and "left" are the fractions of samples in the three right-most and three left-most modes. Unconditional sampling gives 38% and 37% (true: 37.5% each). With $\lambda=1$ the model matches $q(\mathbf{x}_1\mid y=1)$: 62% and 13% (true: 61% and 13%). Guidance then concentrates the samples on the modes where $y=1$ is most likely: 83% and 3% at $\lambda=2$, 98% and 0.1% at $\lambda=4$. In this example the modes themselves barely sharpen; the mean distance of a sample to its mode centre stays between 0.19 and 0.20.*
@@ -541,23 +541,23 @@ where $\lambda=0$ is unconditional, $\lambda=1$ conditional and $\lambda>1$ guid
 Nothing above needs the source $p_0$ to be Gaussian. With a coupling $\pi(\mathbf{x}_0,\mathbf{x}_1)$ between **any** two distributions, for example low- and high-resolution images, or images from two domains, the same regression learns a flow between them. Albergo and Vanden-Eijnden's **stochastic interpolants** make this general.[^albergo2023]<sup>,</sup>[^albergo2023si] They interpolate
 
 $$
-\mathbf{x}_t=I(t,\mathbf{x}_0,\mathbf{x}_1)+\gamma(t)\,\mathbf{z},
+\mathbf{x}_t=\boldsymbol\psi_t(\mathbf{x}_0,\mathbf{x}_1)+\gamma(t)\,\mathbf{z},
 \qquad\mathbf{z}\sim\mathcal{N}(\mathbf{0},\mathbf{I}),
 $$
 
-with $I(0,\cdot)=\mathbf{x}_0$, $I(1,\cdot)=\mathbf{x}_1$ and an extra noise level $\gamma(t)$ that vanishes at both ends. They learn the velocity $\mathbf{b}(\mathbf{x},t)$ by the same kind of regression, and the score $\mathbf{s}(\mathbf{x},t)$ of $p_t$ by a denoising regression. Then a whole family of samplers has the right marginals: for any $\varepsilon(t)\ge0$,
+with $\boldsymbol\psi_0(\mathbf{x}_0,\mathbf{x}_1)=\mathbf{x}_0$, $\boldsymbol\psi_1(\mathbf{x}_0,\mathbf{x}_1)=\mathbf{x}_1$ and an extra noise level $\gamma(t)$ that vanishes at both ends. They learn the velocity $\mathbf{b}(\mathbf{x},t)$ by the same kind of regression, and the score $\mathbf{s}(\mathbf{x},t)$ of $p_t$ by a denoising regression. Then a whole family of samplers has the right marginals: for any $\eta(t)\ge0$,
 
 $$
-d\mathbf{x}_t=\big[\mathbf{b}(\mathbf{x}_t,t)+\varepsilon(t)\,\mathbf{s}(\mathbf{x}_t,t)\big]\,dt+\sqrt{2\varepsilon(t)}\,d\mathbf{w}_t.
+d\mathbf{x}_t=\big[\mathbf{b}(\mathbf{x}_t,t)+\eta(t)\,\mathbf{s}(\mathbf{x}_t,t)\big]\,dt+\sqrt{2\eta(t)}\,d\mathbf{w}_t.
 $$
 
-$\varepsilon=0$ is the flow-matching ODE; $\varepsilon>0$ adds Langevin-like noise and correction, as in diffusion sampling. Flow matching and diffusion models are both special cases, which makes stochastic interpolants a convenient common language.
+$\eta=0$ is the flow-matching ODE; $\eta>0$ adds Langevin-like noise and correction, as in diffusion sampling. Flow matching and diffusion models are both special cases, which makes stochastic interpolants a convenient common language.
 
 ## Flow matching in practice
 
 Flow matching has become the default training objective for large generative models.
 - **Images.** Stable Diffusion 3 trains a transformer with rectified flow (the straight-line path, $\sigma_{\min}=0$). Its authors compared it with diffusion and other flow formulations at scale and found rectified flow best when the training times are drawn from a **logit-normal** distribution that concentrates on the middle of $[0,1]$, where the regression is hardest.[^esser2024]
-- **Video, speech and actions.** Meta's Movie Gen video models,[^polyak2024] the Voicebox speech model[^le2023] and the $\pi_0$ robot policy[^black2024] are trained with flow matching. For robot policies the appeal is the same as for images: a flow can represent a multimodal distribution over actions, which the regression of [[Imitation Learning#Behavior Cloning (BC)|behaviour cloning]] averages away.
+- **Video, speech and actions.** Meta's Movie Gen video models,[^polyak2024] the Voicebox speech model[^le2023] and the $\pi_0$ robot policy[^black2024] are trained with flow matching. For robot policies the appeal is the same as for images: a flow can represent a multimodal distribution over actions, which the regression of [[Imitation Learning#Behaviour Cloning (BC)|behaviour cloning]] averages away.
 - **Discrete data.** Text and other discrete data have no velocities, but the same construction works with [[Markov Chains#Continuous-time Markov chains|continuous-time Markov chains]] in place of ODEs: **discrete flow matching** learns the transition rates of a chain that carries a simple distribution to the data.[^gat2024]
 - **A reference.** The "Flow Matching Guide and Code" by Lipman and coauthors covers all of this, including non-Euclidean and discrete versions, with a PyTorch library.[^lipman2024]
 

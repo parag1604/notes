@@ -40,7 +40,7 @@ $$
 
 The slope is the sample covariance divided by the sample variance, and the line passes through the point of means $(\bar x,\bar y)$. Everything below generalizes this to many features.
 
-**Linear in the parameters, not in the inputs.** "Linear" refers to the weights. We can first map each input through fixed **basis functions** $\boldsymbol\phi(\mathbf{x})=(\phi_1(\mathbf{x}),\dots,\phi_M(\mathbf{x}))$ and predict $\hat y=\mathbf{w}^\top\boldsymbol\phi(\mathbf{x})$. Polynomials $\phi_j(x)=x^j$, Gaussian bumps $\phi_j(x)=e^{-(x-c_j)^2/2s^2}$, or hand-crafted features all work. The prediction is still linear in $\mathbf{w}$, so every formula in this lecture applies with the design matrix $\mathbf{X}$ replaced by the matrix $\boldsymbol\Phi$ of basis-function values. This is how a "linear" model fits curves. The price is the choice of basis: too few functions underfit, too many overfit (Figure 4 below). [[Support Vector Machines#Kernels|Kernels]] take the idea to its limit by using infinitely many basis functions implicitly.
+**Linear in the parameters, not in the inputs.** "Linear" refers to the weights. We can first map each input through fixed **basis functions** $\boldsymbol\phi(\mathbf{x})=(\phi_1(\mathbf{x}),\dots,\phi_M(\mathbf{x}))$ and predict $\hat y=\mathbf{w}^\top\boldsymbol\phi(\mathbf{x})$. Polynomials $\phi_j(x)=x^j$, Gaussian bumps $\phi_j(x)=e^{-(x-c_j)^2/2h^2}$, or hand-crafted features all work. The prediction is still linear in $\mathbf{w}$, so every formula in this lecture applies with the design matrix $\mathbf{X}$ replaced by the matrix $\boldsymbol\Phi$ of basis-function values. This is how a "linear" model fits curves. The price is the choice of basis: too few functions underfit, too many overfit (Figure 4 below). [[Support Vector Machines#Kernels|Kernels]] take the idea to its limit by using infinitely many basis functions implicitly.
 
 ### A system of linear equations
 
@@ -57,9 +57,9 @@ So we look for the $\mathbf{w}$ that makes $\mathbf{X}\mathbf{w}$ **as close as 
 ![[Machine Learning/images/linear-models-projection.svg]]
 *Figure 1: the target vector $\mathbf{y}\in\mathbb{R}^N$ generally lies outside the column space $C(\mathbf{X})$, the set of all achievable predictions $\mathbf{X}\mathbf{w}$. The closest achievable prediction is the orthogonal projection $\hat{\mathbf{y}}=\mathbf{X}\mathbf{w}_*$. The residual is perpendicular to $C(\mathbf{X})$.*
 
-Every prediction $\mathbf{X}\mathbf{w}=\sum_j w_j\,\mathbf{x}_{:,j}$ is a combination of the columns of $\mathbf{X}$, so it lives in the column space $C(\mathbf{X})$. This is a subspace of dimension at most $D$ *inside* $\mathbb{R}^N$. The vector $\mathbf{y}$ usually sticks out of it. To keep as much information as possible, project $\mathbf{y}$ onto $C(\mathbf{X})$ so that the error $\epsilon=\lVert\mathbf{y}-\mathbf{X}\mathbf{w}\rVert_2$ is smallest. The weights $\mathbf{w}$ are simply the *coordinates* of that projection in the basis of columns.
+Every prediction $\mathbf{X}\mathbf{w}=\sum_j w_j\,\mathbf{x}_{:,j}$ is a combination of the columns of $\mathbf{X}$, so it lives in the column space $C(\mathbf{X})$. This is a subspace of dimension at most $D$ *inside* $\mathbb{R}^N$. The vector $\mathbf{y}$ usually sticks out of it. To keep as much information as possible, project $\mathbf{y}$ onto $C(\mathbf{X})$ so that the error $E=\lVert\mathbf{y}-\mathbf{X}\mathbf{w}\rVert_2$ is smallest. The weights $\mathbf{w}$ are simply the *coordinates* of that projection in the basis of columns.
 
-Since $u\mapsto u^2$ is increasing for $u\ge0$, minimizing $\epsilon$ is the same as minimizing $\epsilon^2$. Multiplying by a positive constant doesn't move the minimizer either. So the objective is
+Since $u\mapsto u^2$ is increasing for $u\ge0$, minimizing $E$ is the same as minimizing $E^2$. Multiplying by a positive constant doesn't move the minimizer either. So the objective is
 
 $$
 \mathcal{L}(\mathbf{w})=\frac12\lVert\mathbf{y}-\mathbf{X}\mathbf{w}\rVert_2^2=\frac12\sum_{i=1}^{N}\big(y_i-\mathbf{w}^\top\mathbf{x}_i\big)^2.
@@ -100,15 +100,15 @@ The inverse exists exactly when $\mathbf{X}$ has full column rank, which justifi
 Computing $\mathbf{X}^\top\mathbf{X}$ costs $O(ND^2)$ and inverting it costs $O(D^3)$. Both are expensive when $N$ or $D$ is large. Gradient methods avoid the inverse entirely, needing only matrix–vector products.
 
 > [!example] Algorithm: (mini-batch) gradient descent
-> Initialize $\mathbf{w}^0=\mathbf{0}$ (or $\mathbf{w}^0\sim\mathcal{N}(\mathbf{0},\sigma_0^2\mathbf{I})$ with small $\sigma_0$). Choose a batch size $B$ and step sizes $\alpha_t$.
+> Initialize $\mathbf{w}_0=\mathbf{0}$ (or small random values). Choose a batch size $B$ and step sizes $\alpha_t$.
 > **For** $t=0,1,2,\dots$:
 > 1. Sample a mini-batch $\mathcal{B}_t\subseteq\{1,\dots,N\}$ of size $B$, without replacement within an epoch.
-> 2. Compute $\mathbf{g}_t=\frac{1}{B}\sum_{i\in\mathcal{B}_t}\big(\mathbf{w}_t^\top\mathbf{x}_i-y_i\big)\,\mathbf{x}_i=\frac1B\tilde{\mathbf{X}}^\top(\tilde{\mathbf{X}}\mathbf{w}_t-\tilde{\mathbf{y}})$, where $\tilde{\mathbf{X}},\tilde{\mathbf{y}}$ are the batch.
+> 2. Compute $\mathbf{g}_t=\frac{1}{B}\sum_{i\in\mathcal{B}_t}\big(\mathbf{w}_t^\top\mathbf{x}_i-y_i\big)\,\mathbf{x}_i=\frac1B\mathbf{X}_{\mathcal{B}_t}^\top(\mathbf{X}_{\mathcal{B}_t}\mathbf{w}_t-\mathbf{y}_{\mathcal{B}_t})$, where $\mathbf{X}_{\mathcal{B}_t},\mathbf{y}_{\mathcal{B}_t}$ are the batch.
 > 3. Update $\mathbf{w}_{t+1}=\mathbf{w}_t-\alpha_t\,\mathbf{g}_t$.
 >
 > $B=N$ is full-batch **gradient descent**; $B=1$ is **stochastic gradient descent** (SGD). Stop after a fixed budget, or when the loss on held-out data stops improving.
 
-- **Full-batch GD** on this quadratic converges with any *constant* step $0<\alpha<2/\lambda_{\max}(\frac1N\mathbf{X}^\top\mathbf{X})$; with a constant step **SGD** keeps bouncing around $\mathbf{w}_*$, and converging exactly needs decaying steps. **Mini-batches** sit in between, with less noise than $B=1$ and far cheaper steps than $B=N$.[^bottou2018]
+- **Full-batch GD** on this quadratic converges with any *constant* step $0<\alpha<2/L$, where $L$ is the largest eigenvalue of $\frac1N\mathbf{X}^\top\mathbf{X}$; with a constant step **SGD** keeps bouncing around $\mathbf{w}_*$, and converging exactly needs decaying steps. **Mini-batches** sit in between, with less noise than $B=1$ and far cheaper steps than $B=N$.[^bottou2018]
 - Why these hold, how fast each method converges, and how to pick step sizes, batch sizes, momentum or Adam: see [[First-Order Optimization]] (prerequisite), especially [[First-Order Optimization#Gradient descent on a quadratic|gradient descent on a quadratic]], which analyses exactly this loss.
 
 ![[Machine Learning/images/linear-models-gd-paths.svg]]
@@ -122,29 +122,29 @@ Computing $\mathbf{X}^\top\mathbf{X}$ costs $O(ND^2)$ and inverting it costs $O(
 >
 > Two common fixes, applied per feature column $j$:
 > 1. **Min–max scaling:** $x_{ij}\leftarrow\dfrac{x_{ij}-x^{\min}_j}{x^{\max}_j-x^{\min}_j}$, which maps every feature to $[0,1]$.
-> 2. **Standardization:** $x_{ij}\leftarrow\dfrac{x_{ij}-\mu_j}{\sigma_j}$, giving every feature mean $0$ and variance $1$.
+> 2. **Standardization:** $x_{ij}\leftarrow\dfrac{x_{ij}-\bar x_j}{s_j}$, giving every feature mean $0$ and variance $1$.
 >
-> Compute $x^{\min}_j$, $x^{\max}_j$, $\mu_j$ and $\sigma_j$ on the **training set only**, and reuse them on test data.
+> Compute $x^{\min}_j$, $x^{\max}_j$, $\bar x_j$ and $s_j$ on the **training set only**, and reuse them on test data.
 
 ---
 
 ### Warm-up: maximum likelihood and MAP for a coin
 
-Before the regression model, the two estimation principles on the simplest example. A coin with unknown probability of heads $\theta$ is tossed $N$ times and shows $k$ heads. The **likelihood** is the probability of the data as a function of the parameter,
+Before the regression model, the two estimation principles on the simplest example. A coin with unknown probability of heads $\theta$ is tossed $N$ times and shows $N_{\mathrm{H}}$ heads. The **likelihood** is the probability of the data as a function of the parameter,
 
 $$
-p(\mathcal{D}\mid\theta)=\theta^{k}(1-\theta)^{N-k},\qquad\log p(\mathcal{D}\mid\theta)=k\log\theta+(N-k)\log(1-\theta).
+p(\mathcal{D}\mid\theta)=\theta^{N_{\mathrm{H}}}(1-\theta)^{N-N_{\mathrm{H}}},\qquad\log p(\mathcal{D}\mid\theta)=N_{\mathrm{H}}\log\theta+(N-N_{\mathrm{H}})\log(1-\theta).
 $$
 
-Setting the derivative $k/\theta-(N-k)/(1-\theta)$ to zero gives the **maximum-likelihood estimate** $\hat\theta_{\text{MLE}}=k/N$, the observed fraction of heads. Reasonable, but brittle: after three tosses that all land heads, the MLE says the coin can never show tails.
+Setting the derivative $N_{\mathrm{H}}/\theta-(N-N_{\mathrm{H}})/(1-\theta)$ to zero gives the **maximum-likelihood estimate** $\hat\theta_{\text{MLE}}=N_{\mathrm{H}}/N$, the observed fraction of heads. Reasonable, but brittle: after three tosses that all land heads, the MLE says the coin can never show tails.
 
-**MAP** adds prior knowledge. With a Beta prior $p(\theta)\propto\theta^{a-1}(1-\theta)^{b-1}$, the posterior is proportional to $\theta^{k+a-1}(1-\theta)^{N-k+b-1}$, again a Beta distribution, and its mode is
+**MAP** adds prior knowledge. With a Beta prior $p(\theta)\propto\theta^{a_{\mathrm{H}}-1}(1-\theta)^{a_{\mathrm{T}}-1}$, the posterior is proportional to $\theta^{N_{\mathrm{H}}+a_{\mathrm{H}}-1}(1-\theta)^{N-N_{\mathrm{H}}+a_{\mathrm{T}}-1}$, again a Beta distribution, and its mode is
 
 $$
-\hat\theta_{\text{MAP}}=\frac{k+a-1}{N+a+b-2}.
+\hat\theta_{\text{MAP}}=\frac{N_{\mathrm{H}}+a_{\mathrm{H}}-1}{N+a_{\mathrm{H}}+a_{\mathrm{T}}-2}.
 $$
 
-The prior acts like $a-1$ imaginary heads and $b-1$ imaginary tails added to the data (**pseudo-counts**). With $a=b=2$, three heads in three tosses give $\hat\theta_{\text{MAP}}=4/5$ instead of 1. A flat prior ($a=b=1$) gives back the MLE, and as $N$ grows the data swamp any fixed prior, so the two estimates agree. Linear regression follows the same pattern: least squares is the MLE, and regularization is a prior.
+The prior acts like $a_{\mathrm{H}}-1$ imaginary heads and $a_{\mathrm{T}}-1$ imaginary tails added to the data (**pseudo-counts**). With $a_{\mathrm{H}}=a_{\mathrm{T}}=2$, three heads in three tosses give $\hat\theta_{\text{MAP}}=4/5$ instead of 1. A flat prior ($a_{\mathrm{H}}=a_{\mathrm{T}}=1$) gives back the MLE, and as $N$ grows the data swamp any fixed prior, so the two estimates agree. Linear regression follows the same pattern: least squares is the MLE, and regularization is a prior.
 
 ### The probabilistic perspective: maximum likelihood
 
@@ -181,7 +181,7 @@ $$
 **Maximum likelihood under Gaussian noise is least squares.** Maximizing over $\sigma^2$ as well gives the noise estimate $\hat\sigma^2=\frac1N\sum_i(y_i-\mathbf{w}_{\text{MLE}}^\top\mathbf{x}_i)^2$, the mean squared residual.
 
 > [!note] Aside: other noise models, robust regression
-> The squared loss is not a law of nature; it comes from assuming Gaussian noise. Assume instead **Laplace** noise, $p(\epsilon)\propto e^{-\lvert\epsilon\rvert/s}$, whose tails are heavier. The negative log-likelihood becomes $\sum_i\lvert y_i-\mathbf{w}^\top\mathbf{x}_i\rvert$, the **absolute loss**. Its minimizer predicts the conditional *median* of $y$ rather than the mean ([[Random Variables#Mean, median and mode|Random Variables]]), and a single wild outlier moves it far less, because the outlier's influence no longer grows quadratically. The **Huber loss**, quadratic for small residuals and linear for large ones, combines the efficiency of least squares with this robustness. Neither has a closed form, but both are convex.
+> The squared loss is not a law of nature; it comes from assuming Gaussian noise. Assume instead **Laplace** noise, $p(\epsilon)\propto e^{-\lvert\epsilon\rvert/\beta}$, whose tails are heavier. The negative log-likelihood becomes $\sum_i\lvert y_i-\mathbf{w}^\top\mathbf{x}_i\rvert$, the **absolute loss**. Its minimizer predicts the conditional *median* of $y$ rather than the mean ([[Random Variables#Mean, median and mode|Random Variables]]), and a single wild outlier moves it far less, because the outlier's influence no longer grows quadratically. The **Huber loss**, quadratic for small residuals and linear for large ones, combines the efficiency of least squares with this robustness. Neither has a closed form, but both are convex.
 
 ---
 
@@ -244,7 +244,7 @@ $$
 \mathbf{w}_{\text{lasso}}=\arg\min_\mathbf{w}\frac12\lVert\mathbf{y}-\mathbf{X}\mathbf{w}\rVert_2^2+\lambda\lVert\mathbf{w}\rVert_1,\qquad\lVert\mathbf{w}\rVert_1=\sum_{j=1}^{D}\lvert w_j\rvert.
 $$
 
-The objective is still convex, and its solutions contain **exact zeros**. In MAP terms, this is a **Laplace prior** $p(w_j)\propto e^{-\lvert w_j\rvert/b}$, with $\lambda=\sigma^2/b$.
+The objective is still convex, and its solutions contain **exact zeros**. In MAP terms, this is a **Laplace prior** $p(w_j)\propto e^{-\lvert w_j\rvert/\nu}$, with $\lambda=\sigma^2/\nu$.
 
 ![[Machine Learning/images/linear-models-l1-vs-l2.svg]]
 *Figure 5: why $L_1$ gives sparsity. The regularized solution is where the loss contours (around the OLS solution) first touch the constraint region. The $L_2$ ball is round, so the contact point generically has every coordinate nonzero. The $L_1$ ball has corners on the axes, and the contours usually hit a corner, which sets some weights exactly to zero.*
@@ -318,17 +318,17 @@ $$
 $$
 
 > [!note] Why not squared loss on the sigmoid?
-> One could fit $\sigma(\mathbf{w}^\top\mathbf{x})$ to the labels by least squares. Two things go wrong. The loss $\sum_i(y_i-\sigma(\mathbf{w}^\top\mathbf{x}_i))^2$ is **not convex** in $\mathbf{w}$, so gradient descent can stall in flat regions or poor local minima. And its gradient carries a factor $\sigma'(z)=\sigma(z)(1-\sigma(z))$, which vanishes when $\lvert z\rvert$ is large. A confidently *wrong* prediction therefore produces almost no gradient, exactly when a large correction is needed. The cross-entropy's gradient, $(\sigma-y)\mathbf{x}$ below, has no such factor: the more wrong the prediction, the larger the step.
+> One could fit $\sigma(\mathbf{w}^\top\mathbf{x})$ to the labels by least squares. Two things go wrong. The loss $\sum_i(y_i-\sigma(\mathbf{w}^\top\mathbf{x}_i))^2$ is **not convex** in $\mathbf{w}$, so gradient descent can stall in flat regions or poor local minima. And its gradient carries a factor $\sigma'(z)=\sigma(z)(1-\sigma(z))$, which vanishes when $\lvert z\rvert$ is large. A confidently *wrong* prediction therefore produces almost no gradient, exactly when a large correction is needed. The cross-entropy's gradient, $(\sigma(z)-y)\mathbf{x}$ below, has no such factor: the more wrong the prediction, the larger the step.
 
 ### Optimizing it
 
 Using $\sigma'(z)=\sigma(z)(1-\sigma(z))$, the gradient and Hessian are
 
 $$
-\nabla_\mathbf{w}\mathcal{L}=\sum_{i=1}^{N}\big(\sigma(\mathbf{w}^\top\mathbf{x}_i)-y_i\big)\,\mathbf{x}_i=\mathbf{X}^\top\big(\boldsymbol{\sigma}-\mathbf{y}\big),\qquad\nabla^2_\mathbf{w}\mathcal{L}=\mathbf{X}^\top\mathbf{S}\mathbf{X},
+\nabla_\mathbf{w}\mathcal{L}=\sum_{i=1}^{N}\big(\sigma(\mathbf{w}^\top\mathbf{x}_i)-y_i\big)\,\mathbf{x}_i=\mathbf{X}^\top\big(\mathbf{p}-\mathbf{y}\big),\qquad\nabla^2_\mathbf{w}\mathcal{L}=\mathbf{X}^\top\mathbf{S}\mathbf{X},
 $$
 
-where $\boldsymbol{\sigma}=\sigma(\mathbf{X}\mathbf{w})$ elementwise and $\mathbf{S}=\operatorname{diag}\big(\sigma_i(1-\sigma_i)\big)$.
+where $\mathbf{p}=\sigma(\mathbf{X}\mathbf{w})$ elementwise holds the predicted probabilities $p_i=\sigma(\mathbf{w}^\top\mathbf{x}_i)$, and $\mathbf{S}=\operatorname{diag}\big(p_i(1-p_i)\big)$.
 
 - **Compare with linear regression.** The gradient has exactly the same form, *prediction minus target, times input*.
 - **Convex.** The Hessian is positive semi-definite, so the loss is convex and has no spurious local minima.
@@ -336,7 +336,7 @@ where $\boldsymbol{\sigma}=\sigma(\mathbf{X}\mathbf{w})$ elementwise and $\mathb
 - **No closed form.** Setting the gradient to zero gives nonlinear equations, so we solve them iteratively: (mini-batch) gradient descent as before, or **Newton's method**.
 
 > [!tip] Newton's method is iteratively reweighted least squares
-> A Newton step is $\mathbf{w}\leftarrow\mathbf{w}-(\mathbf{X}^\top\mathbf{S}\mathbf{X})^{-1}\mathbf{X}^\top(\boldsymbol{\sigma}-\mathbf{y})$. It can be rewritten as $\mathbf{w}\leftarrow(\mathbf{X}^\top\mathbf{S}\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{S}\,\mathbf{z}$ with "working targets" $\mathbf{z}=\mathbf{X}\mathbf{w}-\mathbf{S}^{-1}(\boldsymbol{\sigma}-\mathbf{y})$. That is a [[#Weighted linear regression|weighted least-squares]] problem with weights $\sigma_i(1-\sigma_i)$, re-solved at every step. Hence the name **IRLS**.
+> A Newton step is $\mathbf{w}\leftarrow\mathbf{w}-(\mathbf{X}^\top\mathbf{S}\mathbf{X})^{-1}\mathbf{X}^\top(\mathbf{p}-\mathbf{y})$. It can be rewritten as $\mathbf{w}\leftarrow(\mathbf{X}^\top\mathbf{S}\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{S}\,\mathbf{q}$ with "working targets" $\mathbf{q}=\mathbf{X}\mathbf{w}-\mathbf{S}^{-1}(\mathbf{p}-\mathbf{y})$. That is a [[#Weighted linear regression|weighted least-squares]] problem with weights $p_i(1-p_i)$, re-solved at every step. Hence the name **IRLS**.
 
 > [!example]- Code: logistic regression by Newton's method (IRLS)
 > ```python
@@ -351,7 +351,7 @@ where $\boldsymbol{\sigma}=\sigma(\mathbf{X}\mathbf{w})$ elementwise and $\mathb
 >     w = np.zeros(X.shape[1])
 >     for _ in range(n_iter):
 >         s = sigmoid(X @ w)
->         grad = X.T @ (s - y) + lam * w                                 # X^T (sigma - y)
+>         grad = X.T @ (s - y) + lam * w                                 # X^T (p - y)
 >         H = X.T @ (X * (s * (1 - s))[:, None]) + lam * np.eye(len(w))  # X^T S X
 >         w -= np.linalg.solve(H, grad)                                  # Newton step
 >     return w
@@ -380,10 +380,10 @@ p(y_i\mid\mathbf{x}_i;\mathbf{W})&=\prod_{j=1}^{K}\mu_{ij}^{\mathbb{1}\{y_i=j\}}
 \end{aligned}
 $$
 
-Only the term for the true class survives the inner sum: the indicator just *selects* the predicted probability of the ground-truth label. We minimize the negative log-likelihood. Writing $\mathbf{M}=[\mu_{ij}]$ for the predicted probabilities and $\mathbf{Y}$ for the one-hot labels (both $N\times K$), the gradient is again *prediction minus target, times input*:
+Only the term for the true class survives the inner sum: the indicator just *selects* the predicted probability of the ground-truth label. We minimize the negative log-likelihood. Writing $\mathbf{P}=[\mu_{ij}]$ for the predicted probabilities and $\mathbf{Y}$ for the one-hot labels (both $N\times K$), the gradient is again *prediction minus target, times input*:
 
 $$
-\nabla_\mathbf{W}\Big(-\sum_i\log\mu_{i,y_i}\Big)=\mathbf{X}^\top(\mathbf{M}-\mathbf{Y}).
+\nabla_\mathbf{W}\Big(-\sum_i\log\mu_{i,y_i}\Big)=\mathbf{X}^\top(\mathbf{P}-\mathbf{Y}).
 $$
 
 **Two classes recover the sigmoid.** With $K=2$, $\mu_{i1}=\frac{e^{z_1}}{e^{z_1}+e^{z_2}}=\sigma(z_1-z_2)$. Only the *difference* of the two weight vectors matters, so softmax is over-parameterized. One class's weights can be fixed to $\mathbf{0}$ without loss.
@@ -401,7 +401,7 @@ $$
 >     m = Z.max(axis=1, keepdims=True)
 >     log_mu = Z - m - np.log(np.exp(Z - m).sum(axis=1, keepdims=True))   # stable log-softmax
 >     Y = np.eye(W.shape[1])[y]                                   # one-hot labels
->     return -(log_mu * Y).sum(), X.T @ (np.exp(log_mu) - Y)      # gradient X^T (M - Y)
+>     return -(log_mu * Y).sum(), X.T @ (np.exp(log_mu) - Y)      # gradient X^T (P - Y)
 > ```
 
 > [!note] One-vs-all: a different model
@@ -418,7 +418,7 @@ D_{\mathrm{KL}}\big(p\,\|\,p_\mathbf{W}\big)&=\sum_y p(y\mid\mathbf{x})\log\frac
 \end{aligned}
 $$
 
-So minimizing the KL divergence over $\mathbf{W}$ is the same as minimizing the cross-entropy. In a labelled dataset we take the target distribution to be one-hot, $p(y=j\mid\mathbf{x}_i)=\mathbb{1}\{y_i=j\}$: we "know" the label, ignoring label noise. The cross-entropy then collapses to $-\log p_\mathbf{W}(y_i\mid\mathbf{x}_i)$. Averaging over the training inputs gives exactly the NLL above. **Maximum likelihood minimizes the KL divergence from the empirical data distribution to the model**, which is why the NLL loss is also called the **(categorical) cross-entropy loss**. The same identity reappears in variational autoencoders, language models and [[Imitation Learning#Behavior Cloning (BC)|behavior cloning]].
+So minimizing the KL divergence over $\mathbf{W}$ is the same as minimizing the cross-entropy. In a labelled dataset we take the target distribution to be one-hot, $p(y=j\mid\mathbf{x}_i)=\mathbb{1}\{y_i=j\}$: we "know" the label, ignoring label noise. The cross-entropy then collapses to $-\log p_\mathbf{W}(y_i\mid\mathbf{x}_i)$. Averaging over the training inputs gives exactly the NLL above. **Maximum likelihood minimizes the KL divergence from the empirical data distribution to the model**, which is why the NLL loss is also called the **(categorical) cross-entropy loss**. The same identity reappears in variational autoencoders, language models and [[Imitation Learning#Behaviour Cloning (BC)|behaviour cloning]].
 
 ---
 
@@ -446,7 +446,7 @@ Where weighted least squares shows up:
 
 - **Unequal noise.** It is exactly the MLE when the noise has a different variance for each point, $\sigma_i^2\propto1/r_i$: precise measurements count more.
 - **Logistic regression.** It is the inner step of [[#Optimizing it|IRLS]].
-- **Reinforcement learning.** Weighting examples by how good they were is the idea behind *reward-weighted regression* and *advantage-weighted* behavior cloning. It is also the spirit of [[Policy Gradients#Policy gradient = weighted maximum likelihood|policy gradients]], which weight log-likelihood gradients by returns.
+- **Reinforcement learning.** Weighting examples by how good they were is the idea behind *reward-weighted regression* and *advantage-weighted* behaviour cloning. It is also the spirit of [[Policy Gradients#Policy gradient = weighted maximum likelihood|policy gradients]], which weight log-likelihood gradients by returns.
 
 ## Key takeaways
 
@@ -459,6 +459,7 @@ Where weighted least squares shows up:
 
 - [[Discriminant Analysis]]: a *generative* route to linear classifiers. Its posterior turns out to be a logistic or softmax function of $\mathbf{x}$.
 - [[Support Vector Machines]]: maximum-margin linear classifiers and the kernel trick.
+- [[Neural Networks]]: the perceptron is derived from logistic regression, and stacking logistic units gives multilayer networks.
 - [[Energy-Based Models]]: the softmax is a Boltzmann distribution with energy = negative logit, and temperature controls its sharpness.
 - [[Imitation Learning]] and [[Policy Gradients]]: maximum likelihood and weighted maximum likelihood, applied to policies.
 

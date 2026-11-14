@@ -11,7 +11,7 @@ prev: "[[Matrix Factorization and Dimensionality Reduction]]"
 next: "[[Graph Representation Learning]]"
 ---
 
-> **Prerequisites:** [[Discriminant Analysis]] (Gaussian class models, Bayes' rule), [[Non-parametric Models]] (distances, RBF similarities), [[Support Vector Machines]] (kernels, Lagrange multipliers), and [[Matrix Factorization and Dimensionality Reduction]] (eigenvectors, used by spectral clustering).
+> **Prerequisites:** [[Discriminant Analysis]] (Gaussian class models, Bayes' rule), [[Non-parametric Models]] (distances, RBF similarities), [[Support Vector Machines#Kernels|kernels]], [[Multivariable Calculus#Constrained optimization: Lagrange multipliers|Lagrange multipliers]], and [[Matrix Factorization and Dimensionality Reduction]] (eigenvectors, used by spectral clustering).
 >
 > **TL;DR:**
 > - **Clustering** groups unlabelled points. Doing it optimally is NP-hard, so practical algorithms optimize relaxations.
@@ -20,7 +20,7 @@ next: "[[Graph Representation Learning]]"
 > - **Spectral clustering** relaxes a balanced graph cut into an eigenvector problem, and **modularity / Louvain** find communities in networks.
 > - Hierarchical clustering, DBSCAN and evaluation metrics complete the toolbox.
 >
-> **Code:** [K-Means-Clustering](https://github.com/parag1604/K-Means-Clustering): K-means for colour quantization of an image; [Gaussian-Mixture-Models](https://github.com/parag1604/Gaussian-Mixture-Models): Gaussian mixtures fitted with EM.
+> **Code:** [K-Means-Clustering](https://github.com/parag1604/K-Means-Clustering): K-Means for colour quantization of an image; [Gaussian-Mixture-Models](https://github.com/parag1604/Gaussian-Mixture-Models): Gaussian mixtures fitted with EM.
 
 ## The clustering problem
 
@@ -31,16 +31,16 @@ Intuitively, a good clustering has two properties:
 1. **low within-cluster spread:** points in the same cluster are close to each other; and
 2. **high between-cluster spread:** different clusters are far apart.
 
-With squared Euclidean distances, these are two sides of one coin. The **total scatter** $T=\sum_i\lVert\mathbf{x}_i-\bar{\mathbf{x}}\rVert^2$ does not depend on the clustering, and it splits exactly into a within-cluster part $W$ and a between-cluster part $B$. This is the same decomposition behind [[Discriminant Analysis#Fisher's linear discriminant|Fisher's criterion]]:
+With squared Euclidean distances, these are two sides of one coin. The **total scatter** $S_T=\sum_i\lVert\mathbf{x}_i-\bar{\mathbf{x}}\rVert^2$ does not depend on the clustering, and it splits exactly into a within-cluster part $S_W$ and a between-cluster part $S_B$. This is the same decomposition behind [[Discriminant Analysis#Fisher's linear discriminant|Fisher's criterion]]:
 
 $$
-T=\underbrace{\sum_{j=1}^K\sum_{i:c_i=j}\lVert\mathbf{x}_i-\boldsymbol{\mu}_j\rVert^2}_{W}+\underbrace{\sum_{j=1}^Kn_j\lVert\boldsymbol{\mu}_j-\bar{\mathbf{x}}\rVert^2}_{B}.
+S_T=\underbrace{\sum_{j=1}^K\sum_{i:c_i=j}\lVert\mathbf{x}_i-\boldsymbol{\mu}_j\rVert^2}_{S_W}+\underbrace{\sum_{j=1}^Kn_j\lVert\boldsymbol{\mu}_j-\bar{\mathbf{x}}\rVert^2}_{S_B}.
 $$
 
-Here $n_j$ is the size of cluster $j$ and $\boldsymbol{\mu}_j$ its mean. Since $T$ is fixed, **minimizing $W$ automatically maximizes $B$**: solving criterion 1 also solves criterion 2. The within-cluster spread can also be written with pairwise distances, $\sum_{i,i'\in C_j}\lVert\mathbf{x}_i-\mathbf{x}_{i'}\rVert^2=2n_j\sum_{i\in C_j}\lVert\mathbf{x}_i-\boldsymbol{\mu}_j\rVert^2$. So the ideal clustering is
+Here $n_j$ is the size of cluster $j$ and $\boldsymbol{\mu}_j$ its mean. Since $S_T$ is fixed, **minimizing $S_W$ automatically maximizes $S_B$**: solving criterion 1 also solves criterion 2. The within-cluster spread can also be written with pairwise distances, $\sum_{i,i'\in C_j}\lVert\mathbf{x}_i-\mathbf{x}_{i'}\rVert^2=2n_j\sum_{i\in C_j}\lVert\mathbf{x}_i-\boldsymbol{\mu}_j\rVert^2$. So the ideal clustering is
 
 $$
-\mathbf{c}^*=\arg\min_{\mathbf{c}}\ \sum_{j=1}^K\frac{1}{2n_j}\sum_{i,i':\,c_i=c_{i'}=j}\lVert\mathbf{x}_i-\mathbf{x}_{i'}\rVert^2=\arg\min_{\mathbf{c}}\ W(\mathbf{c}).
+\mathbf{c}^*=\arg\min_{\mathbf{c}}\ \sum_{j=1}^K\frac{1}{2n_j}\sum_{i,i':\,c_i=c_{i'}=j}\lVert\mathbf{x}_i-\mathbf{x}_{i'}\rVert^2=\arg\min_{\mathbf{c}}\ S_W(\mathbf{c}).
 $$
 
 The factor $\frac{1}{n_j}$ matters. Without it, large clusters would be penalized more heavily. Searching over all $K^N$ assignments is hopeless: the problem is **NP-hard**, even for $K=2$ in general dimension.[^aloise2009] Practical algorithms therefore solve relaxed versions, usually iteratively.
@@ -106,7 +106,7 @@ So $J$ decreases monotonically, and the algorithm must stop after finitely many 
 **Choosing $K$.** $J$ always decreases as $K$ grows ($K=N$ gives $J=0$), so we cannot simply minimize it.
 
 - **Elbow:** plot the converged $J$ against $K$ and look for the "elbow" where the improvements suddenly flatten.
-- **Silhouette:** for each point, let $a_i$ be its mean distance to its own cluster and $b_i$ its mean distance to the nearest *other* cluster. Then $s_i=\frac{b_i-a_i}{\max(a_i,b_i)}\in[-1,1]$, and we prefer the $K$ with the highest mean silhouette.[^rousseeuw1987]
+- **Silhouette:** for each point, let $a_i$ be its mean distance to its own cluster and $b_i$ its mean distance to the nearest *other* cluster. Then $\mathrm{sil}_i=\frac{b_i-a_i}{\max(a_i,b_i)}\in[-1,1]$, and we prefer the $K$ with the highest mean silhouette.[^rousseeuw1987]
 - **Model selection:** for probabilistic models such as GMMs, information criteria like BIC apply (see [[#Gaussian mixture models]]).
 
 ![[Machine Learning/images/clustering-em-choosing-k.svg]]
@@ -137,19 +137,19 @@ $$
 \boldsymbol{\mu}_k=\frac{\sum_i(r_i^k)^\alpha\,\mathbf{x}_i}{\sum_i(r_i^k)^\alpha}.
 $$
 
-**Weights, with the centres fixed.** The constraints only couple the memberships *of the same point*, so the problem splits into one small problem per point. Here the [[Support Vector Machines#The Lagrangian dual|Lagrangian]] does the work. We can drop $r_i^k\ge0$, because the solution below turns out positive anyway. Writing $d_{ik}=\lVert\mathbf{x}_i-\boldsymbol{\mu}_k\rVert^2$:
+**Weights, with the centres fixed.** The constraints only couple the memberships *of the same point*, so the problem splits into one small problem per point. Here a [[Multivariable Calculus#Equality constraints|Lagrange multiplier]] does the work. We can drop $r_i^k\ge0$, because the solution below turns out positive anyway. Writing $\delta_{ik}=\lVert\mathbf{x}_i-\boldsymbol{\mu}_k\rVert^2$:
 
 $$
 \begin{aligned}
-\mathcal{L}_i&=\sum_k(r_i^k)^\alpha d_{ik}-\nu_i\Big(\sum_kr_i^k-1\Big),\qquad\frac{\partial\mathcal{L}_i}{\partial r_i^k}=\alpha(r_i^k)^{\alpha-1}d_{ik}-\nu_i=0\\
-\implies r_i^k&=\Big(\frac{\nu_i}{\alpha\,d_{ik}}\Big)^{1/(\alpha-1)}.
+\mathcal{L}_i&=\sum_k(r_i^k)^\alpha \delta_{ik}-\nu_i\Big(\sum_kr_i^k-1\Big),\qquad\frac{\partial\mathcal{L}_i}{\partial r_i^k}=\alpha(r_i^k)^{\alpha-1}\delta_{ik}-\nu_i=0\\
+\implies r_i^k&=\Big(\frac{\nu_i}{\alpha\,\delta_{ik}}\Big)^{1/(\alpha-1)}.
 \end{aligned}
 $$
 
 Substituting into $\sum_kr_i^k=1$ to eliminate $\nu_i$ gives
 
 $$
-r_i^k=\frac{d_{ik}^{-1/(\alpha-1)}}{\sum_{k'=1}^{K}d_{ik'}^{-1/(\alpha-1)}}=\frac{\lVert\mathbf{x}_i-\boldsymbol{\mu}_k\rVert^{-2/(\alpha-1)}}{\sum_{k'}\lVert\mathbf{x}_i-\boldsymbol{\mu}_{k'}\rVert^{-2/(\alpha-1)}}.
+r_i^k=\frac{\delta_{ik}^{-1/(\alpha-1)}}{\sum_{k'=1}^{K}\delta_{ik'}^{-1/(\alpha-1)}}=\frac{\lVert\mathbf{x}_i-\boldsymbol{\mu}_k\rVert^{-2/(\alpha-1)}}{\sum_{k'}\lVert\mathbf{x}_i-\boldsymbol{\mu}_{k'}\rVert^{-2/(\alpha-1)}}.
 $$
 
 **The role of $\alpha$** (Figure 3):
@@ -168,7 +168,7 @@ Initialize the centres as in K-Means and the memberships as one-hot vectors, the
 
 K-Means can only draw straight boundaries, so it fails on data such as two interleaving moons (Figure 4, left). As in [[Support Vector Machines#Kernels|SVMs]], we can run it in a feature space $\phi(\mathbf{x})$, given only a kernel $\kappa(\mathbf{x},\mathbf{x}')=\phi(\mathbf{x})^\top\phi(\mathbf{x}')$ with $\kappa:\mathcal{X}\times\mathcal{X}\to\mathbb{R}$. (We write $\kappa$ to avoid a clash with the number of clusters $K$.)
 
-The centre of cluster $C_j$ in feature space is $\mathbf{m}_j=\frac{1}{n_j}\sum_{l\in C_j}\phi(\mathbf{x}_l)$. It is *not* $\phi$ of any input point, so it never needs to be computed. The squared distance from a point to a centre expands into kernel evaluations only:
+The centre of cluster $C_j$ in feature space is $\bar{\boldsymbol\phi}_j=\frac{1}{n_j}\sum_{l\in C_j}\phi(\mathbf{x}_l)$. It is *not* $\phi$ of any input point, so it never needs to be computed. The squared distance from a point to a centre expands into kernel evaluations only:
 
 $$
 \lVert\phi(\mathbf{x}_i)-\mathbf{m}_j\rVert^2=\kappa(\mathbf{x}_i,\mathbf{x}_i)-\frac{2}{n_j}\sum_{l\in C_j}\kappa(\mathbf{x}_i,\mathbf{x}_l)+\frac{1}{n_j^2}\sum_{l,l'\in C_j}\kappa(\mathbf{x}_l,\mathbf{x}_{l'}).
@@ -189,7 +189,7 @@ $$
 >         dist = np.full((len(G), K), np.inf)
 >         for j in range(K):
 >             m = c == j
->             if m.any():                                # ||phi(x_i) - m_j||^2, kernel values only
+>             if m.any():                                # ||phi(x_i) - phi_bar_j||^2, kernel values only
 >                 dist[:, j] = np.diag(G) - 2 * G[:, m].mean(axis=1) + G[np.ix_(m, m)].mean()
 >         c_new = dist.argmin(axis=1)
 >         if np.array_equal(c_new, c):
@@ -246,22 +246,22 @@ $$
 \ell(\theta)=\log p(\mathbf{x};\theta)=\log\int p(\mathbf{x},\mathbf{z};\theta)\,d\mathbf{z}.
 $$
 
-(For discrete $\mathbf{z}$ the integral is a sum.) Introduce any distribution $Q(\mathbf{z})$ over the latents (a *variational* distribution), multiply and divide by it, and apply Jensen:
+(For discrete $\mathbf{z}$ the integral is a sum.) Introduce any distribution $q(\mathbf{z})$ over the latents (a *variational* distribution), multiply and divide by it, and apply Jensen:
 
 $$
 \begin{aligned}
-\ell(\theta)&=\log\int Q(\mathbf{z})\,\frac{p(\mathbf{x},\mathbf{z};\theta)}{Q(\mathbf{z})}\,d\mathbf{z}=\log\mathbb{E}_{Q}\Big[\frac{p(\mathbf{x},\mathbf{z};\theta)}{Q(\mathbf{z})}\Big]\\
-&\ge\mathbb{E}_{Q}\Big[\log\frac{p(\mathbf{x},\mathbf{z};\theta)}{Q(\mathbf{z})}\Big]=\underbrace{\mathbb{E}_Q\big[\log p(\mathbf{x},\mathbf{z};\theta)\big]+H(Q)}_{\mathrm{ELBO}(Q,\theta)}.
+\ell(\theta)&=\log\int q(\mathbf{z})\,\frac{p(\mathbf{x},\mathbf{z};\theta)}{q(\mathbf{z})}\,d\mathbf{z}=\log\mathbb{E}_{q}\Big[\frac{p(\mathbf{x},\mathbf{z};\theta)}{q(\mathbf{z})}\Big]\\
+&\ge\mathbb{E}_{q}\Big[\log\frac{p(\mathbf{x},\mathbf{z};\theta)}{q(\mathbf{z})}\Big]=\underbrace{\mathbb{E}_q\big[\log p(\mathbf{x},\mathbf{z};\theta)\big]+H(q)}_{\mathrm{ELBO}(q,\theta)}.
 \end{aligned}
 $$
 
-Here $H(Q)=-\mathbb{E}_Q[\log Q]$ is the entropy. The bound holds for **every** $Q$ and $\theta$. How loose is it? Using the *correct* factorization $p(\mathbf{x},\mathbf{z};\theta)=p(\mathbf{z}\mid\mathbf{x};\theta)\,p(\mathbf{x};\theta)$:
+Here $H(q)=-\mathbb{E}_q[\log q]$ is the entropy. The bound holds for **every** $q$ and $\theta$. How loose is it? Using the *correct* factorization $p(\mathbf{x},\mathbf{z};\theta)=p(\mathbf{z}\mid\mathbf{x};\theta)\,p(\mathbf{x};\theta)$:
 
 $$
-\ell(\theta)-\mathrm{ELBO}(Q,\theta)=\int Q(\mathbf{z})\log\frac{Q(\mathbf{z})}{p(\mathbf{z}\mid\mathbf{x};\theta)}\,d\mathbf{z}=D_{\mathrm{KL}}\big(Q(\mathbf{z})\,\big\|\,p(\mathbf{z}\mid\mathbf{x};\theta)\big)\ \ge0.
+\ell(\theta)-\mathrm{ELBO}(q,\theta)=\int q(\mathbf{z})\log\frac{q(\mathbf{z})}{p(\mathbf{z}\mid\mathbf{x};\theta)}\,d\mathbf{z}=D_{\mathrm{KL}}\big(q(\mathbf{z})\,\big\|\,p(\mathbf{z}\mid\mathbf{x};\theta)\big)\ \ge0.
 $$
 
-So $\ell(\theta)=\mathrm{ELBO}(Q,\theta)+D_{\mathrm{KL}}(Q\,\|\,p(\mathbf{z}\mid\mathbf{x};\theta))$. The bound is **tight exactly when $Q$ is the posterior**, $Q(\mathbf{z})=p(\mathbf{z}\mid\mathbf{x};\theta)$. You can check this directly: with $Q=p(\mathbf{z}\mid\mathbf{x})$, the integrand becomes $\log p(\mathbf{x};\theta)$, which integrates to $\ell(\theta)$. For i.i.d. data everything decomposes over examples, with one $Q_i(z_i)$ per point.
+So $\ell(\theta)=\mathrm{ELBO}(q,\theta)+D_{\mathrm{KL}}(q\,\|\,p(\mathbf{z}\mid\mathbf{x};\theta))$. The bound is **tight exactly when $q$ is the posterior**, $q(\mathbf{z})=p(\mathbf{z}\mid\mathbf{x};\theta)$. You can check this directly: with $q=p(\mathbf{z}\mid\mathbf{x})$, the integrand becomes $\log p(\mathbf{x};\theta)$, which integrates to $\ell(\theta)$. For i.i.d. data everything decomposes over examples, with one $q_i(z_i)$ per point.
 
 ### The algorithm
 
@@ -269,18 +269,18 @@ EM is **coordinate ascent on the ELBO**. Make the bound tight at the current par
 
 > [!example] Algorithm: Expectation–Maximization
 > **Repeat** until the log-likelihood stops improving:
-> 1. **E-step:** $Q_i^{t}(z_i)=p(z_i\mid\mathbf{x}_i;\theta^t)$ for all $i$.
-> 2. **M-step:** $\theta^{t+1}=\arg\max_{\theta}\ \sum_i\mathbb{E}_{Q_i^t}\big[\log p(\mathbf{x}_i,z_i;\theta)\big]$.
+> 1. **E-step:** $q_i^{t}(z_i)=p(z_i\mid\mathbf{x}_i;\theta^t)$ for all $i$.
+> 2. **M-step:** $\theta^{t+1}=\arg\max_{\theta}\ \sum_i\mathbb{E}_{q_i^t}\big[\log p(\mathbf{x}_i,z_i;\theta)\big]$.
 >
-> The entropy term of the ELBO does not depend on $\theta$, so the M-step maximizes the **expected complete-data log-likelihood**. We optimize over $\theta$ with $Q$ held at its E-step value, *not* over $\theta^t$.
+> The entropy term of the ELBO does not depend on $\theta$, so the M-step maximizes the **expected complete-data log-likelihood**. We optimize over $\theta$ with $q$ held at its E-step value, *not* over $\theta^t$.
 
 **EM never decreases the likelihood.** It is not enough to note that $\mathrm{KL}\ge0$. The argument is a chain of three steps:
 
 $$
-\ell(\theta^{t+1})\ \overset{(a)}{\ge}\ \mathrm{ELBO}(Q^t,\theta^{t+1})\ \overset{(b)}{\ge}\ \mathrm{ELBO}(Q^t,\theta^{t})\ \overset{(c)}{=}\ \ell(\theta^{t}),
+\ell(\theta^{t+1})\ \overset{(a)}{\ge}\ \mathrm{ELBO}(q^t,\theta^{t+1})\ \overset{(b)}{\ge}\ \mathrm{ELBO}(q^t,\theta^{t})\ \overset{(c)}{=}\ \ell(\theta^{t}),
 $$
 
-- **(a)** the ELBO is a lower bound for *any* $Q$;
+- **(a)** the ELBO is a lower bound for *any* $q$;
 - **(b)** the M-step maximizes over $\theta$;
 - **(c)** the E-step made the bound tight at $\theta^t$.
 
@@ -290,7 +290,7 @@ Like K-Means, EM converges only to a **local** maximum (or a saddle), and it can
 *Figure 6: left, Jensen's inequality for the concave $\log$: the chord midpoint lies below the curve. Right, the average log-likelihood of a 3-component GMM during EM. It never decreases, but it can plateau near a saddle before improving again.*
 
 > [!tip] Where else the ELBO appears
-> The same bound, rewritten as $\mathbb{E}_Q[\log p(\mathbf{x}\mid\mathbf{z})]-D_{\mathrm{KL}}(Q(\mathbf{z})\,\|\,p(\mathbf{z}))$, is the objective of **variational autoencoders**. There the exact posterior is intractable, so $Q$ becomes a learned encoder instead of the exact E-step.
+> The same bound, rewritten as $\mathbb{E}_q[\log p(\mathbf{x}\mid\mathbf{z})]-D_{\mathrm{KL}}(q(\mathbf{z})\,\|\,p(\mathbf{z}))$, is the objective of [[Variational Autoencoders|variational autoencoders]]. There the exact posterior is intractable, so $q$ becomes a learned encoder instead of the exact E-step.
 
 ---
 
@@ -338,7 +338,7 @@ $$
 \Longrightarrow\ &\boldsymbol{\Sigma}_j=\frac{1}{N_j}\sum_iq_{ij}(\mathbf{x}_i-\boldsymbol{\mu}_j)(\mathbf{x}_i-\boldsymbol{\mu}_j)^\top.
 \end{aligned}
 $$
-- **Mixing weights.** Maximize $\sum_{i,j}q_{ij}\log\pi_j$ subject to $\sum_j\pi_j=1$. With a multiplier $\nu$: $\frac{N_j}{\pi_j}=\nu$, so $\pi_j=N_j/\nu$, and the constraint gives $\nu=\sum_jN_j=N$. Hence $\pi_j=N_j/N$. The constraints $\pi_j\ge0$ can be dropped: the solution is already positive, so those constraints are inactive and their [[Support Vector Machines#The Lagrangian dual|KKT]] multipliers are zero.
+- **Mixing weights.** Maximize $\sum_{i,j}q_{ij}\log\pi_j$ subject to $\sum_j\pi_j=1$. With a multiplier $\nu$: $\frac{N_j}{\pi_j}=\nu$, so $\pi_j=N_j/\nu$, and the constraint gives $\nu=\sum_jN_j=N$. Hence $\pi_j=N_j/N$. The constraints $\pi_j\ge0$ can be dropped: the solution is already positive, so those constraints are inactive and their [[Multivariable Calculus#The KKT conditions|KKT]] multipliers are zero.
 
 > [!example] Algorithm: EM for a Gaussian mixture
 > Initialize $\boldsymbol{\pi},\boldsymbol{\mu}_j,\boldsymbol{\Sigma}_j$, for example from K-Means. **Repeat:**
@@ -366,7 +366,7 @@ $$
 > Repeating these lines never decreases `loglik` (up to the small ridge), as the chain (a)–(c) above guarantees.
 
 > [!warning] Degeneracies
-> If a component collapses onto a single point ($\boldsymbol{\mu}_j=\mathbf{x}_i$, $\boldsymbol{\Sigma}_j\to\mathbf{0}$), the likelihood goes to $+\infty$. The global "MLE" of an unconstrained GMM is therefore meaningless. Add a small ridge to every covariance ($\boldsymbol{\Sigma}_j+\epsilon\mathbf{I}$), or use a prior. Restricting the covariance type (spherical, diagonal, tied as in LDA, or full) also trades flexibility for stability.
+> If a component collapses onto a single point ($\boldsymbol{\mu}_j=\mathbf{x}_i$, $\boldsymbol{\Sigma}_j\to\mathbf{0}$), the likelihood goes to $+\infty$. The global "MLE" of an unconstrained GMM is therefore meaningless. Add a small ridge to every covariance ($\boldsymbol{\Sigma}_j+\rho\mathbf{I}$), or use a prior. Restricting the covariance type (spherical, diagonal, tied as in LDA, or full) also trades flexibility for stability.
 
 ### K-Means is a limit of GMM-EM
 
@@ -375,7 +375,7 @@ Fix all covariances to $\boldsymbol{\Sigma}_j=\sigma^2\mathbf{I}$ and the weight
 ![[Machine Learning/images/clustering-em-kmeans-vs-gmm.svg]]
 *Figure 7: two elongated, crossing clusters. K-Means, with its convex Voronoi cells, splits the data into the wrong halves (ARI $\approx0$). A full-covariance GMM fits one elongated Gaussian per cluster (dashed: 2-standard-deviation ellipses) and recovers most of the structure. Points near the crossing remain genuinely ambiguous.*
 
-**Choosing $K$ for a GMM.** The likelihood is a proper probability model, so information criteria apply. For example, the **BIC**, $-2\ell(\hat\theta)+p\log N$ with $p$ free parameters, penalizes extra components.[^schwarz1978] Choose the $K$ with the smallest BIC.
+**Choosing $K$ for a GMM.** The likelihood is a proper probability model, so information criteria apply. For example, the **BIC**, $-2\ell(\hat\theta)+\lvert\theta\rvert\log N$ with $\lvert\theta\rvert$ free parameters, penalizes extra components.[^schwarz1978] Choose the $K$ with the smallest BIC.
 
 ---
 
@@ -504,10 +504,10 @@ This is the same quadratic form as before, now to be *maximized*. Relaxing $s_i\
 
 ### The Louvain method
 
-Maximizing $Q$ exactly is NP-hard. **Louvain** is a fast greedy heuristic that scales to millions of nodes.[^blondel2008] For a node $i$ with degree $d_i$, write $d_{i,\text{in}}(C)$ for the total weight of edges from $i$ into community $C$, and $\Sigma_{\text{tot}}(C)$ for the total degree of $C$. Moving $i$ (currently alone) into $C$ changes the modularity by
+Maximizing $Q$ exactly is NP-hard. **Louvain** is a fast greedy heuristic that scales to millions of nodes.[^blondel2008] For a node $i$ with degree $d_i$, write $d_{i,\text{in}}(C)$ for the total weight of edges from $i$ into community $C$, and $d_{\text{tot}}(C)$ for the total degree of $C$. Moving $i$ (currently alone) into $C$ changes the modularity by
 
 $$
-\Delta Q=\frac{1}{m}\Big[d_{i,\text{in}}(C)-\frac{\Sigma_{\text{tot}}(C)\,d_i}{2m}\Big].
+\Delta Q=\frac{1}{m}\Big[d_{i,\text{in}}(C)-\frac{d_{\text{tot}}(C)\,d_i}{2m}\Big].
 $$
 
 This is cheap to evaluate, because it involves only $i$'s neighbours.
@@ -538,7 +538,7 @@ Start with each point as its own cluster. Repeatedly **merge the two closest clu
 - **single:** the closest pair of points. It can chain clusters together along thin bridges.
 - **complete:** the farthest pair. It gives compact clusters.
 - **average:** the mean pairwise distance.
-- **Ward:** the merge that increases the within-cluster sum of squares $W$ the least. This is K-Means' objective, built up greedily.
+- **Ward:** the merge that increases the within-cluster sum of squares $S_W$ the least. This is K-Means' objective, built up greedily.
 
 A naive implementation needs $O(N^2)$ memory and $O(N^2\log N)$ time, which limits it to moderate $N$.
 
@@ -563,31 +563,29 @@ It needs no $K$, finds arbitrarily shaped clusters, and flags outliers (Figure 1
 
 **External measures** compare against reference labels, when they exist (for benchmarking).
 
-- **Adjusted Rand index (ARI).** Count the pairs of points on which two partitions agree (same cluster in both, or different in both), then correct for chance.[^hubert1985] For contingency counts $n_{ab}$ (points in cluster $a$ of one partition and $b$ of the other), row sums $a_\cdot$ and column sums $b_\cdot$:
+- **Adjusted Rand index (ARI).** Count the pairs of points on which two partitions agree (same cluster in both, or different in both), then correct for chance.[^hubert1985] For contingency counts $n_{uv}$ (points in cluster $u$ of one partition and $v$ of the other), row sums $n_{u\cdot}$ and column sums $n_{\cdot v}$:
 $$
-\mathrm{ARI}=\frac{\sum_{ab}\binom{n_{ab}}{2}-E}{\frac12\Big[\sum_a\binom{a_\cdot}{2}+\sum_b\binom{b_\cdot}{2}\Big]-E},\qquad E=\frac{\sum_a\binom{a_\cdot}{2}\sum_b\binom{b_\cdot}{2}}{\binom{N}{2}}.
+\mathrm{ARI}=\frac{\sum_{uv}\binom{n_{uv}}{2}-E}{\frac12\Big[\sum_u\binom{n_{u\cdot}}{2}+\sum_v\binom{n_{\cdot v}}{2}\Big]-E},\qquad E=\frac{\sum_u\binom{n_{u\cdot}}{2}\sum_v\binom{n_{\cdot v}}{2}}{\binom{N}{2}}.
 $$
 It is $1$ for identical partitions, about $0$ for random ones, and invariant to relabelling the clusters.
-- **Normalized mutual information (NMI).** $\mathrm{NMI}=\frac{I(U;V)}{\sqrt{H(U)H(V)}}$, where $I$ is the mutual information between the two labelings and $H$ their entropies. It is $1$ for identical partitions and $0$ for independent ones.
+- **Normalized mutual information (NMI).** $\mathrm{NMI}=\frac{I(U;V)}{\sqrt{H(U)H(V)}}$, where $I$ is the mutual information between the two labellings and $H$ their entropies. It is $1$ for identical partitions and $0$ for independent ones.
 
 ## Key takeaways
 
-- Optimal clustering is NP-hard. With squared distances, minimizing within-cluster spread $W$ is the same as maximizing between-cluster spread, because $T=W+B$.
+- Optimal clustering is NP-hard. With squared distances, minimizing within-cluster spread $S_W$ is the same as maximizing between-cluster spread, because $S_T=S_W+S_B$.
 - **K-Means** is coordinate descent on $J$. It converges because $J$ decreases monotonically over finitely many assignments, but only to a local optimum. Use k-means++ and restarts, and choose $K$ by elbow, silhouette or BIC.
 - **Fuzzy c-means** gives soft memberships $r_i^k\propto\lVert\mathbf{x}_i-\boldsymbol{\mu}_k\rVert^{-2/(\alpha-1)}$. **Kernel K-Means** needs only the Gram matrix, with no explicit projection.
-- **EM** maximizes the ELBO, $\ell(\theta)=\mathrm{ELBO}(Q,\theta)+D_{\mathrm{KL}}(Q\,\|\,p(\mathbf{z}\mid\mathbf{x}))$, by alternating a tight E-step ($Q$ = posterior) with an M-step (maximize the expected complete log-likelihood). The likelihood never decreases.
+- **EM** maximizes the ELBO, $\ell(\theta)=\mathrm{ELBO}(q,\theta)+D_{\mathrm{KL}}(q\,\|\,p(\mathbf{z}\mid\mathbf{x}))$, by alternating a tight E-step ($q$ = posterior) with an M-step (maximize the expected complete log-likelihood). The likelihood never decreases.
 - **GMM-EM** is QDA estimation with soft labels. K-Means is its hard, spherical limit. Guard against collapsing components.
 - **Spectral clustering** relaxes the balanced cut $\frac14\mathbf{s}^\top\mathbf{L}\mathbf{s}$ to an eigenproblem; the Fiedler vector gives the split. **Modularity** compares edges with a degree-preserving null model, and **Louvain** maximizes it greedily and hierarchically.
 - **Hierarchical** clustering gives all $K$ at once. **DBSCAN** finds arbitrarily shaped dense clusters and outliers. Evaluate with silhouette (internal) or ARI/NMI (external).
 
 ## Where this shows up next
 
-- [[Discriminant Analysis]]: the supervised version of the GMM, with QDA/LDA and the same estimates under hard labels.
-- [[Non-parametric Models]]: RBF similarities and density estimation. A GMM sits between one Gaussian and a full KDE.
-- [[Matrix Factorization and Dimensionality Reduction]]: PCA and kernel PCA. K-Means is a matrix factorization with one-hot codes, and spectral clustering is a Laplacian eigenmap followed by K-Means.
-- [[Graph Representation Learning]], next in the series: spectral embeddings, modularity and the graph Laplacian lead to graph neural networks and knowledge-graph embeddings.
+- [[Graph Representation Learning]], next in the series: the graph Laplacian, spectral embeddings and centrality lead to learned node embeddings and knowledge-graph embeddings, and later to [[Graph Neural Networks]].
 - [[Neural Networks]]: learned, non-linear features, starting the deep-learning lectures.
 - [[Variational Autoencoders]]: the ELBO with a learned, amortized E-step.
+- Back in [[Discriminant Analysis]], [[Non-parametric Models]] and [[Matrix Factorization and Dimensionality Reduction]]: the GMM is QDA with soft labels; a GMM sits between one Gaussian and a full KDE; K-Means is a matrix factorization with one-hot codes, and spectral clustering is a Laplacian eigenmap followed by K-Means.
 
 <!-- References: footnote definitions below render as the numbered "References" list at the bottom of the page -->
 
